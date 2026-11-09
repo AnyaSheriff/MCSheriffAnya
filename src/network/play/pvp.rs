@@ -629,15 +629,16 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
 
 /// Изнашивает надетую броню от удара силы `damage`.
 pub(super) fn wear_armor(shared: &Shared, player: &mut PlayerState, damage: f32) {
-    let _ = wear_armor_except(shared, player, damage, None, None);
+    let _ = wear_armor_except(shared, player, damage, None, None, false);
 }
 
-fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, except: Option<i32>, plan: Option<&combat::ArmorWearPlan>) -> Vec<u8> {
+fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, except: Option<i32>, plan: Option<&combat::ArmorWearPlan>, ordinary_melee: bool) -> Vec<u8> {
     let wear = combat::armor_wear(damage);
     let mut broken = Vec::new();
 
     for (slot, _) in combat::ARMOR_SLOTS {
         let Some(stack) = player.inventory.slot(slot) else { continue };
+        if ordinary_melee && !receives_melee_armor_wear(stack) { continue; }
         let dimension = player.dimension;
         let mut roll = || vitals::world_random(shared, dimension);
         let worn = planned_armor_wear(plan, slot, stack).unwrap_or_else(|| combat::wear(&stack, wear, true, &mut roll));
@@ -649,7 +650,7 @@ fn wear_armor_except(shared: &Shared, player: &mut PlayerState, damage: f32, exc
 
 pub(super) async fn wear_armor_before_strike_with_plan(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, damage: f32, plan: Option<&combat::ArmorWearPlan>) -> io::Result<()> {
     // Себе — до DamageEvent; общий журнал не должен прислать дубликат.
-    let broken = wear_armor_except(shared, player, damage, Some(player.entity_id), plan);
+    let broken = wear_armor_except(shared, player, damage, Some(player.entity_id), plan, true);
     vitals::update_equipment(player, *shared.ticks.borrow());
     for status in broken { vitals::send_entity_event(stream, player.entity_id, status as i8).await?; }
     Ok(())
@@ -835,8 +836,12 @@ pub(super) fn guardian_spikes(shared: &Shared, player: &mut PlayerState, guardia
     });
 }
 
-/// Бросает шипы жертвы по её опубликованным уровням: сработавшим кладёт урон
-/// в очередь ударов нападающего; возвращает слоты сработавших.
+// Opaque777 elytra-melee: обычный удар не изнашивает элитры, включая damage431.
+// Только уже проверенный ранний путь player_attack26.3; полёт изнашивает отдельно.
+fn receives_melee_armor_wear(stack: Stack) -> bool {
+    combat::item_name(stack.item) != Some("elytra")
+}
+
 fn planned_armor_wear(plan: Option<&combat::ArmorWearPlan>, slot: i32, stack: Stack) -> Option<i32> {
     plan?.slots.iter().find(|(number, original, _)| *number == slot && *original == stack).map(|(_, _, wear)| *wear)
 }
@@ -846,14 +851,14 @@ fn plan_thorns_armor_wear(profile: crate::gameplay_catalog::Profile, gear: &crat
     let wear = combat::armor_wear(damage);
     let uncertain = gear.worn.iter().skip(1).flatten().any(|stack| {
         let data = stack.extras();
-        data.level("thorns") > 0 && data.level("unbreaking") > 0 && !data.unbreakable
+        receives_melee_armor_wear(*stack) && data.level("thorns") > 0 && data.level("unbreaking") > 0 && !data.unbreakable
             && combat::add_damage(*stack, wear).is_none()
     });
     if !uncertain { return None; }
     // Opaque777 near-break/UnbreakingIII: броня, сломанная входящим ударом,
     // не отражает его. Бросок износа общий для предсказания и жертвы.
     let slots = combat::ARMOR_SLOTS.iter().zip(gear.worn.iter().skip(1))
-        .filter_map(|((slot, _), stack)| stack.map(|stack| (*slot, stack, combat::wear(&stack, wear, true, &mut roll))))
+        .filter_map(|((slot, _), stack)| stack.filter(|stack| receives_melee_armor_wear(*stack)).map(|stack| (*slot, stack, combat::wear(&stack, wear, true, &mut roll))))
         .collect();
     Some(combat::ArmorWearPlan { slots })
 }
@@ -905,6 +910,20 @@ mod thorns_wear_plan_tests {
     }
 
     #[test]
+    fn nearly_broken_elytra_are_not_predicted_as_destroyed_by_melee() {
+        for unbreaking in [0, 3] {
+            let mut data = crate::stackdata::Data { damage: 431, ..Default::default() };
+            data.set_enchant(crate::stackdata::enchantment_number("thorns").unwrap(), 7);
+            if unbreaking > 0 { data.set_enchant(crate::stackdata::enchantment_number("unbreaking").unwrap(), unbreaking); }
+            let stack = Stack::new(crate::blocks::item_named("elytra").unwrap(), 1).with_extras(data);
+            let mut gear = crate::players::Gear::default();gear.worn[2] = Some(stack);gear.view.thorns[1] = 7;
+            assert!(!receives_melee_armor_wear(stack));
+            assert!(plan_thorns_armor_wear(Profile::Preview26_3, &gear, 1., Source::PlayerAttack, || panic!("elytra must not consume armor RNG")).is_none());
+            assert_eq!(thorns_after_armor_wear(Profile::Preview26_3, &gear, 1., Source::PlayerAttack).thorns[1], 7);
+        }
+    }
+
+    #[test]
     fn changed_stack_or_slot_cannot_reuse_another_armor_roll() {
         let gear = gear(527, 3);let stack = gear.worn[2].unwrap();
         let plan = plan_thorns_armor_wear(Profile::Preview26_3, &gear, 1., Source::PlayerAttack, || 0.99).unwrap();
@@ -924,6 +943,7 @@ pub(super) fn thorns_after_armor_wear(profile: crate::gameplay_catalog::Profile,
     let wear = combat::armor_wear(damage);
     for (level, stack) in view.thorns.iter_mut().zip(gear.worn.iter().skip(1)) {
         if *level > 0 && let Some(stack) = stack
+            && receives_melee_armor_wear(*stack)
             && stack.extras().level("unbreaking") <= 0
             && combat::add_damage(*stack, wear).is_none()
         {

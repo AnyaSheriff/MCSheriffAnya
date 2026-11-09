@@ -1,0 +1,50 @@
+name: Elytra melee wear and paired combat regressions
+on:
+  push:
+    branches: ['feature/elytra-melee-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  paired:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      CARGO_BUILD_JOBS: '4'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: Swatinem/rust-cache@v2
+      - name: Build exact gameplay source
+        run: cargo build --release
+      - name: Check strict semantic rejection controls
+        run: python3 -m unittest discover -s tools/blackbox -p 'test_elytra*.py' -v
+      - name: Record original and candidate plus previous combat regressions
+        run: python3 tools/blackbox/elytra_melee_wear.py ci --output elytra-melee-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: elytra-melee-${{ github.run_id }}-${{ github.run_attempt }}
+          path: elytra-melee-evidence/
+          retention-days: 7
+          if-no-files-found: warn
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      CARGO_BUILD_JOBS: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - run: rustup target add wasm32-wasip2
+      - run: cargo build --release --target wasm32-wasip2
+        working-directory: plugins-examples
+      - run: cargo clippy --release --all-targets --workspace -- -D warnings
+      - run: cargo test --release --workspace
+      - run: cargo test --release --no-default-features
+      - run: cargo build --release

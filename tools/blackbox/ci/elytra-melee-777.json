@@ -1,0 +1,64 @@
+{
+  "schema": "elytra-melee777-v1",
+  "baseline": "c719246cbed67f71ec9dc43962d8cf3116b553f2 gameplay; paired opaque777 observation 2026-11-09",
+  "cases": [
+    [
+      "diamond_chestplate",
+      0,
+      0
+    ],
+    [
+      "elytra",
+      0,
+      0
+    ],
+    [
+      "elytra",
+      431,
+      0
+    ],
+    [
+      "elytra",
+      431,
+      3
+    ],
+    [
+      "diamond_chestplate",
+      0,
+      0
+    ],
+    [
+      "elytra",
+      0,
+      0
+    ],
+    [
+      "elytra",
+      431,
+      0
+    ],
+    [
+      "elytra",
+      431,
+      3
+    ]
+  ],
+  "expected_final_damage": [
+    1,
+    0,
+    431,
+    431,
+    1,
+    0,
+    431,
+    431
+  ],
+  "expected_break_statuses": [
+    0,
+    0
+  ],
+  "post_hit_item_echo_required": true,
+  "scope": "Ordinary incoming player melee in primary26.3. Not flight/custom equippable/plugin or other damage-source proof.",
+  "baseline_mismatches": 5,
+  "source": "Actual original post-shift authoritative inventory packets; initial HP20 and causal incoming player_attack both observers, diamondwear1 controls."
+}
