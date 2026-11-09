@@ -115,6 +115,8 @@ pub(super) struct Pending {
     pub push: Option<(f64, f64)>,
     /// Остальным игрокам об этом уроне уже сообщено в такт удара (шипы).
     pub announced: bool,
+    /// Следующий принятый урон той же цепочки шипов: HP без новой анимации.
+    pub quiet_thorns: bool,
 }
 
 /// Чем занята рука, пока держится кнопка «использовать».
@@ -847,7 +849,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
             log_debug!("Play: {} приземлился с уроном {} на {:.2} {:.2} {:.2} (шаг {:.3})", player.name, damage, player.x, player.y, player.z, dy);
 
             let announced = announce_fall(player, shared, damage, env.below);
-            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, hurt_yaw: None, killer: None, push: None, announced });
+            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, hurt_yaw: None, killer: None, push: None, announced, quiet_thorns: false });
         }
     } else if player.game_mode == GAME_MODE_CREATIVE && !player.vit.dead {
         // Творческий: урона от падения нет, но высота падения копится — от неё
@@ -2271,8 +2273,16 @@ pub(super) async fn hit_by_breached(
 
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn hit_by_breached_with_armor_plan(
-    stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32,
+    stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, amount: f32,
     source: Source, direct: i32, cause: i32, killer: Option<Killer<'_>>, hurt_yaw: Option<f32>, breach: f32, armor_wear: Option<f32>, plan: Option<&crate::combat::ArmorWearPlan>,
+) -> io::Result<Option<survival::Hit>> {
+    hit_by_breached_with_feedback(stream,shared,player,amount,source,direct,cause,killer,hurt_yaw,breach,armor_wear,plan,false).await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn hit_by_breached_with_feedback(
+    stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32,
+    source: Source, direct: i32, cause: i32, killer: Option<Killer<'_>>, hurt_yaw: Option<f32>, breach: f32, armor_wear: Option<f32>, plan: Option<&crate::combat::ArmorWearPlan>, quiet_thorns: bool,
 ) -> io::Result<Option<survival::Hit>> {
     if crate::frost::protects(&player.inventory, source) { return Ok(None); }
     amount = projectile_difficulty(amount, source, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), killer.is_some());
@@ -2314,7 +2324,8 @@ pub(super) async fn hit_by_breached_with_armor_plan(
     // молча: без события урона (чёрный ящик, wither-skull-hit: череп — магия
     // 5 и событие, взрыв следом — только здоровье) [проверить: у остальных
     // источников].
-    let quiet = player.vit.invulnerable > 10 && matches!(source, Source::Explosion | Source::PlayerExplosion);
+    let quiet = player.vit.invulnerable > 10 && (matches!(source, Source::Explosion | Source::PlayerExplosion)
+        || (quiet_thorns && source==Source::Thorns && super::pvp::quiet_thorns_feedback_allowed(shared,player)));
     let Some(mut result) = player.vit.hurt(amount, source, immune) else {
         return Ok(None);
     };
@@ -2612,7 +2623,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         player.net.announced = pending.announced;
         player.net.announced_health = None;
 
-        let done = hit_by(stream, shared, player, pending.amount, pending.source, pending.direct, 0, killer, pending.hurt_yaw).await?;
+        let done = hit_by_breached_with_feedback(stream,shared,player,pending.amount,pending.source,pending.direct,0,killer,pending.hurt_yaw,1.0,None,None,pending.quiet_thorns).await?;
 
         if pending.source == Source::Fall
             && let Some(vy) = player.net.landing_velocity.take()
@@ -2636,7 +2647,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
             player.net.velocity = Some((dx / 2.0 * 0.546 + ux * 0.218, up, dz / 2.0 * 0.546 + uz * 0.218));
             player.net.velocity_due = false;
             player.net.hold_meta = true;
-        } else if let (Some(_), Some(dir)) = (done, pending.push) {
+        } else if let (Some(_), Some(dir), false) = (done, pending.push, pending.quiet_thorns) {
             let resistance = player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
 
             knock_back(player, dir, crate::mob::BASE_KNOCKBACK, resistance);

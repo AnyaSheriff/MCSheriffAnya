@@ -830,7 +830,7 @@ pub(super) fn guardian_spikes(shared: &Shared, player: &mut PlayerState, guardia
         direct: guardian,
         hurt_yaw: Some((toward - player.yaw).rem_euclid(360.0)),
         push: Some(if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { crate::mob::look_direction(player.yaw) }),
-        announced,
+        announced, quiet_thorns: false,
         killer: None,
     });
 }
@@ -933,9 +933,22 @@ pub(super) fn thorns_after_armor_wear(profile: crate::gameplay_catalog::Profile,
     view
 }
 
+pub(super) fn quiet_thorns_feedback_allowed(shared: &Shared, player: &PlayerState) -> bool {
+    shared.catalog().profile()==crate::gameplay_catalog::Profile::Preview26_3
+        && !crate::plugins::active()
+        && player.attrs.value(crate::attributes::ARMOR)==0.0
+        && player.attrs.value(crate::attributes::ARMOR_TOUGHNESS)==0.0
+        && combat::ARMOR_SLOTS.iter().all(|(slot,_)|player.inventory.slot(*slot).is_none())
+}
+
 fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players::CombatView, victim_at: (f64, f64, f64), victim: i32) -> Vec<i32> {
     let mut slots = Vec::new();
     let dimension = player.dimension;
+    // Opaque777 multiarmor: усиление того же отражения меняет HP, но не повторяет
+    // DamageEvent/анимацию. Пока только голый атакующий с HP>5, без прежней очереди.
+    let sequential = player.vit.health>5.0 && player.vit.invulnerable<=10 && player.net.hits.is_empty()
+        && quiet_thorns_feedback_allowed(shared,player);
+    let mut predicted = None;
 
     for ((slot, _), level) in combat::ARMOR_SLOTS.iter().zip(view.thorns) {
         if level <= 0 || vitals::world_random(shared, dimension) >= 0.15 * level as f32 {
@@ -951,23 +964,28 @@ fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players:
         // позже, когда он применится у него самого (чёрный ящик, pvp-thorns:
         // «other damage_event» и здоровье в одном сбросе с остальным): урон
         // заранее прикидывается на копии состояния.
-        let mut probe = player.vit.clone();
+        let mut probe = predicted.take().unwrap_or_else(||player.vit.clone());
+        let quiet_thorns = sequential && probe.invulnerable>10;
         let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
         let points: i32 = combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| combat::protection_points(&stack.extras(), Source::Thorns)).sum();
         // Тот же расчёт, что у настоящего удара (hit_by_breached): броня и чары.
         let (armor, toughness) = (player.attrs.value(crate::attributes::ARMOR) as f32, player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32);
-        let announced = probe.hurt(combat::mitigated_damage(amount, armor, toughness, points, Source::Thorns, 1.0), Source::Thorns, immune).is_some();
+        let accepted = probe.hurt(combat::mitigated_damage(amount, armor, toughness, points, Source::Thorns, 1.0), Source::Thorns, immune).is_some();
 
+        let announced = accepted && !quiet_thorns;
         if announced {
             let (type_id, culprit, direct) = vitals::damage_fields(Source::Thorns, victim, 0);
 
             world.note_player_damaged(player.entity_id, type_id, culprit, direct);
+        }
+        if accepted {
             player.net.announced_health = Some(probe.health);
             shared.players.lock().expect("список игроков захвачен другим потоком").set_health(&player.uuid, probe.health);
         }
 
         // Звуки идут в журнал сразу: клиенты получат их в этом же такте.
-        world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, player.entity_id);
+        if !quiet_thorns { world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, player.entity_id); }
+        if sequential { predicted=Some(probe); }
         world.note_sound_player_at(at, "minecraft:enchant.thorns.hit", 1.0, 1.0);
         drop(world);
 
@@ -982,13 +1000,46 @@ fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players:
 
                 Some(if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { crate::mob::look_direction(player.yaw) })
             },
-            announced,
+            announced, quiet_thorns,
             killer: shared.players.lock().expect("список игроков захвачен другим потоком").by_entity(victim).map(|(member, _)| (member.name.clone(), member.uuid)),
         });
         slots.push(*slot);
     }
 
     slots
+}
+
+#[cfg(test)]
+mod multi_thorns_feedback_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile};
+
+    #[tokio::test]
+    async fn several_thorns_pieces_publish_actual_health_and_one_damage_animation() {
+        // Opaque777 multiarmor: 1/2/4 детали, один DamageEvent у обоих наблюдателей.
+        for count in [1, 2, 4] {
+            let catalog=Catalog::new(Profile::Preview26_3);
+            let shared=Shared::new(World::in_memory_with_catalog(catalog),World::in_memory_with_catalog(catalog),
+                Default::default(),Default::default(),Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/multi-thorns/ops.json")),crate::skins::Settings::default());
+            let mut p=PlayerState::new_for_catalog([83;16],"BareAttacker".into(),None,None,0x7f,83,(0.5,64.,1.5),catalog);
+            p.entity_id=83;p.game_mode=GAME_MODE_SURVIVAL;p.on_ground=true;p.awaiting_teleport=false;
+            shared.players.lock().unwrap().join(p.member(),p.entity_id).unwrap();
+            let mut view=crate::players::CombatView::default();view.thorns[..count].fill(7);
+            assert_eq!(thorns_hits(&shared,&mut p,&view,(0.5,64.,3.5),84).len(),count);
+            assert_eq!(p.net.hits.len(),count);assert_eq!(p.vit.health,20.);
+            let published=p.net.announced_health.unwrap();let mut out=Outgoing::capture();
+            vitals::tick(&mut out,&shared,&mut p).await.unwrap();
+            assert_eq!(published,p.vit.health,"published reflection health for {count} pieces");
+            let mut bytes=out.queued();let mut damage=0;let mut animation=0;
+            while !bytes.is_empty() {
+                let packet=read_packet(&mut bytes).await.unwrap();
+                if packet.id==0x19 {damage+=1;} if packet.id==0x2a {animation+=1;}
+            }
+            assert_eq!(damage,1,"real self damage packets for {count} pieces");
+            assert_eq!(animation,1,"real self hurt animation for {count} pieces");
+        }
+    }
 }
 
 #[cfg(test)]

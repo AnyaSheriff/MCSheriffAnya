@@ -102,7 +102,7 @@ pub(super) fn tick(shared: &Shared, player: &mut PlayerState) {
         let damage = (lost * 10.0 - 3.0) as f32;
 
         if damage > 0.0 {
-            player.net.hits.push(vitals::Pending { amount: damage, source: crate::survival::Source::FlyIntoWall, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false });
+            player.net.hits.push(vitals::Pending { amount: damage, source: crate::survival::Source::FlyIntoWall, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false, quiet_thorns: false });
         }
     }
 }

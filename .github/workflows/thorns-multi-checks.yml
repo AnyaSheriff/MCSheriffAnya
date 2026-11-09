@@ -1,0 +1,35 @@
+name: Multi-armor Thorns feedback and paired regressions
+on:
+  push:
+    branches: ['wip/thorns-multi-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  paired:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: '4'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: Swatinem/rust-cache@v2
+      - name: Build exact gameplay source
+        run: cargo build --release
+      - name: Check strict semantic rejection controls
+        run: python3 -m unittest discover -s tools/blackbox -p 'test_thorns*.py' -v
+      - name: Record natural III, breaking Unbreaking and multi-armor on both servers
+        run: python3 tools/blackbox/thorns_multi_sample.py ci --output thorns-multi-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: thorns-multi-${{ github.run_id }}-${{ github.run_attempt }}
+          path: thorns-multi-evidence/
+          retention-days: 7
+          if-no-files-found: warn

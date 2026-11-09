@@ -6992,7 +6992,7 @@ async fn read_and_log_play_packets(
                 Order::CommandDamage { amount, source, origin } => {
                     vitals::command_hit(stream, shared, player, amount, source, origin).await?;
                 }
-                Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
+                Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false, quiet_thorns: false }),
                 Order::Health { value } => vitals::set_health(stream, shared, player, value).await?,
                 Order::PluginFlight {owner,field,value} => {
                     if !player.apply_plugin_flight(owner, field, value) { continue; }
@@ -7046,10 +7046,10 @@ async fn read_and_log_play_packets(
                         hurt_yaw: Some(yaw),
                         killer,
                         push: (length > 1.0e-4).then(|| (dx / length, dz / length)),
-                        announced: false,
+                        announced: false, quiet_thorns: false,
                     });
                 }
-                Order::MagicHit { amount, killer, from: None } => player.net.hits.push(vitals::Pending { amount, source: crate::survival::Source::Magic, direct: 0, hurt_yaw: None, killer, push: None, announced: false }),
+                Order::MagicHit { amount, killer, from: None } => player.net.hits.push(vitals::Pending { amount, source: crate::survival::Source::Magic, direct: 0, hurt_yaw: None, killer, push: None, announced: false, quiet_thorns: false }),
                 Order::Progress(event) => player.progress.event(event),
                 Order::Advancement { grant, ids, criterion, revision } => {
                     if revision != 0 { player.advancement_revision = revision; }
