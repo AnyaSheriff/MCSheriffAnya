@@ -63,6 +63,7 @@ pub mod block_entities;
 mod block_entity_ids;
 pub mod movement;
 pub mod teleport;
+pub mod player_position;
 pub mod registry;
 pub mod wire;
 #[path="probe_776.rs"]

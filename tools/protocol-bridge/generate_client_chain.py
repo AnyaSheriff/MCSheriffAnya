@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Закреплённые соседние таблицы769↔770↔771↔772↔773↔774; не полный Play/dопуск."""
+"""Рабочие таблицы769–774 и подготовка767↔768↔769; без изменения допуска."""
 import argparse
 import hashlib
 import json
@@ -41,6 +41,8 @@ def load(cache, cache774, fetch=False):
     docs = {}
     for number, row in manifest['versions'].items():
         version = int(number)
+        assert row.get('data_only', False) == (version not in VERSIONS)
+        assert version in VERSIONS or version in (767, 768)
         docs[version] = {k: locked(cache / number, k + '.json', r, fetch) for k, r in row['files'].items()}
         assert docs[version]['version']['version'] == version
         for release in row['releases']:
@@ -60,6 +62,52 @@ def registries(doc):
                 Particle=mapper(doc['protocol']['types']['Particle'][1][0]['type']))
 
 
+def compress_mapping(values):
+    runs = []
+    for number, target in enumerate(values):
+        delta = None if target == 65535 else target - number
+        if runs and runs[-1][2] == delta:
+            runs[-1][1] = number
+        else:
+            runs.append([number, number, delta])
+    return runs
+
+
+def translate_prepared_id(edge, kind, source, target, number):
+    """Точный перевод ID по подготовленным данным; не перевод payload/допуск."""
+    key = f'{kind}/{source}-{target}'
+    if key not in edge['registries'] or not isinstance(number, int) or isinstance(number, bool):
+        raise ValueError('Нет закреплённого маршрута/целого ID')
+    row = edge['registries'][key]
+    if not 0 <= number < row['count']:
+        raise ValueError('Неизвестный исходный ID')
+    for first, last, delta in row['ranges']:
+        if first <= number <= last:
+            if delta is None:
+                raise ValueError('Отсутствует точная цель')
+            return number + delta
+    raise ValueError('Неполная таблица исходных ID')
+
+
+def preparation(docs):
+    # Данные для ещё закрытых клиентов: НЕ добавляются в Rust-таблицы/enum.
+    # Полное равенство схем не разрешает пересылку вложенных ID или native NBT.
+    tables = {n: registries(docs[n]) for n in (767, 768, 769)}
+    result = {'scope': 'Exact static ID transformations and schema evidence only; public admission CLOSED; no payload codec', 'edges': {}}
+    for older in (767, 768):
+        newer = older + 1
+        packets = compare(docs[older]['protocol'], docs[newer]['protocol'])
+        edge = {'packets': packets, 'registries': {}}
+        for source, target in ((older, newer), (newer, older)):
+            for kind in KINDS:
+                values = direct_mapping(tables[source][kind], tables[target][kind])
+                edge['registries'][f'{kind}/{source}-{target}'] = {
+                    'count': len(values), 'missing': values.count(65535),
+                    'ranges': compress_mapping(values)}
+        result['edges'][f'{older}-{newer}'] = edge
+    return result
+
+
 def generate(docs):
     tables = {n: registries(d) for n, d in docs.items()}
     text = '// Сгенерировано generate_client_chain.py из client-chain-sources.json и step1-sources-774.json.\n'
@@ -68,6 +116,8 @@ def generate(docs):
     text += "type Ranges = (u32, &'static [(u32,u32,i32)]);\n"
     ranges, packets, arrays = [], [], []
     report = {'scope': 'Pinned schema/static ID evidence only; controls implemented, full Play and admission CLOSED', 'edges': {}}
+    if 767 in docs or 768 in docs:
+        report['preparation'] = preparation(docs)
     for older in (773, 772, 771, 770, 769):
         newer = older + 1
         rows = compare(docs[older]['protocol'], docs[newer]['protocol'])
