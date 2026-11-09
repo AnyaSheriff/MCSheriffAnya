@@ -702,7 +702,7 @@ mod tests {
             fn block(&self,_:i32,y:i32,_:i32)->i32 {if y<=60 {1} else if y==61 {self.feet} else if y==62 {self.head} else {0}}
             fn loaded(&self,_:i32,_:i32)->bool {true}
         }
-        let player=Watcher {id:1,x:0.5,y:61.0,z:0.5,eye:1.62,holding:[None,None],spectator:false,targetable:true,look:(0.0,0.0),pumpkin:false,sprinting:false,riding:false,gold_armor:false};
+        let player=Watcher {id:1,x:0.5,y:61.0,z:0.5,eye:1.62,holding:[None,None],spectator:false,targetable:true,look:(0.0,0.0),pumpkin:false,sprinting:false,riding:false,gold_armor:false, witch_health: 20.0, witch_effects: 0, };
         let rules=Rules {difficulty:2,raids:false,patrols:true,day:6};
         let mut dry=0;
         for seed in 0..100 {
@@ -784,7 +784,7 @@ mod tests {
         }
 
         let mut raids = Raids::default();
-        let player = Watcher { id: 5, x: 0.5, y: -60.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
+        let player = Watcher { id: 5, x: 0.5, y: -60.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false , witch_health: 20.0, witch_effects: 0, };
         let rules = Rules { difficulty: 2, raids: true, patrols: false, day: 0 };
         let mut rng = Rng::new(1);
         let mut id = 100;
@@ -837,7 +837,7 @@ mod tests {
         }
 
         let mut raids = Raids::default();
-        let player = Watcher { id: 5, x: 0.5, y: -60.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
+        let player = Watcher { id: 5, x: 0.5, y: -60.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false , witch_health: 20.0, witch_effects: 0, };
         let rules = Rules { difficulty: 2, raids: true, patrols: false, day: 0 };
         let mut rng = Rng::new(3);
         let mut id = 0;

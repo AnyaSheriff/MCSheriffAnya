@@ -39,7 +39,7 @@ fn returning_to_nether_resets_conversion() {
 }
 
 fn watcher() -> ai::Watcher {
-    ai::Watcher {id:2,x:0.5,y:1.0,z:0.5,eye:1.62,holding:[None;2],spectator:false,targetable:true,look:(0.0,0.0),pumpkin:false,gold_armor:false,sprinting:false,riding:false}
+    ai::Watcher {id:2,x:0.5,y:1.0,z:0.5,eye:1.62,holding:[None;2],spectator:false,targetable:true,look:(0.0,0.0),pumpkin:false,gold_armor:false,sprinting:false,riding:false,  witch_health: 20.0, witch_effects: 0, }
 }
 
 #[test]

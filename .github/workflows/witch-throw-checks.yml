@@ -1,0 +1,79 @@
+name: Witch throw verification
+on:
+  push:
+    branches: ['feature/witch-throw-20261109']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+      CARGO_TERM_COLOR: never
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+      - uses: Swatinem/rust-cache@v2
+      - name: Compile all workspace targets first
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/witch-checks"
+          cargo check --release --all-targets --workspace 2>&1 | tee "$RUNNER_TEMP/witch-checks/check.log"
+      - name: Build WASM plugin examples
+        working-directory: plugins-examples
+        run: |
+          set -o pipefail
+          cargo build --release --target wasm32-wasip2 2>&1 | tee "$RUNNER_TEMP/witch-checks/wasm.log"
+      - name: Check selected witch and provenance tests
+        run: |
+          set -o pipefail
+          cargo test --release --workspace witch_ -- --nocapture 2>&1 | tee "$RUNNER_TEMP/witch-checks/witch-tests.log"
+          cargo test --release --workspace mob_splash -- --nocapture 2>&1 | tee "$RUNNER_TEMP/witch-checks/splash-tests.log"
+          cargo test --release --workspace mob_potion_harm -- --nocapture 2>&1 | tee "$RUNNER_TEMP/witch-checks/cause-tests.log"
+      - name: Strict workspace clippy
+        run: |
+          set -o pipefail
+          cargo clippy --release --all-targets --workspace -- -D warnings 2>&1 | tee "$RUNNER_TEMP/witch-checks/clippy.log"
+      - name: Release workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --workspace 2>&1 | tee "$RUNNER_TEMP/witch-checks/tests.log"
+      - name: Release tests without default features
+        run: |
+          set -o pipefail
+          cargo test --release --no-default-features 2>&1 | tee "$RUNNER_TEMP/witch-checks/no-default.log"
+      - name: Release runtime
+        run: |
+          set -o pipefail
+          cargo build --release 2>&1 | tee "$RUNNER_TEMP/witch-checks/build.log"
+      - name: Record source and results
+        if: always()
+        env:
+          CHECK_STATUS: ${{ job.status }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/witch-checks"
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'witch-checks'
+          paths=list(out.glob('*.log'))+[pathlib.Path('Cargo.lock'),pathlib.Path('plugins-examples/Cargo.lock'),pathlib.Path('target/release/mcsheriffanya')]
+          receipt={'head':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'status':os.environ['CHECK_STATUS'],'run':os.environ['GITHUB_RUN_ID'],'attempt':os.environ['GITHUB_RUN_ATTEMPT'],'sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths if p.is_file()}}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: witch-checks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/witch-checks/
+            target/release/mcsheriffanya
+          if-no-files-found: warn
+          retention-days: 7

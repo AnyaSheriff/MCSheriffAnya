@@ -219,6 +219,15 @@ impl Flying {
         }
     }
 
+    /// Заготовка для зелья моба: материал и состав задаются явно.
+    /// Решение о цели, времени и векторе остаётся у ИИ.
+    pub fn mob_splash_potion(entity_id: i32, dimension: Dimension, potion: &str, at: (f64, f64, f64), velocity: (f64, f64, f64), owner: i32) -> Option<Self> {
+        let item = crate::blocks::item_named("splash_potion")?;
+        let potion = crate::survival::potion_number(potion)?;
+        let stack = Stack::new(item, 1).with_extras(crate::stackdata::Data { potion: Some(potion), ..Default::default() });
+        Some(Self::potion(entity_id, dimension, Kind::Splash, stack, at, velocity, owner))
+    }
+
     /// Огненный шар дракона: из точки `at` со скоростью `velocity`, разгон —
     /// по `direction` (длина приводится к единице).
     pub fn fireball(entity_id: i32, dimension: Dimension, at: (f64, f64, f64), velocity: (f64, f64, f64), direction: (f64, f64, f64), owner: i32) -> Self {
@@ -641,14 +650,14 @@ enum Deed {
     Effect(i32, Effect),
     Heal(i32, f32),
     /// Игрок, урон, бросивший и (для брошенного зелья) номер снаряда с точкой удара.
-    Hurt([u8; 16], f32, Option<(i32, [u8; 16])>, Option<(i32, (f64, f64, f64))>),
+    Hurt([u8; 16], f32, Option<(i32, [u8; 16])>, Option<(i32, (f64, f64, f64), i32)>),
     Progress([u8; 16], crate::progress::Event),
 }
 
 /// Наложить эффекты `effects` с силой `scale` (срок × `duration_scale`,
 /// мгновенные × `scale`) на игрока или моба.
 #[allow(clippy::too_many_arguments)]
-fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uuid: [u8; 16], effects: &[Effect], scale: f64, duration_scale: f64, owner: Option<(i32, [u8; 16])>, origin: Option<(i32, (f64, f64, f64))>) {
+fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uuid: [u8; 16], effects: &[Effect], scale: f64, duration_scale: f64, owner: Option<(i32, [u8; 16])>, origin: Option<(i32, (f64, f64, f64), i32)>) {
     for effect in effects {
         if effect.kind.instant() {
             let amount = instant_amount(effect.kind, effect.amplifier, scale);
@@ -672,7 +681,7 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
                             // (чёрный ящик, itemaudit2-splash-mob-harming: тип 23, корова
                             // получает скорость (0; 0; 0,4)); облако — прежним уроном магии.
                             let (source, push) = match origin {
-                                Some((potion, at)) => {
+                                Some((potion, at, _cause)) => {
                                     let (dx, dz) = (mob.x - at.0, mob.z - at.2);
                                     let length = dx.hypot(dz);
                                     let dir = if length > 1.0e-4 { (dx / length, dz / length) } else { (0.0, 0.0) };
@@ -1173,8 +1182,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
                 let scale = splash_scale(distance, struck == Some(Struck::Player(*id)));
 
-                if crate::plugins::active() {potion_applications.push(PendingApplication {dimension,source:flying.uuid,cloud:false,target:Struck::Player(*id),uuid:*uuid,effects:effects.clone(),scale,owner:members.iter().find(|m|m.0==flying.owner).map(|m|(m.0,m.4)),origin:Some((flying.entity_id,at))});}
-                else {apply(&mut deeds, &mut [], Struck::Player(*id), *uuid, &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at)));}
+                if crate::plugins::active() {potion_applications.push(PendingApplication {dimension,source:flying.uuid,cloud:false,target:Struck::Player(*id),uuid:*uuid,effects:effects.clone(),scale,owner:members.iter().find(|m|m.0==flying.owner).map(|m|(m.0,m.4)),origin:Some((flying.entity_id,at,flying.owner))});}
+                else {apply(&mut deeds, &mut [], Struck::Player(*id), *uuid, &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at, flying.owner)));}
             }
 
             let targets: Vec<(i32, f64)> = items
@@ -1190,8 +1199,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 .collect();
 
             for (id, scale) in targets {
-                if crate::plugins::active() {if let Some(uuid)=items.mobs().iter().find(|m|m.entity_id==id).map(|m|m.uuid) {potion_applications.push(PendingApplication {dimension,source:flying.uuid,cloud:false,target:Struck::Mob(id),uuid,effects:effects.clone(),scale,owner:members.iter().find(|m|m.0==flying.owner).map(|m|(m.0,m.4)),origin:Some((flying.entity_id,at))});}}
-                else {apply(&mut deeds, items.mobs_mut(), Struck::Mob(id), [0; 16], &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at)));}
+                if crate::plugins::active() {if let Some(uuid)=items.mobs().iter().find(|m|m.entity_id==id).map(|m|m.uuid) {potion_applications.push(PendingApplication {dimension,source:flying.uuid,cloud:false,target:Struck::Mob(id),uuid,effects:effects.clone(),scale,owner:members.iter().find(|m|m.0==flying.owner).map(|m|(m.0,m.4)),origin:Some((flying.entity_id,at,flying.owner))});}}
+                else {apply(&mut deeds, items.mobs_mut(), Struck::Mob(id), [0; 16], &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at, flying.owner)));}
             }
         }
 
@@ -1597,6 +1606,35 @@ mod tests {
     use super::*;
 
     #[test]
+    fn mob_potion_harm_keeps_entity_cause_without_player_credit() {
+        let effect = crate::survival::potion_effects(crate::survival::potion_number("harming").unwrap());
+        let mut deeds = Vec::new();
+        let player_uuid = [7; 16];
+        let origin = Some((21, (1.0, 2.0, 3.0), 19));
+        apply(&mut deeds, &mut [], Struck::Player(1), player_uuid, &effect, 1.0, 1.0, None, origin);
+        assert!(matches!(deeds.as_slice(), [Deed::Hurt(uuid, _, None, Some((21, _, 19)))] if *uuid == player_uuid));
+        let shooter_uuid = [9; 16];
+        deeds.clear();
+        apply(&mut deeds, &mut [], Struck::Player(1), player_uuid, &effect, 1.0, 1.0, Some((4, shooter_uuid)), Some((21, (1.0, 2.0, 3.0), 4)));
+        assert!(matches!(deeds.as_slice(), [Deed::Hurt(_, _, Some((4, uuid)), Some((21, _, 4)))] if *uuid == shooter_uuid));
+    }
+
+    #[test]
+    fn mob_splash_keeps_owner_potion_contents_and_supplied_velocity() {
+        let from = (3.0, 4.0, 5.0);
+        let velocity = (-0.3, 0.2, 0.7);
+        for potion in ["poison", "harming"] {
+            let flying = Flying::mob_splash_potion(21, Dimension::Overworld, potion, from, velocity, 19).expect("зелье есть");
+            assert_eq!(flying.kind, Kind::Splash);
+            assert_eq!(flying.owner, 19);
+            assert_eq!(flying.start, (from, velocity));
+            assert_eq!(flying.stack.expect("предмет").extras().potion, crate::survival::potion_number(potion));
+            assert_eq!(flying.effects(), crate::survival::potion_effects(crate::survival::potion_number(potion).unwrap()));
+        }
+        assert!(Flying::mob_splash_potion(21, Dimension::Overworld, "unknown", from, velocity, 19).is_none());
+    }
+
+    #[test]
     fn a_potion_thrown_up_goes_straight_up_and_level_is_lifted_twenty_degrees() {
         let mut none = || 0.0;
         // Взгляд прямо вверх: поправка не наклоняет (splash-potion: 0; 0,501; 0).
@@ -1756,7 +1794,7 @@ mod resistance_itemaudit_tests {
 mod itemaudit4_tests;
 
 #[derive(Clone)]
-struct PendingApplication {dimension:Dimension,source:[u8;16],cloud:bool,target:Struck,uuid:[u8;16],effects:Vec<Effect>,scale:f64,owner:Option<(i32,[u8;16])>,origin:Option<(i32,(f64,f64,f64))>}
+struct PendingApplication {dimension:Dimension,source:[u8;16],cloud:bool,target:Struck,uuid:[u8;16],effects:Vec<Effect>,scale:f64,owner:Option<(i32,[u8;16])>,origin:Option<(i32,(f64,f64,f64),i32)>}
 
 /// Событие и его решение проходят без замков; эффекты применяются после проверки.
 pub fn deliver_pending(shared: &Shared, dimension: Dimension) {

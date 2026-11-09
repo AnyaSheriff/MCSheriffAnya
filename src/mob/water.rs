@@ -666,7 +666,7 @@ pub fn predator_targets(mobs:&[Mob],players:&[ai::Watcher],guardian:bool)->Vec<a
     targets.extend(mobs.iter().filter(|m| !m.is_dead() && !m.h.despawn
         && ((m.kind==Kind::Axolotl && m.water.playing_dead==0)
             || (guardian && matches!(m.kind,Kind::Squid | Kind::GlowSquid))))
-        .map(|m| ai::Watcher{id:m.entity_id,x:m.x,y:m.y,z:m.z,eye:m.eye(),holding:[None,None],
+        .map(|m| ai::Watcher{id:m.entity_id,x:m.x,y:m.y,z:m.z,eye:m.eye(),holding:[None,None], witch_health:m.vitals.health, witch_effects:m.vitals.witch_effects(),
             spectator:false,targetable:true,look:(m.yaw,m.pitch),pumpkin: false, sprinting: false, riding: false, gold_armor: false}));
     targets
 }
