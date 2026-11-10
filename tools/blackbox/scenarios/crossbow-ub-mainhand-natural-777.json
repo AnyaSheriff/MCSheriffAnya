@@ -1,0 +1,10354 @@
+{
+  "name": "crossbow-ub-mainhand-natural-777",
+  "about": "PRECAPTURE bounded original-first UBIII; no runtime proof yet",
+  "second": true,
+  "track_self": true,
+  "track_players": true,
+  "exclusive": true,
+  "blocks": [
+    {
+      "at": [
+        5,
+        0,
+        3
+      ],
+      "state": "minecraft:chest[facing=west,type=single,waterlogged=false]"
+    }
+  ],
+  "inventory": true,
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "gamemode survival $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "kill $(bot)",
+    "!wait 30",
+    "!stopfly",
+    "!wait 20",
+    "!hotbar2 0",
+    "!hotbar 0",
+    "tp $(bot) $(3.5,0,3.5) 0 -20",
+    "tp $(bot2) $(0.5,0,3.5) 90 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 0,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=0,enchantments={multishot:1}]"
+    },
+    {
+      "after": 10,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 16,
+      "close": true
+    },
+    {
+      "after": 24,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 54,
+      "release": true
+    },
+    {
+      "after": 62,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 68,
+      "close": true
+    },
+    {
+      "after": 76,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 90,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 96,
+      "close": true
+    },
+    {
+      "after": 104,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 104,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 105,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 106,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 106,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=0,enchantments={multishot:1}]"
+    },
+    {
+      "after": 114,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 120,
+      "close": true
+    },
+    {
+      "after": 128,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 158,
+      "release": true
+    },
+    {
+      "after": 166,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 172,
+      "close": true
+    },
+    {
+      "after": 180,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 194,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 200,
+      "close": true
+    },
+    {
+      "after": 208,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 208,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 209,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 210,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 210,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 218,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 224,
+      "close": true
+    },
+    {
+      "after": 232,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 262,
+      "release": true
+    },
+    {
+      "after": 270,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 276,
+      "close": true
+    },
+    {
+      "after": 284,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 298,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 304,
+      "close": true
+    },
+    {
+      "after": 312,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 312,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 313,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 314,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 314,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 322,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 328,
+      "close": true
+    },
+    {
+      "after": 336,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 366,
+      "release": true
+    },
+    {
+      "after": 374,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 380,
+      "close": true
+    },
+    {
+      "after": 388,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 402,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 408,
+      "close": true
+    },
+    {
+      "after": 416,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 416,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 417,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 418,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 418,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 426,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 432,
+      "close": true
+    },
+    {
+      "after": 440,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 470,
+      "release": true
+    },
+    {
+      "after": 478,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 484,
+      "close": true
+    },
+    {
+      "after": 492,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 506,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 512,
+      "close": true
+    },
+    {
+      "after": 520,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 520,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 521,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 522,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 522,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 530,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 536,
+      "close": true
+    },
+    {
+      "after": 544,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 574,
+      "release": true
+    },
+    {
+      "after": 582,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 588,
+      "close": true
+    },
+    {
+      "after": 596,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 610,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 616,
+      "close": true
+    },
+    {
+      "after": 624,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 624,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 625,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 626,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 626,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 634,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 640,
+      "close": true
+    },
+    {
+      "after": 648,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 678,
+      "release": true
+    },
+    {
+      "after": 686,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 692,
+      "close": true
+    },
+    {
+      "after": 700,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 714,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 720,
+      "close": true
+    },
+    {
+      "after": 728,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 728,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 729,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 730,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 730,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 738,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 744,
+      "close": true
+    },
+    {
+      "after": 752,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 782,
+      "release": true
+    },
+    {
+      "after": 790,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 796,
+      "close": true
+    },
+    {
+      "after": 804,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 818,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 824,
+      "close": true
+    },
+    {
+      "after": 832,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 832,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 833,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 834,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 834,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 842,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 848,
+      "close": true
+    },
+    {
+      "after": 856,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 886,
+      "release": true
+    },
+    {
+      "after": 894,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 900,
+      "close": true
+    },
+    {
+      "after": 908,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 922,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 928,
+      "close": true
+    },
+    {
+      "after": 936,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 936,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 937,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 938,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 938,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 946,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 952,
+      "close": true
+    },
+    {
+      "after": 960,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 990,
+      "release": true
+    },
+    {
+      "after": 998,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1004,
+      "close": true
+    },
+    {
+      "after": 1012,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1026,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1032,
+      "close": true
+    },
+    {
+      "after": 1040,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1040,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1041,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1042,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1042,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1050,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1056,
+      "close": true
+    },
+    {
+      "after": 1064,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1094,
+      "release": true
+    },
+    {
+      "after": 1102,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1108,
+      "close": true
+    },
+    {
+      "after": 1116,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1130,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1136,
+      "close": true
+    },
+    {
+      "after": 1144,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1144,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1145,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1146,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1146,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1154,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1160,
+      "close": true
+    },
+    {
+      "after": 1168,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1198,
+      "release": true
+    },
+    {
+      "after": 1206,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1212,
+      "close": true
+    },
+    {
+      "after": 1220,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1234,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1240,
+      "close": true
+    },
+    {
+      "after": 1248,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1248,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1249,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1250,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1250,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1258,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1264,
+      "close": true
+    },
+    {
+      "after": 1272,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1302,
+      "release": true
+    },
+    {
+      "after": 1310,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1316,
+      "close": true
+    },
+    {
+      "after": 1324,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1338,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1344,
+      "close": true
+    },
+    {
+      "after": 1352,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1352,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1353,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1354,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1354,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1362,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1368,
+      "close": true
+    },
+    {
+      "after": 1376,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1406,
+      "release": true
+    },
+    {
+      "after": 1414,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1420,
+      "close": true
+    },
+    {
+      "after": 1428,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1442,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1448,
+      "close": true
+    },
+    {
+      "after": 1456,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1456,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1457,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1458,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1458,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1466,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1472,
+      "close": true
+    },
+    {
+      "after": 1480,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1510,
+      "release": true
+    },
+    {
+      "after": 1518,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1524,
+      "close": true
+    },
+    {
+      "after": 1532,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1546,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1552,
+      "close": true
+    },
+    {
+      "after": 1560,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1560,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1561,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1562,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1562,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1570,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1576,
+      "close": true
+    },
+    {
+      "after": 1584,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1614,
+      "release": true
+    },
+    {
+      "after": 1622,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1628,
+      "close": true
+    },
+    {
+      "after": 1636,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1650,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1656,
+      "close": true
+    },
+    {
+      "after": 1664,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1664,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1665,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1666,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1666,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1674,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1680,
+      "close": true
+    },
+    {
+      "after": 1688,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1718,
+      "release": true
+    },
+    {
+      "after": 1726,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1732,
+      "close": true
+    },
+    {
+      "after": 1740,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1754,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1760,
+      "close": true
+    },
+    {
+      "after": 1768,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1768,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1769,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1770,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1770,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1778,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1784,
+      "close": true
+    },
+    {
+      "after": 1792,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1822,
+      "release": true
+    },
+    {
+      "after": 1830,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1836,
+      "close": true
+    },
+    {
+      "after": 1844,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1858,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1864,
+      "close": true
+    },
+    {
+      "after": 1872,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1872,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1873,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1874,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1874,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1882,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1888,
+      "close": true
+    },
+    {
+      "after": 1896,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1926,
+      "release": true
+    },
+    {
+      "after": 1934,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1940,
+      "close": true
+    },
+    {
+      "after": 1948,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 1962,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1968,
+      "close": true
+    },
+    {
+      "after": 1976,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 1976,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 1977,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 1978,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 1978,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 1986,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 1992,
+      "close": true
+    },
+    {
+      "after": 2000,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2030,
+      "release": true
+    },
+    {
+      "after": 2038,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2044,
+      "close": true
+    },
+    {
+      "after": 2052,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2066,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2072,
+      "close": true
+    },
+    {
+      "after": 2080,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 2080,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 2081,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2082,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2082,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 2090,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2096,
+      "close": true
+    },
+    {
+      "after": 2104,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2134,
+      "release": true
+    },
+    {
+      "after": 2142,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2148,
+      "close": true
+    },
+    {
+      "after": 2156,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2170,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2176,
+      "close": true
+    },
+    {
+      "after": 2184,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 2184,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 2185,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2186,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2186,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 2194,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2200,
+      "close": true
+    },
+    {
+      "after": 2208,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2238,
+      "release": true
+    },
+    {
+      "after": 2246,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2252,
+      "close": true
+    },
+    {
+      "after": 2260,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2274,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2280,
+      "close": true
+    },
+    {
+      "after": 2288,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 2288,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 2289,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2290,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2290,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 2298,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2304,
+      "close": true
+    },
+    {
+      "after": 2312,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2342,
+      "release": true
+    },
+    {
+      "after": 2350,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2356,
+      "close": true
+    },
+    {
+      "after": 2364,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2378,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2384,
+      "close": true
+    },
+    {
+      "after": 2392,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 2392,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 2393,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2394,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2394,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 2402,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2408,
+      "close": true
+    },
+    {
+      "after": 2416,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2446,
+      "release": true
+    },
+    {
+      "after": 2454,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2460,
+      "close": true
+    },
+    {
+      "after": 2468,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2482,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2488,
+      "close": true
+    },
+    {
+      "after": 2496,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 2496,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 2497,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2498,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2498,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 2506,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2512,
+      "close": true
+    },
+    {
+      "after": 2520,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2550,
+      "release": true
+    },
+    {
+      "after": 2558,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2564,
+      "close": true
+    },
+    {
+      "after": 2572,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2586,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2592,
+      "close": true
+    },
+    {
+      "after": 2600,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 2600,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 2601,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2602,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2602,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 2610,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2616,
+      "close": true
+    },
+    {
+      "after": 2624,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2654,
+      "release": true
+    },
+    {
+      "after": 2662,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2668,
+      "close": true
+    },
+    {
+      "after": 2676,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2690,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2696,
+      "close": true
+    },
+    {
+      "after": 2704,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 2704,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 2705,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2706,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2706,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 2714,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2720,
+      "close": true
+    },
+    {
+      "after": 2728,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2758,
+      "release": true
+    },
+    {
+      "after": 2766,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2772,
+      "close": true
+    },
+    {
+      "after": 2780,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2794,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2800,
+      "close": true
+    },
+    {
+      "after": 2808,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 2808,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 2809,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2810,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2810,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 2818,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2824,
+      "close": true
+    },
+    {
+      "after": 2832,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2862,
+      "release": true
+    },
+    {
+      "after": 2870,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2876,
+      "close": true
+    },
+    {
+      "after": 2884,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2898,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2904,
+      "close": true
+    },
+    {
+      "after": 2912,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 2912,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 2913,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 2914,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 2914,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 2922,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2928,
+      "close": true
+    },
+    {
+      "after": 2936,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 2966,
+      "release": true
+    },
+    {
+      "after": 2974,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 2980,
+      "close": true
+    },
+    {
+      "after": 2988,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3002,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3008,
+      "close": true
+    },
+    {
+      "after": 3016,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3016,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3017,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3018,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3018,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3026,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3032,
+      "close": true
+    },
+    {
+      "after": 3040,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3070,
+      "release": true
+    },
+    {
+      "after": 3078,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3084,
+      "close": true
+    },
+    {
+      "after": 3092,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3106,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3112,
+      "close": true
+    },
+    {
+      "after": 3120,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3120,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3121,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3122,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3122,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3130,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3136,
+      "close": true
+    },
+    {
+      "after": 3144,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3174,
+      "release": true
+    },
+    {
+      "after": 3182,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3188,
+      "close": true
+    },
+    {
+      "after": 3196,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3210,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3216,
+      "close": true
+    },
+    {
+      "after": 3224,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3224,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3225,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3226,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3226,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3234,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3240,
+      "close": true
+    },
+    {
+      "after": 3248,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3278,
+      "release": true
+    },
+    {
+      "after": 3286,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3292,
+      "close": true
+    },
+    {
+      "after": 3300,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3314,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3320,
+      "close": true
+    },
+    {
+      "after": 3328,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3328,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3329,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3330,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3330,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3338,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3344,
+      "close": true
+    },
+    {
+      "after": 3352,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3382,
+      "release": true
+    },
+    {
+      "after": 3390,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3396,
+      "close": true
+    },
+    {
+      "after": 3404,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3418,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3424,
+      "close": true
+    },
+    {
+      "after": 3432,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3432,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3433,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3434,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3434,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3442,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3448,
+      "close": true
+    },
+    {
+      "after": 3456,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3486,
+      "release": true
+    },
+    {
+      "after": 3494,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3500,
+      "close": true
+    },
+    {
+      "after": 3508,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3522,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3528,
+      "close": true
+    },
+    {
+      "after": 3536,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3536,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3537,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3538,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3538,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3546,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3552,
+      "close": true
+    },
+    {
+      "after": 3560,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3590,
+      "release": true
+    },
+    {
+      "after": 3598,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3604,
+      "close": true
+    },
+    {
+      "after": 3612,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3626,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3632,
+      "close": true
+    },
+    {
+      "after": 3640,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3640,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3641,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3642,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3642,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3650,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3656,
+      "close": true
+    },
+    {
+      "after": 3664,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3694,
+      "release": true
+    },
+    {
+      "after": 3702,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3708,
+      "close": true
+    },
+    {
+      "after": 3716,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3730,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3736,
+      "close": true
+    },
+    {
+      "after": 3744,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3744,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3745,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3746,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3746,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3754,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3760,
+      "close": true
+    },
+    {
+      "after": 3768,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3798,
+      "release": true
+    },
+    {
+      "after": 3806,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3812,
+      "close": true
+    },
+    {
+      "after": 3820,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3834,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3840,
+      "close": true
+    },
+    {
+      "after": 3848,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3848,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3849,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3850,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3850,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3858,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3864,
+      "close": true
+    },
+    {
+      "after": 3872,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3902,
+      "release": true
+    },
+    {
+      "after": 3910,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3916,
+      "close": true
+    },
+    {
+      "after": 3924,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 3938,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3944,
+      "close": true
+    },
+    {
+      "after": 3952,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 3952,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 3953,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 3954,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 3954,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 3962,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 3968,
+      "close": true
+    },
+    {
+      "after": 3976,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4006,
+      "release": true
+    },
+    {
+      "after": 4014,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4020,
+      "close": true
+    },
+    {
+      "after": 4028,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4042,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4048,
+      "close": true
+    },
+    {
+      "after": 4056,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4056,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4057,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4058,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4058,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 4066,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4072,
+      "close": true
+    },
+    {
+      "after": 4080,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4110,
+      "release": true
+    },
+    {
+      "after": 4118,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4124,
+      "close": true
+    },
+    {
+      "after": 4132,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4146,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4152,
+      "close": true
+    },
+    {
+      "after": 4160,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4160,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4161,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4162,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4162,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 4170,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4176,
+      "close": true
+    },
+    {
+      "after": 4184,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4214,
+      "release": true
+    },
+    {
+      "after": 4222,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4228,
+      "close": true
+    },
+    {
+      "after": 4236,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4250,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4256,
+      "close": true
+    },
+    {
+      "after": 4264,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4264,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4265,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4266,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4266,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 4274,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4280,
+      "close": true
+    },
+    {
+      "after": 4288,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4318,
+      "release": true
+    },
+    {
+      "after": 4326,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4332,
+      "close": true
+    },
+    {
+      "after": 4340,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4354,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4360,
+      "close": true
+    },
+    {
+      "after": 4368,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4368,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4369,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4370,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4370,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 4378,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4384,
+      "close": true
+    },
+    {
+      "after": 4392,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4422,
+      "release": true
+    },
+    {
+      "after": 4430,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4436,
+      "close": true
+    },
+    {
+      "after": 4444,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4458,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4464,
+      "close": true
+    },
+    {
+      "after": 4472,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4472,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4473,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4474,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4474,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 4482,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4488,
+      "close": true
+    },
+    {
+      "after": 4496,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4526,
+      "release": true
+    },
+    {
+      "after": 4534,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4540,
+      "close": true
+    },
+    {
+      "after": 4548,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4562,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4568,
+      "close": true
+    },
+    {
+      "after": 4576,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4576,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4577,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4578,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4578,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 4586,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4592,
+      "close": true
+    },
+    {
+      "after": 4600,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4630,
+      "release": true
+    },
+    {
+      "after": 4638,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4644,
+      "close": true
+    },
+    {
+      "after": 4652,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4666,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4672,
+      "close": true
+    },
+    {
+      "after": 4680,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4680,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4681,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4682,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4682,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 4690,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4696,
+      "close": true
+    },
+    {
+      "after": 4704,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4734,
+      "release": true
+    },
+    {
+      "after": 4742,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4748,
+      "close": true
+    },
+    {
+      "after": 4756,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4770,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4776,
+      "close": true
+    },
+    {
+      "after": 4784,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4784,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4785,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4786,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4786,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 4794,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4800,
+      "close": true
+    },
+    {
+      "after": 4808,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4838,
+      "release": true
+    },
+    {
+      "after": 4846,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4852,
+      "close": true
+    },
+    {
+      "after": 4860,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4874,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4880,
+      "close": true
+    },
+    {
+      "after": 4888,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4888,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4889,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4890,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4890,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 4898,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4904,
+      "close": true
+    },
+    {
+      "after": 4912,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4942,
+      "release": true
+    },
+    {
+      "after": 4950,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4956,
+      "close": true
+    },
+    {
+      "after": 4964,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 4978,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 4984,
+      "close": true
+    },
+    {
+      "after": 4992,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 4992,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 4993,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 4994,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 4994,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5002,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5008,
+      "close": true
+    },
+    {
+      "after": 5016,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5046,
+      "release": true
+    },
+    {
+      "after": 5054,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5060,
+      "close": true
+    },
+    {
+      "after": 5068,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5082,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5088,
+      "close": true
+    },
+    {
+      "after": 5096,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 5096,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 5097,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 5098,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 5098,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5106,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5112,
+      "close": true
+    },
+    {
+      "after": 5120,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5150,
+      "release": true
+    },
+    {
+      "after": 5158,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5164,
+      "close": true
+    },
+    {
+      "after": 5172,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5186,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5192,
+      "close": true
+    },
+    {
+      "after": 5200,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 5200,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 5201,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 5202,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 5202,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5210,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5216,
+      "close": true
+    },
+    {
+      "after": 5224,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5254,
+      "release": true
+    },
+    {
+      "after": 5262,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5268,
+      "close": true
+    },
+    {
+      "after": 5276,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5290,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5296,
+      "close": true
+    },
+    {
+      "after": 5304,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 5304,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 5305,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 5306,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 5306,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5314,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5320,
+      "close": true
+    },
+    {
+      "after": 5328,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5358,
+      "release": true
+    },
+    {
+      "after": 5366,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5372,
+      "close": true
+    },
+    {
+      "after": 5380,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5394,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5400,
+      "close": true
+    },
+    {
+      "after": 5408,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 5408,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 5409,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 5410,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 5410,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5418,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5424,
+      "close": true
+    },
+    {
+      "after": 5432,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5462,
+      "release": true
+    },
+    {
+      "after": 5470,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5476,
+      "close": true
+    },
+    {
+      "after": 5484,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5498,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5504,
+      "close": true
+    },
+    {
+      "after": 5512,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 5512,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 5513,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 5514,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 5514,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5522,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5528,
+      "close": true
+    },
+    {
+      "after": 5536,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5566,
+      "release": true
+    },
+    {
+      "after": 5574,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5580,
+      "close": true
+    },
+    {
+      "after": 5588,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5602,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5608,
+      "close": true
+    },
+    {
+      "after": 5616,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 5616,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 5617,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 5618,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 5618,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5626,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5632,
+      "close": true
+    },
+    {
+      "after": 5640,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5670,
+      "release": true
+    },
+    {
+      "after": 5678,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5684,
+      "close": true
+    },
+    {
+      "after": 5692,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5706,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5712,
+      "close": true
+    },
+    {
+      "after": 5720,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 5720,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 5721,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 5722,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 5722,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5730,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5736,
+      "close": true
+    },
+    {
+      "after": 5744,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5774,
+      "release": true
+    },
+    {
+      "after": 5782,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5788,
+      "close": true
+    },
+    {
+      "after": 5796,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5810,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5816,
+      "close": true
+    },
+    {
+      "after": 5824,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 5824,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 5825,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 5826,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 5826,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5834,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5840,
+      "close": true
+    },
+    {
+      "after": 5848,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5878,
+      "release": true
+    },
+    {
+      "after": 5886,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5892,
+      "close": true
+    },
+    {
+      "after": 5900,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5914,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5920,
+      "close": true
+    },
+    {
+      "after": 5928,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 5928,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 5929,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 5930,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 5930,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 5938,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5944,
+      "close": true
+    },
+    {
+      "after": 5952,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 5982,
+      "release": true
+    },
+    {
+      "after": 5990,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 5996,
+      "close": true
+    },
+    {
+      "after": 6004,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6018,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6024,
+      "close": true
+    },
+    {
+      "after": 6032,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6032,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6033,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6034,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6034,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6042,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6048,
+      "close": true
+    },
+    {
+      "after": 6056,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6086,
+      "release": true
+    },
+    {
+      "after": 6094,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6100,
+      "close": true
+    },
+    {
+      "after": 6108,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6122,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6128,
+      "close": true
+    },
+    {
+      "after": 6136,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6136,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6137,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6138,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6138,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6146,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6152,
+      "close": true
+    },
+    {
+      "after": 6160,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6190,
+      "release": true
+    },
+    {
+      "after": 6198,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6204,
+      "close": true
+    },
+    {
+      "after": 6212,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6226,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6232,
+      "close": true
+    },
+    {
+      "after": 6240,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6240,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6241,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6242,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6242,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6250,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6256,
+      "close": true
+    },
+    {
+      "after": 6264,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6294,
+      "release": true
+    },
+    {
+      "after": 6302,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6308,
+      "close": true
+    },
+    {
+      "after": 6316,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6330,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6336,
+      "close": true
+    },
+    {
+      "after": 6344,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6344,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6345,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6346,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6346,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6354,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6360,
+      "close": true
+    },
+    {
+      "after": 6368,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6398,
+      "release": true
+    },
+    {
+      "after": 6406,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6412,
+      "close": true
+    },
+    {
+      "after": 6420,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6434,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6440,
+      "close": true
+    },
+    {
+      "after": 6448,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6448,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6449,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6450,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6450,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6458,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6464,
+      "close": true
+    },
+    {
+      "after": 6472,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6502,
+      "release": true
+    },
+    {
+      "after": 6510,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6516,
+      "close": true
+    },
+    {
+      "after": 6524,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6538,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6544,
+      "close": true
+    },
+    {
+      "after": 6552,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6552,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6553,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6554,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6554,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6562,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6568,
+      "close": true
+    },
+    {
+      "after": 6576,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6606,
+      "release": true
+    },
+    {
+      "after": 6614,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6620,
+      "close": true
+    },
+    {
+      "after": 6628,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6642,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6648,
+      "close": true
+    },
+    {
+      "after": 6656,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6656,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6657,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6658,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6658,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6666,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6672,
+      "close": true
+    },
+    {
+      "after": 6680,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6710,
+      "release": true
+    },
+    {
+      "after": 6718,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6724,
+      "close": true
+    },
+    {
+      "after": 6732,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6746,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6752,
+      "close": true
+    },
+    {
+      "after": 6760,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6760,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6761,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6762,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6762,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6770,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6776,
+      "close": true
+    },
+    {
+      "after": 6784,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6814,
+      "release": true
+    },
+    {
+      "after": 6822,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6828,
+      "close": true
+    },
+    {
+      "after": 6836,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6850,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6856,
+      "close": true
+    },
+    {
+      "after": 6864,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6864,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6865,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6866,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6866,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6874,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6880,
+      "close": true
+    },
+    {
+      "after": 6888,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6918,
+      "release": true
+    },
+    {
+      "after": 6926,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6932,
+      "close": true
+    },
+    {
+      "after": 6940,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 6954,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6960,
+      "close": true
+    },
+    {
+      "after": 6968,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 6968,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 6969,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 6970,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 6970,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 6978,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 6984,
+      "close": true
+    },
+    {
+      "after": 6992,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7022,
+      "release": true
+    },
+    {
+      "after": 7030,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7036,
+      "close": true
+    },
+    {
+      "after": 7044,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7058,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7064,
+      "close": true
+    },
+    {
+      "after": 7072,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 7072,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 7073,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 7074,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 7074,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 7082,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7088,
+      "close": true
+    },
+    {
+      "after": 7096,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7126,
+      "release": true
+    },
+    {
+      "after": 7134,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7140,
+      "close": true
+    },
+    {
+      "after": 7148,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7162,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7168,
+      "close": true
+    },
+    {
+      "after": 7176,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 7176,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 7177,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 7178,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 7178,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 7186,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7192,
+      "close": true
+    },
+    {
+      "after": 7200,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7230,
+      "release": true
+    },
+    {
+      "after": 7238,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7244,
+      "close": true
+    },
+    {
+      "after": 7252,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7266,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7272,
+      "close": true
+    },
+    {
+      "after": 7280,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 7280,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 7281,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 7282,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 7282,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 7290,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7296,
+      "close": true
+    },
+    {
+      "after": 7304,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7334,
+      "release": true
+    },
+    {
+      "after": 7342,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7348,
+      "close": true
+    },
+    {
+      "after": 7356,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7370,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7376,
+      "close": true
+    },
+    {
+      "after": 7384,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 7384,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 7385,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 7386,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 7386,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 7394,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7400,
+      "close": true
+    },
+    {
+      "after": 7408,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7438,
+      "release": true
+    },
+    {
+      "after": 7446,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7452,
+      "close": true
+    },
+    {
+      "after": 7460,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7474,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7480,
+      "close": true
+    },
+    {
+      "after": 7488,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 7488,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 7489,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 7490,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 7490,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 7498,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7504,
+      "close": true
+    },
+    {
+      "after": 7512,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7542,
+      "release": true
+    },
+    {
+      "after": 7550,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7556,
+      "close": true
+    },
+    {
+      "after": 7564,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7578,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7584,
+      "close": true
+    },
+    {
+      "after": 7592,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 7592,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 7593,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 7594,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 7594,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 7602,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7608,
+      "close": true
+    },
+    {
+      "after": 7616,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7646,
+      "release": true
+    },
+    {
+      "after": 7654,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7660,
+      "close": true
+    },
+    {
+      "after": 7668,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7682,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7688,
+      "close": true
+    },
+    {
+      "after": 7696,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 7696,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 7697,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 7698,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 7698,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 7706,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7712,
+      "close": true
+    },
+    {
+      "after": 7720,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7750,
+      "release": true
+    },
+    {
+      "after": 7758,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7764,
+      "close": true
+    },
+    {
+      "after": 7772,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7786,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7792,
+      "close": true
+    },
+    {
+      "after": 7800,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 7800,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 7801,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 7802,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 7802,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 7810,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7816,
+      "close": true
+    },
+    {
+      "after": 7824,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7854,
+      "release": true
+    },
+    {
+      "after": 7862,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7868,
+      "close": true
+    },
+    {
+      "after": 7876,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7890,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7896,
+      "close": true
+    },
+    {
+      "after": 7904,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 7904,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 7905,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 7906,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 7906,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 7914,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7920,
+      "close": true
+    },
+    {
+      "after": 7928,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7958,
+      "release": true
+    },
+    {
+      "after": 7966,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 7972,
+      "close": true
+    },
+    {
+      "after": 7980,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 7994,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8000,
+      "close": true
+    },
+    {
+      "after": 8008,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8008,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8009,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8010,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8010,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8018,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8024,
+      "close": true
+    },
+    {
+      "after": 8032,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8062,
+      "release": true
+    },
+    {
+      "after": 8070,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8076,
+      "close": true
+    },
+    {
+      "after": 8084,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8098,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8104,
+      "close": true
+    },
+    {
+      "after": 8112,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8112,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8113,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8114,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8114,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8122,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8128,
+      "close": true
+    },
+    {
+      "after": 8136,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8166,
+      "release": true
+    },
+    {
+      "after": 8174,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8180,
+      "close": true
+    },
+    {
+      "after": 8188,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8202,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8208,
+      "close": true
+    },
+    {
+      "after": 8216,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8216,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8217,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8218,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8218,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8226,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8232,
+      "close": true
+    },
+    {
+      "after": 8240,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8270,
+      "release": true
+    },
+    {
+      "after": 8278,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8284,
+      "close": true
+    },
+    {
+      "after": 8292,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8306,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8312,
+      "close": true
+    },
+    {
+      "after": 8320,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8320,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8321,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8322,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8322,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8330,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8336,
+      "close": true
+    },
+    {
+      "after": 8344,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8374,
+      "release": true
+    },
+    {
+      "after": 8382,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8388,
+      "close": true
+    },
+    {
+      "after": 8396,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8410,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8416,
+      "close": true
+    },
+    {
+      "after": 8424,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8424,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8425,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8426,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8426,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8434,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8440,
+      "close": true
+    },
+    {
+      "after": 8448,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8478,
+      "release": true
+    },
+    {
+      "after": 8486,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8492,
+      "close": true
+    },
+    {
+      "after": 8500,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8514,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8520,
+      "close": true
+    },
+    {
+      "after": 8528,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8528,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8529,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8530,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8530,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8538,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8544,
+      "close": true
+    },
+    {
+      "after": 8552,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8582,
+      "release": true
+    },
+    {
+      "after": 8590,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8596,
+      "close": true
+    },
+    {
+      "after": 8604,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8618,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8624,
+      "close": true
+    },
+    {
+      "after": 8632,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8632,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8633,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8634,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8634,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8642,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8648,
+      "close": true
+    },
+    {
+      "after": 8656,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8686,
+      "release": true
+    },
+    {
+      "after": 8694,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8700,
+      "close": true
+    },
+    {
+      "after": 8708,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8722,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8728,
+      "close": true
+    },
+    {
+      "after": 8736,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8736,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8737,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8738,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8738,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8746,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8752,
+      "close": true
+    },
+    {
+      "after": 8760,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8790,
+      "release": true
+    },
+    {
+      "after": 8798,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8804,
+      "close": true
+    },
+    {
+      "after": 8812,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8826,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8832,
+      "close": true
+    },
+    {
+      "after": 8840,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8840,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8841,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8842,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8842,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8850,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8856,
+      "close": true
+    },
+    {
+      "after": 8864,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8894,
+      "release": true
+    },
+    {
+      "after": 8902,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8908,
+      "close": true
+    },
+    {
+      "after": 8916,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8930,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8936,
+      "close": true
+    },
+    {
+      "after": 8944,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 8944,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 8945,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 8946,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 8946,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 8954,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8960,
+      "close": true
+    },
+    {
+      "after": 8968,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 8998,
+      "release": true
+    },
+    {
+      "after": 9006,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9012,
+      "close": true
+    },
+    {
+      "after": 9020,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9034,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9040,
+      "close": true
+    },
+    {
+      "after": 9048,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9048,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9049,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9050,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9050,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9058,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9064,
+      "close": true
+    },
+    {
+      "after": 9072,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9102,
+      "release": true
+    },
+    {
+      "after": 9110,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9116,
+      "close": true
+    },
+    {
+      "after": 9124,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9138,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9144,
+      "close": true
+    },
+    {
+      "after": 9152,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9152,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9153,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9154,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9154,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9162,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9168,
+      "close": true
+    },
+    {
+      "after": 9176,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9206,
+      "release": true
+    },
+    {
+      "after": 9214,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9220,
+      "close": true
+    },
+    {
+      "after": 9228,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9242,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9248,
+      "close": true
+    },
+    {
+      "after": 9256,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9256,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9257,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9258,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9258,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9266,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9272,
+      "close": true
+    },
+    {
+      "after": 9280,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9310,
+      "release": true
+    },
+    {
+      "after": 9318,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9324,
+      "close": true
+    },
+    {
+      "after": 9332,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9346,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9352,
+      "close": true
+    },
+    {
+      "after": 9360,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9360,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9361,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9362,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9362,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9370,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9376,
+      "close": true
+    },
+    {
+      "after": 9384,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9414,
+      "release": true
+    },
+    {
+      "after": 9422,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9428,
+      "close": true
+    },
+    {
+      "after": 9436,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9450,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9456,
+      "close": true
+    },
+    {
+      "after": 9464,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9464,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9465,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9466,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9466,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9474,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9480,
+      "close": true
+    },
+    {
+      "after": 9488,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9518,
+      "release": true
+    },
+    {
+      "after": 9526,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9532,
+      "close": true
+    },
+    {
+      "after": 9540,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9554,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9560,
+      "close": true
+    },
+    {
+      "after": 9568,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9568,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9569,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9570,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9570,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9578,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9584,
+      "close": true
+    },
+    {
+      "after": 9592,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9622,
+      "release": true
+    },
+    {
+      "after": 9630,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9636,
+      "close": true
+    },
+    {
+      "after": 9644,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9658,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9664,
+      "close": true
+    },
+    {
+      "after": 9672,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9672,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9673,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9674,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9674,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9682,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9688,
+      "close": true
+    },
+    {
+      "after": 9696,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9726,
+      "release": true
+    },
+    {
+      "after": 9734,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9740,
+      "close": true
+    },
+    {
+      "after": 9748,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9762,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9768,
+      "close": true
+    },
+    {
+      "after": 9776,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9776,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9777,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9778,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9778,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9786,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9792,
+      "close": true
+    },
+    {
+      "after": 9800,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9830,
+      "release": true
+    },
+    {
+      "after": 9838,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9844,
+      "close": true
+    },
+    {
+      "after": 9852,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9866,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9872,
+      "close": true
+    },
+    {
+      "after": 9880,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9880,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9881,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9882,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9882,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9890,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9896,
+      "close": true
+    },
+    {
+      "after": 9904,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9934,
+      "release": true
+    },
+    {
+      "after": 9942,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9948,
+      "close": true
+    },
+    {
+      "after": 9956,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 9970,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 9976,
+      "close": true
+    },
+    {
+      "after": 9984,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 9984,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 9985,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 9986,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 9986,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 9994,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10000,
+      "close": true
+    },
+    {
+      "after": 10008,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10038,
+      "release": true
+    },
+    {
+      "after": 10046,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10052,
+      "close": true
+    },
+    {
+      "after": 10060,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10074,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10080,
+      "close": true
+    },
+    {
+      "after": 10088,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 10088,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 10089,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 10090,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 10090,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 10098,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10104,
+      "close": true
+    },
+    {
+      "after": 10112,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10142,
+      "release": true
+    },
+    {
+      "after": 10150,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10156,
+      "close": true
+    },
+    {
+      "after": 10164,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10178,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10184,
+      "close": true
+    },
+    {
+      "after": 10192,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 10192,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 10193,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 10194,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 10194,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 10202,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10208,
+      "close": true
+    },
+    {
+      "after": 10216,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10246,
+      "release": true
+    },
+    {
+      "after": 10254,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10260,
+      "close": true
+    },
+    {
+      "after": 10268,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10282,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10288,
+      "close": true
+    },
+    {
+      "after": 10296,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 10296,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 10297,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 10298,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 10298,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 10306,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10312,
+      "close": true
+    },
+    {
+      "after": 10320,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10350,
+      "release": true
+    },
+    {
+      "after": 10358,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10364,
+      "close": true
+    },
+    {
+      "after": 10372,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10386,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10392,
+      "close": true
+    },
+    {
+      "after": 10400,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 10400,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 10401,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 10402,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 10402,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 10410,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10416,
+      "close": true
+    },
+    {
+      "after": 10424,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10454,
+      "release": true
+    },
+    {
+      "after": 10462,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10468,
+      "close": true
+    },
+    {
+      "after": 10476,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10490,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10496,
+      "close": true
+    },
+    {
+      "after": 10504,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 10504,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 10505,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 10506,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 10506,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 10514,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10520,
+      "close": true
+    },
+    {
+      "after": 10528,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10558,
+      "release": true
+    },
+    {
+      "after": 10566,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10572,
+      "close": true
+    },
+    {
+      "after": 10580,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10594,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10600,
+      "close": true
+    },
+    {
+      "after": 10608,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 10608,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 10609,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 10610,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 10610,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 10618,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10624,
+      "close": true
+    },
+    {
+      "after": 10632,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10662,
+      "release": true
+    },
+    {
+      "after": 10670,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10676,
+      "close": true
+    },
+    {
+      "after": 10684,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10698,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10704,
+      "close": true
+    },
+    {
+      "after": 10712,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 10712,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 10713,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 10714,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 10714,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 10722,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10728,
+      "close": true
+    },
+    {
+      "after": 10736,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10766,
+      "release": true
+    },
+    {
+      "after": 10774,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10780,
+      "close": true
+    },
+    {
+      "after": 10788,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10802,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10808,
+      "close": true
+    },
+    {
+      "after": 10816,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 10816,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 10817,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 10818,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 10818,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 10826,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10832,
+      "close": true
+    },
+    {
+      "after": 10840,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10870,
+      "release": true
+    },
+    {
+      "after": 10878,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10884,
+      "close": true
+    },
+    {
+      "after": 10892,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10906,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10912,
+      "close": true
+    },
+    {
+      "after": 10920,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 10920,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 10921,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 10922,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 10922,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 10930,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10936,
+      "close": true
+    },
+    {
+      "after": 10944,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 10974,
+      "release": true
+    },
+    {
+      "after": 10982,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10988,
+      "close": true
+    },
+    {
+      "after": 10996,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11010,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11016,
+      "close": true
+    },
+    {
+      "after": 11024,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11024,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11025,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11026,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11026,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11034,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11040,
+      "close": true
+    },
+    {
+      "after": 11048,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11078,
+      "release": true
+    },
+    {
+      "after": 11086,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11092,
+      "close": true
+    },
+    {
+      "after": 11100,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11114,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11120,
+      "close": true
+    },
+    {
+      "after": 11128,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11128,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11129,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11130,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11130,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11138,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11144,
+      "close": true
+    },
+    {
+      "after": 11152,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11182,
+      "release": true
+    },
+    {
+      "after": 11190,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11196,
+      "close": true
+    },
+    {
+      "after": 11204,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11218,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11224,
+      "close": true
+    },
+    {
+      "after": 11232,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11232,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11233,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11234,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11234,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11242,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11248,
+      "close": true
+    },
+    {
+      "after": 11256,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11286,
+      "release": true
+    },
+    {
+      "after": 11294,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11300,
+      "close": true
+    },
+    {
+      "after": 11308,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11322,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11328,
+      "close": true
+    },
+    {
+      "after": 11336,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11336,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11337,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11338,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11338,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11346,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11352,
+      "close": true
+    },
+    {
+      "after": 11360,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11390,
+      "release": true
+    },
+    {
+      "after": 11398,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11404,
+      "close": true
+    },
+    {
+      "after": 11412,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11426,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11432,
+      "close": true
+    },
+    {
+      "after": 11440,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11440,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11441,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11442,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11442,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11450,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11456,
+      "close": true
+    },
+    {
+      "after": 11464,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11494,
+      "release": true
+    },
+    {
+      "after": 11502,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11508,
+      "close": true
+    },
+    {
+      "after": 11516,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11530,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11536,
+      "close": true
+    },
+    {
+      "after": 11544,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11544,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11545,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11546,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11546,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11554,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11560,
+      "close": true
+    },
+    {
+      "after": 11568,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11598,
+      "release": true
+    },
+    {
+      "after": 11606,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11612,
+      "close": true
+    },
+    {
+      "after": 11620,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11634,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11640,
+      "close": true
+    },
+    {
+      "after": 11648,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11648,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11649,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11650,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11650,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11658,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11664,
+      "close": true
+    },
+    {
+      "after": 11672,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11702,
+      "release": true
+    },
+    {
+      "after": 11710,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11716,
+      "close": true
+    },
+    {
+      "after": 11724,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11738,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11744,
+      "close": true
+    },
+    {
+      "after": 11752,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11752,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11753,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11754,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11754,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11762,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11768,
+      "close": true
+    },
+    {
+      "after": 11776,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11806,
+      "release": true
+    },
+    {
+      "after": 11814,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11820,
+      "close": true
+    },
+    {
+      "after": 11828,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11842,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11848,
+      "close": true
+    },
+    {
+      "after": 11856,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11856,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11857,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11858,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11858,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11866,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11872,
+      "close": true
+    },
+    {
+      "after": 11880,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11910,
+      "release": true
+    },
+    {
+      "after": 11918,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11924,
+      "close": true
+    },
+    {
+      "after": 11932,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 11946,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11952,
+      "close": true
+    },
+    {
+      "after": 11960,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 11960,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 11961,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 11962,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 11962,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 11970,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 11976,
+      "close": true
+    },
+    {
+      "after": 11984,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12014,
+      "release": true
+    },
+    {
+      "after": 12022,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12028,
+      "close": true
+    },
+    {
+      "after": 12036,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12050,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12056,
+      "close": true
+    },
+    {
+      "after": 12064,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 12064,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 12065,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 12066,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 12066,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 12074,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12080,
+      "close": true
+    },
+    {
+      "after": 12088,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12118,
+      "release": true
+    },
+    {
+      "after": 12126,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12132,
+      "close": true
+    },
+    {
+      "after": 12140,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12154,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12160,
+      "close": true
+    },
+    {
+      "after": 12168,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 12168,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 12169,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 12170,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 12170,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 12178,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12184,
+      "close": true
+    },
+    {
+      "after": 12192,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12222,
+      "release": true
+    },
+    {
+      "after": 12230,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12236,
+      "close": true
+    },
+    {
+      "after": 12244,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12258,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12264,
+      "close": true
+    },
+    {
+      "after": 12272,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 12272,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 12273,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 12274,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 12274,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 12282,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12288,
+      "close": true
+    },
+    {
+      "after": 12296,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12326,
+      "release": true
+    },
+    {
+      "after": 12334,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12340,
+      "close": true
+    },
+    {
+      "after": 12348,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12362,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12368,
+      "close": true
+    },
+    {
+      "after": 12376,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 12376,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 12377,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 12378,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 12378,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 12386,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12392,
+      "close": true
+    },
+    {
+      "after": 12400,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12430,
+      "release": true
+    },
+    {
+      "after": 12438,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12444,
+      "close": true
+    },
+    {
+      "after": 12452,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12466,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12472,
+      "close": true
+    },
+    {
+      "after": 12480,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 12480,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 12481,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 12482,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 12482,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 12490,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12496,
+      "close": true
+    },
+    {
+      "after": 12504,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12534,
+      "release": true
+    },
+    {
+      "after": 12542,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12548,
+      "close": true
+    },
+    {
+      "after": 12556,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12570,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12576,
+      "close": true
+    },
+    {
+      "after": 12584,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 12584,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 12585,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 12586,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 12586,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 12594,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12600,
+      "close": true
+    },
+    {
+      "after": 12608,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12638,
+      "release": true
+    },
+    {
+      "after": 12646,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12652,
+      "close": true
+    },
+    {
+      "after": 12660,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12674,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12680,
+      "close": true
+    },
+    {
+      "after": 12688,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 12688,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 12689,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 12690,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 12690,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 12698,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12704,
+      "close": true
+    },
+    {
+      "after": 12712,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12742,
+      "release": true
+    },
+    {
+      "after": 12750,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12756,
+      "close": true
+    },
+    {
+      "after": 12764,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12778,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12784,
+      "close": true
+    },
+    {
+      "after": 12792,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 12792,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 12793,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 12794,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 12794,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 12802,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12808,
+      "close": true
+    },
+    {
+      "after": 12816,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12846,
+      "release": true
+    },
+    {
+      "after": 12854,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12860,
+      "close": true
+    },
+    {
+      "after": 12868,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12882,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12888,
+      "close": true
+    },
+    {
+      "after": 12896,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 12896,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 12897,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 12898,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 12898,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 12906,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12912,
+      "close": true
+    },
+    {
+      "after": 12920,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12950,
+      "release": true
+    },
+    {
+      "after": 12958,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12964,
+      "close": true
+    },
+    {
+      "after": 12972,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 12986,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 12992,
+      "close": true
+    },
+    {
+      "after": 13000,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 13000,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 13001,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 13002,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 13002,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 13010,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13016,
+      "close": true
+    },
+    {
+      "after": 13024,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13054,
+      "release": true
+    },
+    {
+      "after": 13062,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13068,
+      "close": true
+    },
+    {
+      "after": 13076,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13090,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13096,
+      "close": true
+    },
+    {
+      "after": 13104,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 13104,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 13105,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 13106,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 13106,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 13114,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13120,
+      "close": true
+    },
+    {
+      "after": 13128,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13158,
+      "release": true
+    },
+    {
+      "after": 13166,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13172,
+      "close": true
+    },
+    {
+      "after": 13180,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13194,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13200,
+      "close": true
+    },
+    {
+      "after": 13208,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 13208,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 13209,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 13210,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 13210,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 13218,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13224,
+      "close": true
+    },
+    {
+      "after": 13232,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13262,
+      "release": true
+    },
+    {
+      "after": 13270,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13276,
+      "close": true
+    },
+    {
+      "after": 13284,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13298,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13304,
+      "close": true
+    },
+    {
+      "after": 13312,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 13312,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 13313,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 13314,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 13314,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 13322,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13328,
+      "close": true
+    },
+    {
+      "after": 13336,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13366,
+      "release": true
+    },
+    {
+      "after": 13374,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13380,
+      "close": true
+    },
+    {
+      "after": 13388,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13402,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13408,
+      "close": true
+    },
+    {
+      "after": 13416,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 13416,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 13417,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 13418,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 13418,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=464,enchantments={unbreaking:3,multishot:1}]"
+    },
+    {
+      "after": 13426,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13432,
+      "close": true
+    },
+    {
+      "after": 13440,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13470,
+      "release": true
+    },
+    {
+      "after": 13478,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13484,
+      "close": true
+    },
+    {
+      "after": 13492,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13506,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13512,
+      "close": true
+    },
+    {
+      "after": 13520,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 13520,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 13521,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 13522,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 13522,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=0,enchantments={multishot:1}]"
+    },
+    {
+      "after": 13530,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13536,
+      "close": true
+    },
+    {
+      "after": 13544,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13574,
+      "release": true
+    },
+    {
+      "after": 13582,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13588,
+      "close": true
+    },
+    {
+      "after": 13596,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13610,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13616,
+      "close": true
+    },
+    {
+      "after": 13624,
+      "cmd": "kill @e[type=arrow]"
+    },
+    {
+      "after": 13624,
+      "cmd": "clear $(bot)"
+    },
+    {
+      "after": 13625,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 0 -20"
+    },
+    {
+      "after": 13626,
+      "cmd": "item replace entity $(bot) inventory.0 with minecraft:arrow 3"
+    },
+    {
+      "after": 13626,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:crossbow[damage=0,enchantments={multishot:1}]"
+    },
+    {
+      "after": 13634,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13640,
+      "close": true
+    },
+    {
+      "after": 13648,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13678,
+      "release": true
+    },
+    {
+      "after": 13686,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13692,
+      "close": true
+    },
+    {
+      "after": 13700,
+      "look": [
+        3.141592653589793,
+        0.3490658503988659
+      ],
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 13714,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 13720,
+      "close": true
+    }
+  ],
+  "record_ticks": 13728,
+  "cleanup": [
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=arrow,distance=..48]",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "gamemode creative $(bot)",
+    "gamemode creative $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "tp $(bot2) $(6.5,0,6.5)",
+    "!wait 4",
+    "!startfly"
+  ],
+  "item_components": true,
+  "random": [],
+  "track_second": true,
+  "track_second_velocity": true,
+  "native_phase": "all",
+  "track_projectiles": true
+}

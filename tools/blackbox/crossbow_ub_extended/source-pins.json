@@ -1,0 +1,18 @@
+{
+  "source": "e3e90d74f60f0750459ebe964c709195f92b49ef",
+  "files": {
+    "tools/blackbox/record777.py": "d63b3dd02498a6edfb4c299a2dae10cbafd49c9e9d3c8acde50280743aaebb43",
+    "tools/blackbox/crossbow_hands_loading_probe.py": "e18f4917c118ab2f379d9865e5d9593f92defeca39ed4e02886ba660b2f21d73",
+    "tools/blackbox/crossbow_unbreaking_probe.py": "491dbbaff4f521359fae70c0ae4ec42eac71f0b9a5afca73a83eb510ef54423f",
+    "tools/blackbox/crossbow_nearbreak_ci.py": "c8a5a4314a2e892be6a8dfd6365dfe304507a6efd323979dada0e10abbece271",
+    "tools/blackbox/scenarios/pvp-thorns-control-777.json": "822abc572c9db0750a3175720054a28b81f8ad6b7542ff92c501986d331143db",
+    "tools/blackbox/ci/protection-edges-777.json": "eff3ea82db330885fbea48bb962b2fd6b28333d26de56d80ed0f9856248d2ee0",
+    "tools/blackbox/ci/crossbow-ub128-primary.json": "b7efa856d8c5cb7d94ebbe993ba1e4517054c3abd3ef79570516969abd10ff3b",
+    "tools/blackbox/ci/crossbow-ub128-criteria.json": "2fa312fb5a41fb04e0b2e761566603f38b8cc71d5d076e8bb9b6db12070f4a02",
+    "tools/protocol-bridge/probe_crossbow_session.py": "2dcb7d891a931c7f7d11874dc6e22a38d1829194bbd634c2d6b861acc13a2ecc"
+  },
+  "criteria_sha256": "24e96f7b79c34111d6239c80bb16cb04f3c602895147e93ee881f3a366ea1cbe",
+  "no_runtime_capture": true,
+  "core_tree": "015d2f37f6b9c3a3a6bce52c53faf9b916f0b49b",
+  "proposed_recorder_sha256": "5f0ce820fc9f39fd26ce8d405d5cc7e64ebd4551e7d233f42e31349f54c6915b"
+}

@@ -1,0 +1,49 @@
+name: First original offhand crossbow UB reference
+on:
+  push:
+    branches: ['test/crossbow-offhand-natural-20261110']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Verify frozen criteria and old recorder contracts without any server
+        env:
+          MCSA_EXTENDED_PROBE_REPO: ${{ github.workspace }}
+        run: |
+          mkdir -p original-check-logs
+          python3 -B -m unittest discover -s tools/blackbox/crossbow_ub_extended -p 'test_extended_probe.py' -v 2>&1 | tee original-check-logs/extended-unit.log
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_record777.py' -v 2>&1 | tee original-check-logs/recorder-unit.log
+      - name: Download the exact own prebuilt identity without building or executing it
+        uses: actions/download-artifact@v4
+        with:
+          name: crossbow-ub-proof-42690720281-1
+          run-id: 42690720281
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/prebuilt-identity
+      - name: One original-only offhand128 plus four controls; no core or natural
+        run: |
+          python3 -B tools/blackbox/crossbow_ub_extended/original_first.py --output offhand-original-evidence --prebuilt "$RUNNER_TEMP/prebuilt-identity" 2>&1 | tee original-check-logs/original-entry.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offhand-first-original-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            original-check-logs/
+            offhand-original-evidence/
+          retention-days: 7
+          if-no-files-found: warn

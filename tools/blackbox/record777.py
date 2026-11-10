@@ -275,6 +275,14 @@ def special(text, clients):
     time.sleep(.1)
 
 
+def allow_causal_original_reference(args, github_actions):
+    """Узкий opt-in только для заранее объявленного original-first UB reference."""
+    allowed={'crossbow-ub-offhand-commandloaded-777','crossbow-ub-mainhand-natural-777','crossbow-ub-offhand-natural-777'}
+    return (github_actions=='true' and args.causal_menu_readiness and args.official_only
+            and args.version==777 and not (args.resume or args.core_only or args.parallel)
+            and len(args.scenarios)==1 and args.scenarios[0] in allowed)
+
+
 def window_click_payload(window,state,action):
     # Та же форма, что у bot.js: без предполагаемых изменённых ячеек и курсора.
     return varint(window)+varint(state)+struct.pack('>hb',action['slot'],action.get('button',0))+varint(action.get('mode',0))+b'\0\0'
@@ -698,6 +706,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
         result={'scenario':s['name'],'protocol':version,'phase_alignment':phase_alignment,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure,'registry_names':c.registry_names} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}
         if causal_menu_readiness:
             result['causal_menu_readiness'] = True
+            result['capture_side'] = capture_side
             for value, client in zip(result['clients'], clients):value['wire_sent'] = client.wire_sent
         output.write_text(json.dumps(result,indent=1)+'\n')
         for text in s.get('cleanup',[]):
@@ -842,10 +851,13 @@ def main():
     p.add_argument('--official-only',action='store_true')
     p.add_argument('--isolate-vitals',action='store_true')
     p.add_argument('--causal-menu-readiness',action='store_true',help='isolated fresh paired probe: wait TP/ACK and full menu; global arrow cleanup through own RCON')
+    p.add_argument('--causal-original-reference',action='store_true',help='GitHub-only original-first UB reference; three fixed scenarios only')
     p.add_argument('--core-debug',action='store_true')
     p.add_argument('scenarios',nargs='*')
     a=p.parse_args()
-    if a.causal_menu_readiness and (a.version!=777 or a.resume or a.core_only or a.official_only):
+    if a.causal_original_reference and not allow_causal_original_reference(a,os.environ.get('GITHUB_ACTIONS')):
+        p.error('--causal-original-reference requires GitHub fresh official-only777 and one declared UB scenario')
+    if a.causal_menu_readiness and (a.version!=777 or a.resume or a.core_only or (a.official_only and not a.causal_original_reference)):
         p.error('--causal-menu-readiness requires a fresh paired777 recording')
     if a.skip_recorded_core:
         p.error('--skip-recorded-core disabled: re-record ours to verify runtime identity')
@@ -874,6 +886,9 @@ def main():
     selected=a.scenarios or sorted({v.stem for pattern in ('pvp-*','cow-crit*','sword-sweep-*','itemaudit4-knockback*','*shield*') for v in (ROOT/'tools/blackbox/scenarios').glob(pattern+'.json')})
     manifest={'isolate_vitals':a.isolate_vitals,'protocol':a.version,'primary':'26.3' if a.version==777 else '26.1.2','binary_sha256':hashlib.sha256(a.binary.read_bytes()).hexdigest(),'jar_sha1':hashlib.sha1(a.jar.read_bytes()).hexdigest(),'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'scenario_names':selected,'core_port':a.core_port,'java':a.java,'max_seconds':a.max_seconds,'scenario_sha256':{name:hashlib.sha256((ROOT/'tools/blackbox/scenarios'/f'{name}.json').read_bytes()).hexdigest() for name in selected},'data_sha256':{path.name:hashlib.sha256(path.read_bytes()).hexdigest() for path in a.data.glob('*.json') if path.name in ('protocol.json','entities.json','items.json','blocks.json')}}
     if a.causal_menu_readiness:manifest['causal_menu_readiness']=True
+    if a.causal_original_reference:
+        manifest['causal_original_reference']=True
+        manifest['requested_capture_sides']=['official']
     manifest['comparison_sha256']={name:hashlib.sha256((Path(__file__).parent/name).read_bytes()).hexdigest() for name in ('bot.js','compare.js','analyze777.py','replay777.js')}
     (a.output/f'run-{time.time_ns()}.json').write_text(json.dumps(manifest,indent=2)+'\n')
     servers=[]

@@ -1,0 +1,66 @@
+{
+  "schema": "crossbow-offhand-natural-ub-v1",
+  "status": "PRECAPTURE-PROPOSAL-NO-RUNTIME-EVIDENCE",
+  "source_before_candidate": "e3e90d74f60f0750459ebe964c709195f92b49ef",
+  "N_each_stratum_each_side": 128,
+  "controls_each": 4,
+  "strata": [
+    "offhand-commandloaded",
+    "mainhand-natural",
+    "offhand-natural"
+  ],
+  "categories": {
+    "one_arrow_then_break": {
+      "probability_hypothesis": 0.25,
+      "inclusive_count_bounds": [
+        14,
+        53
+      ],
+      "lower_rejection_probability": 1.9982675319401375e-05,
+      "upper_rejection_probability": 1.574123443134324e-05
+    },
+    "two_arrows_then_break": {
+      "probability_hypothesis": 0.1875,
+      "inclusive_count_bounds": [
+        8,
+        43
+      ],
+      "lower_rejection_probability": 1.2389410110799297e-05,
+      "upper_rejection_probability": 2.0686429540174183e-05
+    },
+    "three_arrows_then_break": {
+      "probability_hypothesis": 0.140625,
+      "inclusive_count_bounds": [
+        4,
+        36
+      ],
+      "lower_rejection_probability": 6.528045659226013e-06,
+      "upper_rejection_probability": 1.0362540532591956e-05
+    },
+    "three_arrows_survived": {
+      "probability_hypothesis": 0.421875,
+      "inclusive_count_bounds": [
+        32,
+        77
+      ],
+      "lower_rejection_probability": 1.667708906354724e-05,
+      "upper_rejection_probability": 1.4942305510519295e-05
+    }
+  },
+  "familywise_alpha": 0.001,
+  "family": "4 categories × 3 strata × 2 sides × 2 tails",
+  "per_tail_alpha": 2.0833333333333333e-05,
+  "rule": "Freeze before first original. Original first before candidate patch. Statistical original FAIL retained, no retry-for-green/no pooling/no replacement of historical PRIMARY. Readiness INVALID kept separately; any new original is ADDITIONAL, never primary replacement.",
+  "historical_PRIMARY": {
+    "raw_sha256": "6730a4f77a258b57c9452f02ca7ef6f347576c5e914d9b9e01f41f800e4abc28",
+    "counts": [
+      29,
+      19,
+      19,
+      61
+    ],
+    "unchanged": true
+  },
+  "scope": "777 survival default count1/maxdamage damage464 UnbreakingIII; commandloaded plain arrows offhand OR genuine MultishotI arrows main/offhand. No rocket/custom/plugin/fullRNG proof.",
+  "auxiliary_swap55": "Collect raw per-observer counts/timestamps separately, retain prior known mismatch; never equate absence with full parity or mask47/48."
+}
