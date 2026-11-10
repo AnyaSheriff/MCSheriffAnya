@@ -1,0 +1,31 @@
+name: ORIGINAL777 noncombat tracker calibration
+on:
+  push:
+    branches: ['probe/tracker-ground-offset-20261110']
+permissions:
+  contents: read
+jobs:
+  original:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - run: python3 -m unittest discover -s tools/blackbox -p test_tracker_ground_offset_777.py -v
+      - run: python3 tools/blackbox/tracker_ground_offset_777.py --output tracker-ground-offset-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tracker-ground-offset-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tracker-ground-offset-evidence/
+          retention-days: 14
+          include-hidden-files: true
+          if-no-files-found: error

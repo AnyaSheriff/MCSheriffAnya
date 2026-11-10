@@ -1,0 +1,268 @@
+{
+  "schema": "original777-ground-tracker-offset-calibration-v1",
+  "state": "SOURCE_ONLY_NO_CAPTURE_AUTHORIZATION",
+  "protocol": 777,
+  "version": "26.3",
+  "original_jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "original_only": true,
+  "wind_attack_use_item_candidate_build_allowed": false,
+  "max_capture_attempts_after_separate_root_gate": 1,
+  "no_retry_or_adaptive_schedule": true,
+  "isolated_ports": [
+    26180,
+    26181
+  ],
+  "whole_run_watchdog_seconds": 300,
+  "geometry": {
+    "floor_inclusive": [
+      [
+        92,
+        63,
+        92
+      ],
+      [
+        124,
+        63,
+        124
+      ]
+    ],
+    "cleared_air_inclusive": [
+      [
+        92,
+        64,
+        92
+      ],
+      [
+        124,
+        84,
+        124
+      ]
+    ],
+    "actor_initial_feet": [
+      100.5,
+      64.0,
+      100.5
+    ],
+    "observer_feet": [
+      100.5,
+      64.0,
+      106.5
+    ],
+    "all_grounded": true,
+    "no_teleport_after_schedule_start": true
+  },
+  "schedule": {
+    "frame_seconds": 0.05,
+    "total_frames": 412,
+    "tick_end_every_frame": true,
+    "observer_report_every_frames": 20,
+    "max_actor_step_blocks": 0.125,
+    "cadence_timestamp_tolerance_seconds": 0.025,
+    "phases": [
+      {
+        "name": "base-hold",
+        "frames": 40,
+        "kind": "hold",
+        "x": 100.5,
+        "report_every": 20,
+        "authority_frames": [
+          4
+        ]
+      },
+      {
+        "name": "dense-positive",
+        "frames": 32,
+        "kind": "path",
+        "start_x": 100.5,
+        "step": 0.125,
+        "move_offsets": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "authority_frames": [
+          8
+        ]
+      },
+      {
+        "name": "right-hold",
+        "frames": 40,
+        "kind": "hold",
+        "x": 102.5,
+        "report_every": 20,
+        "authority_frames": [
+          4
+        ]
+      },
+      {
+        "name": "sparse-negative",
+        "frames": 40,
+        "kind": "path",
+        "start_x": 102.5,
+        "step": -0.125,
+        "move_offsets": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10,
+          12,
+          14,
+          16,
+          18,
+          20,
+          22,
+          24,
+          26,
+          28,
+          30
+        ],
+        "authority_frames": [
+          16
+        ]
+      },
+      {
+        "name": "left-long-hold",
+        "frames": 80,
+        "kind": "hold",
+        "x": 100.5,
+        "report_every": 20,
+        "authority_frames": [
+          4,
+          44
+        ]
+      },
+      {
+        "name": "irregular-positive",
+        "frames": 36,
+        "kind": "path",
+        "start_x": 100.5,
+        "step": 0.125,
+        "move_offsets": [
+          0,
+          1,
+          4,
+          6,
+          10,
+          11,
+          15,
+          17
+        ],
+        "authority_frames": [
+          10
+        ]
+      },
+      {
+        "name": "middle-hold",
+        "frames": 40,
+        "kind": "hold",
+        "x": 101.5,
+        "report_every": 20,
+        "authority_frames": [
+          4
+        ]
+      },
+      {
+        "name": "dense-negative",
+        "frames": 24,
+        "kind": "path",
+        "start_x": 101.5,
+        "step": -0.125,
+        "move_offsets": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "authority_frames": [
+          0
+        ]
+      },
+      {
+        "name": "final-hold",
+        "frames": 80,
+        "kind": "hold",
+        "x": 100.5,
+        "report_every": 20,
+        "authority_frames": [
+          4,
+          44
+        ]
+      }
+    ]
+  },
+  "authority": {
+    "sample_count": 11,
+    "commands_order": [
+      "say unique-before-token",
+      "data get entity blackbox Pos",
+      "data get entity blackbox OnGround",
+      "say unique-after-token"
+    ],
+    "single_worker_separate_from_movement": true,
+    "maximum_start_delay_seconds": 0.1,
+    "maximum_sample_duration_seconds": 1.0,
+    "phase_echo": "typed profileless_chat, exact unique token, nameRcon/chatType4/targetNone, bothobservers, fresh relative to command issue, trailing0",
+    "Pos": "exact named-player SNBT list3 finite doubles; no local position substitute",
+    "OnGround": "separate exact named-player byteboolean receipt; not atomic with Pos",
+    "world_age": "raw UpdateTime order brackets on each single stream; no arrivaldelta20 as server tick",
+    "hold_Pos_must_match_frozen_endpoint": true,
+    "moving_Pos_is_observation_not_expected_latestwire": true,
+    "query_must_finish_before_its_phase_end": true,
+    "post_schedule_echo_drain_seconds": 0.5
+  },
+  "interpretation": {
+    "held_ground_endpoint_agreement_only": true,
+    "field_emission_gap_hypothesis_test": "reject only if current coordinate packet before-age minus previous coordinate packet after-age exceeds sum offsets; otherwise unresolved",
+    "emission_order_is_not_underlying_sample_or_execution_time": true,
+    "interpolation_vs_sample_offset_may_remain_unidentifiable": true,
+    "automatic_nonzero_Wind_pose_gate_acceptance": false,
+    "ExplosionC_as_pose_oracle": false,
+    "ground_is_not_fall_or_combat_proof": true,
+    "named_wind_set_or_tag_policy_claim": false
+  },
+  "required_gates": [
+    "actualDone/status777/Login2",
+    "initialrawTP/absoluteXYZ+resolvedzeroVelocity/freshmatchingwireACK",
+    "finiteactualgroundmovementwires matchfrozenplansandcadence",
+    "noafterstartTP/corrections/Wind/Attack/use-item/damage",
+    "bothstreamscomplete/live/finaluniqueecho",
+    "all11exactonceRCONPos/ground samples+bothphaseechoes",
+    "realUpdateTime totalprogress>=200ticks",
+    "ownJavaexit0/groupgone/portsfree"
+  ],
+  "negative_guards": [
+    "replaceauthoritativePoswithlocalplan",
+    "stale/wrong/missing/duplicatephaseecho",
+    "wrongRconchatType/speaker/trailingbytes",
+    "missing/duplicate/wrongACK",
+    "noncombatviolatedbyAttack/Wind/damage",
+    "unplannedteleport/correction",
+    "wronggroundorPosnotonfinitewirepath",
+    "wrongcadence/phase/missingpacket",
+    "missingabsolutepeerbase/trailingdelta",
+    "usearrivaldelta20insteadofages",
+    "acceptnonzerooffsetascurrentwithoutproof",
+    "changeoldWindraw/criteria/relabeloldFAIL"
+  ],
+  "plan_sha256": "5e691bbfc345e817c1ad4e09f5ae822b30cdeb4b0715c516ba9f62bba34a3c6f",
+  "preregistration_revision": "v2 before any capture: fixed phase budgets at least1.2s for moving samples; original336draft retained"
+}
