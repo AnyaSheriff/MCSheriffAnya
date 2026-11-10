@@ -1,5 +1,7 @@
 name: Combined gameplay integration review
 on:
+  push:
+    branches: ['integration/gameplay-20261110']
   workflow_dispatch:
 permissions:
   contents: read
