@@ -1,0 +1,493 @@
+{
+  "scope": "Pinned JSON layouts only; synthetic codec fixture is not gameplay evidence",
+  "versions": {
+    "768": {
+      "source": {
+        "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.3/protocol.json",
+        "sha256": "abcd44462eebc703fea2423572719d79b16e92ad398d94ab3235c5a193656865",
+        "bytes": 258419
+      },
+      "player_info": [
+        "container",
+        [
+          {
+            "name": "action",
+            "type": [
+              "bitflags",
+              {
+                "type": "u8",
+                "flags": [
+                  "add_player",
+                  "initialize_chat",
+                  "update_game_mode",
+                  "update_listed",
+                  "update_latency",
+                  "update_display_name",
+                  "update_list_order"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "data",
+            "type": [
+              "array",
+              {
+                "countType": "varint",
+                "type": [
+                  "container",
+                  [
+                    {
+                      "name": "uuid",
+                      "type": "UUID"
+                    },
+                    {
+                      "name": "player",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/add_player",
+                          "fields": {
+                            "true": "game_profile"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "chatSession",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/initialize_chat",
+                          "fields": {
+                            "true": "chat_session"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "gamemode",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_game_mode",
+                          "fields": {
+                            "true": "varint"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "listed",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_listed",
+                          "fields": {
+                            "true": "varint"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "latency",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_latency",
+                          "fields": {
+                            "true": "varint"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "displayName",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_display_name",
+                          "fields": {
+                            "true": [
+                              "option",
+                              "anonymousNbt"
+                            ]
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "listPriority",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_list_order",
+                          "fields": {
+                            "true": "varint"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        ]
+      ],
+      "game_profile": [
+        "container",
+        [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "properties",
+            "type": [
+              "array",
+              {
+                "countType": "varint",
+                "type": [
+                  "container",
+                  [
+                    {
+                      "name": "name",
+                      "type": "string"
+                    },
+                    {
+                      "name": "value",
+                      "type": "string"
+                    },
+                    {
+                      "name": "signature",
+                      "type": [
+                        "option",
+                        "string"
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        ]
+      ],
+      "chat_session": [
+        "option",
+        [
+          "container",
+          [
+            {
+              "name": "uuid",
+              "type": "UUID"
+            },
+            {
+              "name": "publicKey",
+              "type": [
+                "container",
+                [
+                  {
+                    "name": "expireTime",
+                    "type": "i64"
+                  },
+                  {
+                    "name": "keyBytes",
+                    "type": [
+                      "buffer",
+                      {
+                        "countType": "varint"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "keySignature",
+                    "type": [
+                      "buffer",
+                      {
+                        "countType": "varint"
+                      }
+                    ]
+                  }
+                ]
+              ]
+            }
+          ]
+        ]
+      ]
+    },
+    "769": {
+      "source": {
+        "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/protocol.json",
+        "sha256": "e324c6be98f732a10ddc23539d95b35ad7918b0e2dcc2debf2331c8937564443",
+        "bytes": 260129
+      },
+      "player_info": [
+        "container",
+        [
+          {
+            "name": "action",
+            "type": [
+              "bitflags",
+              {
+                "type": "u8",
+                "flags": [
+                  "add_player",
+                  "initialize_chat",
+                  "update_game_mode",
+                  "update_listed",
+                  "update_latency",
+                  "update_display_name",
+                  "update_hat",
+                  "update_list_order"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "data",
+            "type": [
+              "array",
+              {
+                "countType": "varint",
+                "type": [
+                  "container",
+                  [
+                    {
+                      "name": "uuid",
+                      "type": "UUID"
+                    },
+                    {
+                      "name": "player",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/add_player",
+                          "fields": {
+                            "true": "game_profile"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "chatSession",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/initialize_chat",
+                          "fields": {
+                            "true": "chat_session"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "gamemode",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_game_mode",
+                          "fields": {
+                            "true": "varint"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "listed",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_listed",
+                          "fields": {
+                            "true": "varint"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "latency",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_latency",
+                          "fields": {
+                            "true": "varint"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "displayName",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_display_name",
+                          "fields": {
+                            "true": [
+                              "option",
+                              "anonymousNbt"
+                            ]
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "listPriority",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_list_order",
+                          "fields": {
+                            "true": "varint"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "showHat",
+                      "type": [
+                        "switch",
+                        {
+                          "compareTo": "../action/update_hat",
+                          "fields": {
+                            "true": "bool"
+                          },
+                          "default": "void"
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        ]
+      ],
+      "game_profile": [
+        "container",
+        [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "properties",
+            "type": [
+              "array",
+              {
+                "countType": "varint",
+                "type": [
+                  "container",
+                  [
+                    {
+                      "name": "name",
+                      "type": "string"
+                    },
+                    {
+                      "name": "value",
+                      "type": "string"
+                    },
+                    {
+                      "name": "signature",
+                      "type": [
+                        "option",
+                        "string"
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        ]
+      ],
+      "chat_session": [
+        "option",
+        [
+          "container",
+          [
+            {
+              "name": "uuid",
+              "type": "UUID"
+            },
+            {
+              "name": "publicKey",
+              "type": [
+                "container",
+                [
+                  {
+                    "name": "expireTime",
+                    "type": "i64"
+                  },
+                  {
+                    "name": "keyBytes",
+                    "type": [
+                      "buffer",
+                      {
+                        "countType": "varint"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "keySignature",
+                    "type": [
+                      "buffer",
+                      {
+                        "countType": "varint"
+                      }
+                    ]
+                  }
+                ]
+              ]
+            }
+          ]
+        ]
+      ]
+    }
+  },
+  "synthetic_cases": [
+    {
+      "flags768": 0,
+      "flags769": 0,
+      "optional": false,
+      "body768_hex": "00020b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+      "body769_hex": "00020b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a"
+    },
+    {
+      "flags768": 64,
+      "flags769": 128,
+      "optional": true,
+      "body768_hex": "40020b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0bac022a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2aac02",
+      "body769_hex": "80020b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0bac022a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2aac02"
+    },
+    {
+      "flags768": 127,
+      "flags769": 191,
+      "optional": false,
+      "body768_hex": "7f020b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0856696150726f6265010874657874757265730f73796e7468657469632d76616c756500000201960100ac022a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a0856696150726f6265010874657874757265730f73796e7468657469632d76616c756500000201960100ac02",
+      "body769_hex": "bf020b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0856696150726f6265010874657874757265730f73796e7468657469632d76616c756500000201960100ac022a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a0856696150726f6265010874657874757265730f73796e7468657469632d76616c756500000201960100ac02"
+    },
+    {
+      "flags768": 127,
+      "flags769": 191,
+      "optional": true,
+      "body768_hex": "7f020b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0856696150726f6265010874657874757265730f73796e7468657469632d76616c7565011373796e7468657469632d7369676e6174757265013737373737373737373737373737373700000000000004d2030102030204050201960101080008d0a2d0b5d181d182ac022a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a0856696150726f6265010874657874757265730f73796e7468657469632d76616c7565011373796e7468657469632d7369676e6174757265013737373737373737373737373737373700000000000004d2030102030204050201960101080008d0a2d0b5d181d182ac02",
+      "body769_hex": "bf020b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0856696150726f6265010874657874757265730f73796e7468657469632d76616c7565011373796e7468657469632d7369676e6174757265013737373737373737373737373737373700000000000004d2030102030204050201960101080008d0a2d0b5d181d182ac022a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a0856696150726f6265010874657874757265730f73796e7468657469632d76616c7565011373796e7468657469632d7369676e6174757265013737373737373737373737373737373700000000000004d2030102030204050201960101080008d0a2d0b5d181d182ac02"
+    }
+  ]
+}

@@ -163,23 +163,7 @@ pub(crate) fn translate_inner(
         (State::Play, Direction::Clientbound, "game_state_change") if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) => {let reason=cursor.take(1)?[0];if reason>13{return Err(Error::Invalid);}out.push(reason);out.extend(cursor.take(4)?);}
         (State::Play, Direction::Clientbound, "recipe_book_settings") if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5) => {for _ in 0..8 {out.push(u8::from(cursor.boolean()?));}}
         (State::Play, Direction::Clientbound, "player_info") if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) => {
-            let flags=cursor.take(1)?[0];out.push(flags);
-            let n=cursor.count(4096)?;uint(&mut out,n as u32);
-            for _ in 0..n {
-                out.extend(cursor.take(16)?);
-                if flags&1!=0 {
-                    string(&mut out,cursor.string()?);
-                    let properties=cursor.count(256)?;uint(&mut out,properties as u32);
-                    for _ in 0..properties {string(&mut out,cursor.string()?);string(&mut out,cursor.string()?);let signed=cursor.boolean()?;out.push(u8::from(signed));if signed{string(&mut out,cursor.string()?);}}
-                }
-                if flags&2!=0 {let present=cursor.boolean()?;out.push(u8::from(present));if present {out.extend(cursor.take(24)?);for _ in 0..2 {let n=cursor.count(8192)?;uint(&mut out,n as u32);out.extend(cursor.take(n)?);}}}
-                if flags&4!=0 {uint(&mut out,cursor.count(3)? as u32);}
-                if flags&8!=0 {out.push(u8::from(cursor.boolean()?));}
-                if flags&16!=0 {uint(&mut out,cursor.uint()?);}
-                if flags&32!=0 {let present=cursor.boolean()?;out.push(u8::from(present));if present {let n=crate::registry::nbt_length(cursor.rest).map_err(|_|Error::Invalid)?;let text=cursor.take(n)?;crate::items::plain_text(text).map_err(Error::Item)?;out.extend(text);}}
-                if flags&128!=0 {uint(&mut out,cursor.uint()?);}
-                if flags&64!=0 {out.push(u8::from(cursor.boolean()?));}
-            }
+            crate::player_info::modern(&mut cursor, &mut out)?;
         }
         (State::Play, Direction::Clientbound, "entity_velocity") if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8) => {
             uint(&mut out,cursor.uint()?);let speed=crate::legacy_entities::velocity(&mut cursor)?;crate::legacy_entities::put_velocity(&mut out,speed)?;
