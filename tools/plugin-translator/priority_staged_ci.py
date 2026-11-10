@@ -33,9 +33,11 @@ def inputs():
    hashes={}
    for name in z.namelist():
     if not name.startswith(prefix) or name.endswith('/'):continue
-    relative=Path(name.removeprefix(prefix));assert '..' not in relative.parts and len(relative.parts)==2 and relative.name in ['plugin.toml','plugin.wasm']
+    relative=Path(name.removeprefix(prefix));assert '..' not in relative.parts
+    assert (len(relative.parts)==2 and relative.name in ['plugin.toml','plugin.wasm']) or (label=='old-five' and str(relative)=='java-scheduler/data/config.yml'),name
     path=destination/relative;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(z.read(name));hashes[str(relative)]=sha(path)
-   assert len(hashes)==(4 if label=='baseline' else 10)
+   assert len(hashes)==(4 if label=='baseline' else 11)
+   assert sum(name.endswith('/plugin.wasm') for name in hashes)==(2 if label=='baseline' else 5)
   write(OUT/(label+'-input.json'),dict(api=api,files=hashes,archive_sha256=digest));archive.unlink()
  # Только собственный component: меняются имена optional exports, длины binary строк прежние.
  # Оба malformed bytes проходят wasm-tools validate до проверки host type gate.
