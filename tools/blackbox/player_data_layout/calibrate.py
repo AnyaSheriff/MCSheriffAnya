@@ -13,6 +13,7 @@ from combat_process import stop_process,ports_free,process_identity
 from slots import SlotDecoder
 from probe_player_actions_runtime import menu_slot
 BASE=Path(__file__).parent
+FIXTURE_FLAGS='white-list=false\ngamemode=creative\n'
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
 def read(p):return json.loads(p.read_text())
 def write(p,v):p.write_text(json.dumps(v,ensure_ascii=False,indent=2)+'\n')
@@ -125,7 +126,7 @@ def capture(output):
   for e in source['json_files']:
    if e['file'] in ['protocol.json','items.json','entities.json','blocks.json']:combat_ci.fetch(e,data/e['file'])
   (work/'eula.txt').write_text('eula=true\n')
-  (work/'server.properties').write_text('server-ip=127.0.0.1\nserver-port=26230\nenable-rcon=true\nrcon.port=26231\nrcon.password=local-layout-fixture\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\ngenerate-structures=false\nspawn-protection=0\nallow-flight=true\nview-distance=2\nsimulation-distance=2\nmax-tick-time=0\n')
+  (work/'server.properties').write_text(FIXTURE_FLAGS+'server-ip=127.0.0.1\nserver-port=26230\nenable-rcon=true\nrcon.port=26231\nrcon.password=local-layout-fixture\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\ngenerate-structures=false\nspawn-protection=0\nallow-flight=true\nview-distance=2\nsimulation-distance=2\nmax-tick-time=0\n')
   log=(work/'server.log').open('w');argv=['java','-Xmx1G','-XX:ActiveProcessorCount=2','-jar','server.jar','nogui']
   proc=subprocess.Popen(argv,cwd=work,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,start_new_session=True);life['identity']=process_identity(proc.pid);life['argv']=argv
   deadline=time.monotonic()+120;startup_status=None;startup_done=False

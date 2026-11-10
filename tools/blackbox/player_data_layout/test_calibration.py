@@ -77,3 +77,10 @@ class SemanticCorrectionTests(unittest.TestCase):
   c.validate_setup_reply('gamerule spawn_mobs false','Game rule spawn_mobs is now set to false')
   c.validate_setup_reply('gamerule natural_health_regeneration false','Game rule natural_health_regeneration is now set to false')
   with self.assertRaises(AssertionError):c.validate_setup_reply('gamerule spawn_mobs false','Unknown gamerule')
+
+class FixtureNormalizationTests(unittest.TestCase):
+ def test_explicit_whitelist_mode_and_protocol_gate(self):
+  self.assertIn('white-list=false\n',c.FIXTURE_FLAGS)
+  self.assertIn('gamemode=creative\n',c.FIXTURE_FLAGS)
+  with self.assertRaises(AssertionError):c.assert_ready(object(),True,dict(version=dict(protocol=775,name='26.3')))
+  c.assert_ready(object(),True,dict(version=dict(protocol=777,name='26.3')))
