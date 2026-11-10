@@ -1,0 +1,3 @@
+name: java-priority-failed
+version: '1.0'
+main: fixtures.Failed

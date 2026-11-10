@@ -300,3 +300,23 @@ void exports_mcsa_api_item_events_on_entity_death(mcsa_api_types_player_t *who,p
 void exports_mcsa_api_generation_events_on_loot(mcsa_api_types_block_pos_t *pos,exports_mcsa_api_generation_events_list_option_item_t *slots,exports_mcsa_api_generation_events_list_option_item_t *ret) {
  clear();number(pos->dimension);number(pos->x);number(pos->y);number(pos->z);for(size_t i=0;i<slots->len;i++){if(slots->ptr[i].is_some){string(slots->ptr[i].val.kind);number(slots->ptr[i].val.count);string(slots->ptr[i].val.metadata);}else{text("air");text("0");text("");}}dispatch(34);ret->len=slots->len;ret->ptr=calloc(ret->len,sizeof(*ret->ptr));if(!ret->ptr)abort();if(!event_text)abort();char *p=event_text;for(size_t i=0;i<ret->len;i++){char *type=p,*count=strchr(p,'\n');if(!count)abort();*count++=0;char *metadata=strchr(count,'\n');if(!metadata)abort();*metadata++=0;char *end=strchr(metadata,'\n');if(!end)abort();*end=0;p=end+1;ret->ptr[i].is_some=strcmp(type,"air")&&atoi(count)>0;if(ret->ptr[i].is_some){plugin_string_dup(&ret->ptr[i].val.kind,type);ret->ptr[i].val.count=strtoul(count,NULL,10);plugin_string_dup(&ret->ptr[i].val.metadata,metadata);}}
 }
+
+#ifdef MCSA_STAGED_BLOCK_BREAK
+static bool priority_result(int code,exports_mcsa_priority_events_block_break_frame_error_t *err) {
+    if(code>=0)return true;
+    if(code < -5)abort();
+    *err=(exports_mcsa_priority_events_block_break_frame_error_t)(-code-1);return false;
+}
+static void priority_id(uint64_t id) {char s[32];snprintf(s,sizeof(s),"%016llx",(unsigned long long)id);text(s);}
+bool exports_mcsa_priority_events_block_break_begin(uint64_t id,mcsa_api_types_player_t *who,mcsa_api_types_block_pos_t *pos,plugin_string_t *block,bool cancelled,exports_mcsa_priority_events_block_break_frame_error_t *err) {
+    clear();priority_id(id);integer(cancelled);player(who);integer(pos->dimension);integer(pos->x);integer(pos->y);integer(pos->z);string(*block);
+    return priority_result(dispatch(40),err);
+}
+bool exports_mcsa_priority_events_block_break_phase(uint64_t id,uint8_t priority,bool cancelled,bool *ret,exports_mcsa_priority_events_block_break_frame_error_t *err) {
+    clear();priority_id(id);integer(priority);integer(cancelled);int code=dispatch(41);
+    if(!priority_result(code,err))return false;*ret=code!=0;return true;
+}
+bool exports_mcsa_priority_events_block_break_finish(uint64_t id,bool cancelled,exports_mcsa_priority_events_block_break_frame_error_t *err) {
+    clear();priority_id(id);integer(cancelled);return priority_result(dispatch(42),err);
+}
+#endif

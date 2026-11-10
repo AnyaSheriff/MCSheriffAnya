@@ -1,0 +1,146 @@
+name: Staged native Bukkit BlockBreak prototype
+on:
+  push:
+    branches: ['feature/bukkit-priority-staged-*', 'feature/bukkit-priority-integration-20261110']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+env:
+  CARGO_BUILD_JOBS: '4'
+jobs:
+  optional-abi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify exact previous seven translated components and compiler inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py reuse
+      - uses: Swatinem/rust-cache@v2
+      - name: Compile all actual Rust targets first
+        run: |
+          mkdir -p staged-evidence
+          set -o pipefail
+          cargo check --release --locked --all-targets 2>&1 | tee staged-evidence/check.log
+      - name: Verify immutable old components and build mixed inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py inputs
+      - name: Actual Rust budget contracts and staged host
+        run: |
+          set -o pipefail
+          cargo test --release --locked --bin mcsheriffanya plugins::priority::tests -- --nocapture --test-threads=1 2>&1 | tee staged-evidence/budget.log
+          python3 -B tools/plugin-translator/priority_staged_ci.py tests
+      - name: Preserve compact source raw and receipts even after failure
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py finish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staged-prototype-${{ github.run_id }}
+          path: staged-evidence/
+          include-hidden-files: true
+          retention-days: 7
+  old-host-new-components:
+    if: ${{ always() && !cancelled() }}
+    needs: optional-abi
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 354a0d137b60dbd89d32246c3e0aef2ddbd062c1
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: staged-prototype-${{ github.run_id }}
+          path: candidate-artifact
+      - uses: Swatinem/rust-cache@v2
+      - name: Install exact new components into actual frozen old Host checkout
+        run: |
+          mkdir -p tmp/java-priority-baseline/plugins old-host-evidence
+          cp -r candidate-artifact/java-priority-staged/plugins/java-priority-a tmp/java-priority-baseline/plugins/
+          cp -r candidate-artifact/java-priority-staged/plugins/java-priority-b tmp/java-priority-baseline/plugins/
+          cp candidate-artifact/old-host-Cargo.lock Cargo.lock
+          sha256sum Cargo.lock > old-host-evidence/Cargo.lock.sha256
+          git rev-parse HEAD > old-host-evidence/source.txt
+          sha256sum tmp/java-priority-baseline/plugins/*/plugin.wasm > old-host-evidence/components.sha256
+      - name: Execute old Host legacy baseline on exact new components
+        run: |
+          set -o pipefail
+          cargo test --release --locked --bin mcsheriffanya plugins::tests::translated_bukkit_legacy_priority_baseline -- --ignored --exact --nocapture --test-threads=1 2>&1 | tee old-host-evidence/native.log
+      - name: Preserve actual old source proof lock and capture
+        if: always()
+        run: |
+          mkdir -p old-host-evidence
+          test ! -f Cargo.lock || cp Cargo.lock old-host-evidence/Cargo.lock
+          test ! -d tmp/java-priority-baseline || cp -r tmp/java-priority-baseline old-host-evidence/native
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os
+          out=Path('old-host-evidence')
+          binaries={str(p):{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size} for p in Path('target/release/deps').glob('mcsheriffanya-*') if p.is_file() and os.access(p,os.X_OK)}
+          (out/'runtime-test-binaries.json').write_text(json.dumps(binaries,indent=2)+'\n')
+          files={str(p.relative_to(out)):{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size} for p in out.rglob('*') if p.is_file()}
+          (out/'receipt.json').write_text(json.dumps({'source':'354a0d137b60dbd89d32246c3e0aef2ddbd062c1','files':files},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staged-old-host-${{ github.run_id }}
+          path: old-host-evidence/
+          retention-days: 7
+
+  strict-workspace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify pinned dependencies and immutable translated inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py reuse
+      - uses: Swatinem/rust-cache@v2
+      - name: Build own Rust component fixtures for the existing default suite
+        run: |
+          rustup target add wasm32-wasip2
+          set -o pipefail
+          cargo build --manifest-path plugins-examples/Cargo.toml --release --target wasm32-wasip2 2>&1 | tee staged-evidence/rust-fixtures.log
+      - name: Strict complete workspace Clippy
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee staged-evidence/clippy.log
+      - name: Complete default and no-default workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace 2>&1 | tee staged-evidence/default-tests.log
+          cargo test --release --locked --workspace --no-default-features 2>&1 | tee staged-evidence/no-default-tests.log
+      - name: Complete release workspace build
+        run: |
+          set -o pipefail
+          cargo build --release --locked --workspace 2>&1 | tee staged-evidence/build.log
+      - name: Preserve strict source and receipt on every outcome
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py finish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staged-strict-${{ github.run_id }}
+          path: staged-evidence/
+          include-hidden-files: true
+          retention-days: 7

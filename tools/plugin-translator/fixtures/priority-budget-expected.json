@@ -1,0 +1,18 @@
+{
+ "faults":["begin","phase","finish","fuel","guest","native"],
+ "verdict":"deny",
+ "healthy_components":["java-priority-a","java-priority-empty"],
+ "survivors":2,
+ "healthy_final_cancelled":true,
+ "healthy_finish_ok":true,
+ "fault_component_quarantined":true,
+ "reload_fresh":true,
+ "between_phase_budget_successful_phases_min":1,
+ "between_phase_budget_failed_phases":1,
+ "guest_budget_ms":1000,
+ "guest_busy_phase_ms":400,
+ "native_budget_epochs":40,
+ "native_guest_budget_ms":400,
+ "controlled_storage_latency_ms":250,
+ "external_timeout_seconds":180
+}

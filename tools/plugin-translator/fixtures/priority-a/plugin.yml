@@ -1,0 +1,7 @@
+name: java-priority-a
+version: '1.0'
+main: fixtures.PriorityAPlugin
+commands:
+  prioritya:
+    description: Собственный сценарий межкомпонентного порядка A
+    usage: /prioritya order|cancel|uncancel

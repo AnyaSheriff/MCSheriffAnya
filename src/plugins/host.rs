@@ -59,10 +59,10 @@ const EPOCH: Duration = Duration::from_millis(10);
 // Не более секунды на подготовку чанков и файловый ввод-вывод ядра; время гостя ограничено отдельно.
 const NATIVE_WAIT_EPOCHS: u64 = 100;
 #[derive(Default)]
-pub(super) struct NativeWait { active: AtomicBool, left: AtomicU64 }
+pub(super) struct NativeWait { active: AtomicBool, left: AtomicU64, nanos: AtomicU64 }
 impl NativeWait {
     fn reset(&self) { self.left.store(NATIVE_WAIT_EPOCHS,Ordering::Relaxed); }
-    pub(super) fn enter(&self) -> NativeWaitGuard<'_> { self.active.store(true,Ordering::Relaxed);NativeWaitGuard(self) }
+    pub(super) fn enter(&self) -> NativeWaitGuard<'_> { self.active.store(true,Ordering::Relaxed);NativeWaitGuard(self,std::time::Instant::now()) }
     fn consume(&self) -> bool {
         if !self.active.load(Ordering::Relaxed) { return false; }
         let mut left = self.left.load(Ordering::Relaxed);
@@ -75,8 +75,8 @@ impl NativeWait {
         false
     }
 }
-pub(super) struct NativeWaitGuard<'a>(&'a NativeWait);
-impl Drop for NativeWaitGuard<'_> { fn drop(&mut self) { self.0.active.store(false,Ordering::Relaxed); } }
+pub(super) struct NativeWaitGuard<'a>(&'a NativeWait,std::time::Instant);
+impl Drop for NativeWaitGuard<'_> { fn drop(&mut self) { self.0.nanos.fetch_add(self.1.elapsed().as_nanos().min(u64::MAX as u128) as u64,Ordering::Relaxed);self.0.active.store(false,Ordering::Relaxed); } }
 
 
 /// Самый большой `.wasm`.
@@ -142,6 +142,7 @@ pub struct Loaded {
     pub store: Store<PluginCtx>,
     instance: Module,
     completion: Option<Completion>,
+    priority: Option<super::priority::Extension>,
     damage: Option<Damage>,
     damage_from: Option<DamageFrom>,
     death: Option<Death>,
@@ -207,6 +208,11 @@ pub struct Host {
     #[cfg(test)]
     test_call_epochs: Option<u64>,
     native_wait: Arc<NativeWait>,
+    priority_id: u64,
+    #[cfg(test)]
+    priority_budget_override: Option<(u64,Duration)>,
+    #[cfg(test)]
+    priority_trace: Vec<serde_json::Value>,
     /// Сколько хозяин тратит на такт целиком (задачи всех плагинов).
     pub tick_stats: Stats,
 }
@@ -286,6 +292,11 @@ impl Host {
             #[cfg(test)]
             test_call_epochs: None,
             native_wait: Arc::new(NativeWait::default()),
+            priority_id: 0,
+            #[cfg(test)]
+            priority_budget_override: None,
+            #[cfg(test)]
+            priority_trace: Vec::new(),
             tick_stats: Stats::default(),
         })
     }
@@ -395,6 +406,8 @@ impl Host {
         crate::log_info!("[{}] HTTPS: {}", manifest.name, network.description());
         let ctx = PluginCtx {
             native_wait: Arc::clone(&self.native_wait),
+            #[cfg(test)]
+            test_storage_latency: Duration::ZERO,
             pending_mobs: HashMap::new(),
             network,
             chests: Default::default(),
@@ -446,6 +459,24 @@ impl Host {
         };
 
         let instance = Module::new(&mut store, &raw).map_err(|error| short(&error))?;
+        // Только полный typed namespace считается capable; отсутствие — старый путь.
+        let priority = if let Some(parent) = raw.get_export_index(&mut store, None, "mcsa:priority-events/block-break@0.1.0") {
+            let get = |store: &mut Store<PluginCtx>, name: &str| raw.get_export_index(store, Some(&parent), name)
+                .ok_or_else(|| wasmtime::Error::msg(format!("Неполный optional block-break: {name}")));
+            let extension = (|| -> wasmtime::Result<super::priority::Extension> {
+                let begin=get(&mut store,"begin")?;let phase=get(&mut store,"phase")?;let finish=get(&mut store,"finish")?;
+                Ok(super::priority::Extension {
+                    begin: raw.get_typed_func(&mut store,begin)?,
+                    phase: raw.get_typed_func(&mut store,phase)?,
+                    finish: raw.get_typed_func(&mut store,finish)?,
+                })
+            })().map_err(|error| {
+                self.drop_registrations(&manifest.name);
+                crate::presentation::release(&self.shared,&manifest.name);
+                format!("Неверный optional block-break: {}",short(&error))
+            })?;
+            Some(extension)
+        } else { None };
         let completion = raw.get_export_index(&mut store, None, "mcsa:api/completion@0.1.0")
             .and_then(|parent| raw.get_export_index(&mut store, Some(&parent), "on-tab-complete"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Sender, String, Vec<String>), (Vec<String>,)>(&mut store, &index))
@@ -539,7 +570,7 @@ impl Host {
         let interact_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-interact"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, u32, Option<mcsa::api::types::BlockPos>, u32), (u32,)>(&mut store, &index))
             .transpose().map_err(|error| short(&error))?;
-        let mut plugin = Loaded { manifest, trusted, store, instance, completion, damage, damage_from, death, inventory_event, item_event, prepare_craft, prepare_anvil, prepare_enchant, enchant_event, food_event, trade_event, furnace_event, ground_item, block_drop, native_event, entity_death, generated_loot, wants_population, populate, world_init, entity_interact, drag_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
+        let mut plugin = Loaded { manifest, trusted, store, instance, completion, priority, damage, damage_from, death, inventory_event, item_event, prepare_craft, prepare_anvil, prepare_enchant, enchant_event, food_event, trade_event, furnace_event, ground_item, block_drop, native_event, entity_death, generated_loot, wants_population, populate, world_init, entity_interact, drag_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
         // Холодная инициализация классов и конфигурации не входит в бюджет такта.
@@ -1090,10 +1121,95 @@ impl Host {
         if denied { Verdict::Deny } else { Verdict::Allow }
     }
 
+    pub fn block_break_mode(&self) -> &'static str {
+        if self.loaded.is_empty() {"нет участников"}
+        else if self.loaded.iter().all(|p|p.priority.is_some()) {"по общим приоритетам (BlockBreak prototype)"}
+        else {"прежний порядок компонентов (есть legacy)"}
+    }
+
     pub fn block_break(&mut self, who: &PlayerView, pos: &mcsa::api::types::BlockPos, block: &str) -> Verdict {
         let who = who.to_wit();
 
+        if !self.loaded.is_empty() && self.loaded.iter().all(|plugin| plugin.priority.is_some()) {
+            return self.staged_block_break(who, *pos, block);
+        }
         self.verdict(|instance, store| instance.mcsa_api_events().call_on_block_break(store, &who, *pos, block))
+    }
+
+    #[cfg(test)]
+    pub(super) fn priority_probe(&mut self, operation: u8, id: u64, priority: u8, cancelled: bool, who: &PlayerView) -> Result<bool,String> {
+        let now=self.shared_tick();let plugin=&mut self.loaded[0];let extension=plugin.priority.ok_or("Нет staged extension")?;
+        plugin.call(now,|_,store| match operation {
+            0=>{let (v,)=extension.begin.call(&mut *store,(id,who.to_wit(),mcsa::api::types::BlockPos{dimension:mcsa::api::types::Dimension::Overworld,x:3,y:70,z:0},"minecraft:stone".into(),cancelled))?;v.map(|()|false).map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
+            1=>{let (v,)=extension.phase.call(&mut *store,(id,priority,cancelled))?;v.map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
+            2=>{let (v,)=extension.finish.call(&mut *store,(id,cancelled))?;v.map(|()|false).map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
+            _=>Err(wasmtime::Error::msg("Неизвестная test operation")),
+        })
+    }
+
+    #[cfg(test)]
+    pub(super) fn priority_test_budget(&mut self, native: u64, guest: Duration, latency: Duration) {
+        self.priority_budget_override=Some((native,guest));
+        for p in &mut self.loaded {p.store.data_mut().test_storage_latency=latency;}
+    }
+    #[cfg(test)]
+    pub(super) fn priority_test_trace(&self)->&[serde_json::Value] {&self.priority_trace}
+
+    #[cfg(test)]
+    pub(super) fn priority_test_fuel(&mut self, fuel: u64) {for plugin in &mut self.loaded {plugin.limits.fuel=fuel;} }
+
+    fn staged_block_break(&mut self, who: mcsa::api::types::Player, pos: mcsa::api::types::BlockPos, block: &str) -> Verdict {
+        // Весь job синхронен: load/unload/tick не вклинивается в этот snapshot.
+        let Some(id) = self.priority_id.checked_add(1) else {
+            log_error!("Исчерпаны id native BlockBreakEvent");return Verdict::Deny;
+        };
+        self.priority_id=id;
+        let now=self.shared_tick();let mut cancelled=false;let mut crashes=Vec::new();
+        let mut alive=vec![false;self.loaded.len()];
+        let mut budgets: Vec<_> = self.loaded.iter().map(|p| {
+            let native=NATIVE_WAIT_EPOCHS;let guest=EPOCH.saturating_mul(p.limits.epochs.min(u32::MAX as u64) as u32);
+            #[cfg(test)]
+            let (native,guest)=self.priority_budget_override.unwrap_or((native,guest));
+            super::priority::Budget::new(p.limits.fuel,guest,native,EPOCH)
+        }).collect();
+        for (index,plugin) in self.loaded.iter_mut().enumerate() {
+            let extension=plugin.priority.unwrap();
+            let result=plugin.priority_call(now,&mut budgets[index],|store| {
+                let (value,)=extension.begin.call(&mut *store,(id,who.clone(),pos,block.into(),false))?;
+                value.map_err(|error| wasmtime::Error::msg(format!("Native begin: {error:?}")))
+            });
+            #[cfg(test)]
+            self.priority_trace.push(serde_json::json!({"id":id,"plugin":plugin.manifest.name,"stage":"begin","ok":result.is_ok(),"error":result.as_ref().err(),"fuel":budgets[index].fuel,"guest_ns":budgets[index].guest.as_nanos(),"native_epochs":budgets[index].native,"native_ns":budgets[index].native_time.as_nanos()}));
+            match result { Ok(())=>alive[index]=true,Err(reason)=>crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason}) }
+        }
+        for priority in 0..6 {
+            for (index,plugin) in self.loaded.iter_mut().enumerate() {
+                if !alive[index] {continue;}
+                let extension=plugin.priority.unwrap();
+                let result=plugin.priority_call(now,&mut budgets[index],|store| {
+                    let (value,)=extension.phase.call(&mut *store,(id,priority,cancelled))?;
+                    value.map_err(|error| wasmtime::Error::msg(format!("Native phase: {error:?}")))
+                });
+                #[cfg(test)]
+                self.priority_trace.push(serde_json::json!({"id":id,"plugin":plugin.manifest.name,"stage":"phase","phase":priority,"ok":result.is_ok(),"error":result.as_ref().err(),"fuel":budgets[index].fuel,"guest_ns":budgets[index].guest.as_nanos(),"native_epochs":budgets[index].native,"native_ns":budgets[index].native_time.as_nanos()}));
+                match result {Ok(value)=>cancelled=value,Err(reason)=>{alive[index]=false;crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason});}}
+            }
+        }
+        for (index,plugin) in self.loaded.iter_mut().enumerate() {
+            if !alive[index] {continue;}
+            let extension=plugin.priority.unwrap();
+            let result=plugin.priority_call(now,&mut budgets[index],|store| {
+                let (value,)=extension.finish.call(&mut *store,(id,cancelled))?;
+                value.map_err(|error| wasmtime::Error::msg(format!("Native finish: {error:?}")))
+            });
+            #[cfg(test)]
+            self.priority_trace.push(serde_json::json!({"id":id,"plugin":plugin.manifest.name,"stage":"finish","ok":result.is_ok(),"error":result.as_ref().err(),"cancelled":cancelled,"fuel":budgets[index].fuel,"guest_ns":budgets[index].guest.as_nanos(),"native_epochs":budgets[index].native,"native_ns":budgets[index].native_time.as_nanos()}));
+            if let Err(reason)=result {crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason});}
+        }
+        // Trap: последнее подтверждённое cancellation остаётся, side effects не откатываем.
+        // Удаление store очищает даже frame, который уже нельзя безопасно вызвать.
+        self.bury(crashes);
+        if cancelled {Verdict::Deny} else {Verdict::Allow}
     }
 
     pub fn block_place(&mut self, who: &PlayerView, pos: &mcsa::api::types::BlockPos, block: &str) -> Verdict {
@@ -1188,6 +1304,23 @@ impl Host {
 static TICK: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 impl Loaded {
+    fn priority_call<R>(&mut self, now: u64, budget: &mut super::priority::Budget, call: impl FnOnce(&mut Store<PluginCtx>) -> wasmtime::Result<R>) -> Result<R,String> {
+        if !budget.available() {return Err("Исчерпан суммарный бюджет native frame".into());}
+        self.store.data_mut().tick=now;
+        let wait=Arc::clone(&self.store.data().native_wait);
+        wait.left.store(budget.native,Ordering::Relaxed);
+        let before_native=wait.nanos.load(Ordering::Relaxed);
+        self.store.set_fuel(budget.fuel).map_err(|error| error.to_string())?;
+        let epochs=budget.guest.as_nanos().div_ceil(EPOCH.as_nanos()).min(u64::MAX as u128) as u64;
+        self.store.set_epoch_deadline(epochs.max(1));
+        let _inside=InsideGuard::enter();let started=std::time::Instant::now();
+        let result=call(&mut self.store).map_err(|error| short(&error));
+        let elapsed=started.elapsed();self.stats.add(elapsed.as_nanos().min(u64::MAX as u128) as u64);
+        let native=Duration::from_nanos(wait.nanos.load(Ordering::Relaxed).saturating_sub(before_native));
+        let charged=budget.charge(self.store.get_fuel().unwrap_or(0),elapsed,wait.left.load(Ordering::Relaxed),native);
+        charged?;result
+    }
+
     /// Один вызов плагина с топливом, сроком и охраной от возврата в хозяина.
     fn call<R>(&mut self, now: u64, call: impl FnOnce(&Module, &mut Store<PluginCtx>) -> wasmtime::Result<R>) -> Result<R, String> {
         self.store.data_mut().tick = now;
