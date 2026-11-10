@@ -473,7 +473,7 @@ impl Host {
             })().map_err(|error| {
                 self.drop_registrations(&manifest.name);
                 crate::presentation::release(&self.shared,&manifest.name);
-                short(&error)
+                format!("Неверный optional block-break: {}",short(&error))
             })?;
             Some(extension)
         } else { None };

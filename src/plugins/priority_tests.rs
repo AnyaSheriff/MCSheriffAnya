@@ -44,6 +44,7 @@ fn capture_priority_contract(fixture_folder: &str, public: bool) {
         java_info(&shared);
         let mut host = Host::new(Arc::clone(&shared), root).unwrap();
         for letter in order { host.load(&format!("java-priority-{letter}")).unwrap(); }
+        if order.len()==2 {assert_eq!(host.block_break_mode().contains("есть legacy"),!public);}
         let sender = wit::Sender { kind: wit::SenderKind::Player, uuid: Some(crate::network::login::format_uuid(&[1;16])), name: "Первый".into() };
         for mode in ["order", "cancel", "uncancel"] {
             let name = format!("{}-{mode}", order.join("-"));
@@ -73,7 +74,7 @@ fn capture_priority_contract(fixture_folder: &str, public: bool) {
             let public_match = serde_json::json!(&trace) == reference["public_contract"]["trace"] && verdict == reference["public_contract"]["verdict"].as_str().unwrap();
             if !public_match { public_mismatches += 1; }
             if verdict != reference["public_contract"]["verdict"].as_str().unwrap() { verdict_mismatches += 1; }
-            let row = serde_json::json!({"name":&name,"load_order":order,"mode":mode,"trace":&trace,"verdict":verdict,"raw_message_nbt_hex":&raw,"public_contract_match":public_match});
+            let row = serde_json::json!({"dispatch_mode":host.block_break_mode(),"name":&name,"load_order":order,"mode":mode,"trace":&trace,"verdict":verdict,"raw_message_nbt_hex":&raw,"public_contract_match":public_match});
             println!("PRIORITY_STAGED_CONTRACT {row}");
             let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(capture_dir.join(format!("{}-{}.json", name, std::process::id()))).unwrap();
             writeln!(file, "{}", serde_json::to_string_pretty(&row).unwrap()).unwrap();
@@ -118,7 +119,14 @@ fn translated_bukkit_staged_frames_reject_invalid_order_replay_and_capacity() {
     for id in 2..34 {host.priority_probe(0,id,0,false,&who).unwrap();}
     assert!(host.priority_probe(0,34,0,false,&who).unwrap_err().contains("Capacity"));
     host.unload_all();assert!(host.is_empty());
-    println!("PRIORITY_FRAME_NEGATIVES_PASS missing duplicate zero invalid-priority out-of-order early-finish phase-replay id-replay finish-replay capacity unload");
+    host.load("java-priority-a").unwrap();
+    host.priority_probe(0,u64::MAX,0,false,&who).unwrap();
+    for priority in 0..6 {host.priority_probe(1,u64::MAX,priority,false,&who).unwrap();}
+    host.priority_probe(2,u64::MAX,0,false,&who).unwrap();
+    assert!(host.priority_probe(0,u64::MAX,0,false,&who).unwrap_err().contains("Order"));
+    assert!(host.priority_probe(0,1,0,false,&who).unwrap_err().contains("Order"));
+    host.unload_all();assert!(host.is_empty());
+    println!("PRIORITY_FRAME_NEGATIVES_PASS missing duplicate zero invalid-priority out-of-order early-finish phase-replay id-replay finish-replay capacity unload full-u64");
 }
 
 #[test]
@@ -128,7 +136,7 @@ fn translated_bukkit_staged_monitor_epoch_nested_trap_and_empty() {
     let mut rows=Vec::new();
     for case in spec["cases"].as_array().unwrap() {
         let mode=case["mode"].as_str().unwrap();let root=server_root(&format!("priority-safety-{mode}"));
-        let names=if mode=="empty" {vec!["observer","empty"]} else {vec!["observer","mutator"]};
+        let names=if mode=="empty" {["observer","empty"]} else {["observer","mutator"]};
         for suffix in names.iter().copied().chain(std::iter::once("failed")) {
             let name=format!("java-priority-{suffix}");let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/plugins").join(&name);let folder=root.join("plugins").join(&name);std::fs::create_dir_all(&folder).unwrap();
             for file in ["plugin.wasm","plugin.toml"] {std::fs::copy(source.join(file),folder.join(file)).unwrap();}
@@ -178,7 +186,7 @@ fn translated_bukkit_staged_faults_and_cumulative_native_budgets() {
         for suffix in ["a","fault","empty"] {
             let name=format!("java-priority-{suffix}");let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/plugins").join(&name);let folder=root.join("plugins").join(&name);std::fs::create_dir_all(&folder).unwrap();for file in ["plugin.wasm","plugin.toml"]{std::fs::copy(source.join(file),folder.join(file)).unwrap();}
         }
-        let shared=shared();java_info(&shared);let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("java-priority-a").unwrap();host.load("java-priority-fault").unwrap();host.load("java-priority-empty").unwrap();
+        let shared=shared();java_info(&shared);let mut host=Host::new(Arc::clone(&shared),root.clone()).unwrap();host.load("java-priority-a").unwrap();host.load("java-priority-fault").unwrap();host.load("java-priority-empty").unwrap();
         let sender=wit::Sender{kind:wit::SenderKind::Player,uuid:Some(crate::network::login::format_uuid(&[1;16])),name:"Первый".into()};assert!(host.run_command(sender,"prioritya",&["cancel".into()]).unwrap().0);shared.players.lock().unwrap().take_orders(&[1;16]);
         if fault=="fuel" {host.priority_test_fuel(50_000_000);}
         if fault=="guest" {host.priority_test_fuel(u64::MAX);host.priority_test_budget(100,Duration::from_millis(1000),Duration::ZERO);}
@@ -195,7 +203,11 @@ fn translated_bukkit_staged_faults_and_cumulative_native_budgets() {
         if fault=="fuel" {assert_eq!(failed[0]["fuel"],0);}
         for healthy in ["java-priority-a","java-priority-empty"] {assert!(rows.iter().any(|r|r["plugin"]==healthy&&r["stage"]=="finish"&&r["ok"]==true&&r["cancelled"]==true));}
         let messages:Vec<_>=shared.players.lock().unwrap().take_orders(&[1;16]).into_iter().filter_map(|order|match order {crate::players::Order::Message{component}=>Some(component),_=>None}).collect();assert_eq!(messages,vec![crate::network::nbt::text_component("trace A0 c0>1"),crate::network::nbt::text_component("trace A5 c1")]);
-        let row=serde_json::json!({"fault":fault,"boundaries":rows,"survivors":2,"verdict":"deny","raw_message_nbt_hex":messages.iter().map(|m|m.iter().map(|b|format!("{b:02x}")).collect::<String>()).collect::<Vec<_>>()});println!("PRIORITY_CUMULATIVE_FAULT {row}");captures.push(row);
+        let side_effect=if fault=="native" {
+            let path=root.join("plugins/java-priority-fault/data/native-budget-proof.txt");assert!(path.is_file());assert!(std::fs::read(&path).unwrap().is_empty());
+            std::fs::copy(path,Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/native-side-effect.txt")).unwrap();true
+        } else {false};
+        let row=serde_json::json!({"native_side_effect_persisted":side_effect,"fault":fault,"boundaries":rows,"survivors":2,"verdict":"deny","raw_message_nbt_hex":messages.iter().map(|m|m.iter().map(|b|format!("{b:02x}")).collect::<String>()).collect::<Vec<_>>()});println!("PRIORITY_CUMULATIVE_FAULT {row}");captures.push(row);
         host.load("java-priority-fault").unwrap();assert_eq!(host.block_break(&view(),&pos,"minecraft:stone"),Verdict::Deny);assert_eq!(host.loaded.len(),3);host.unload_all();assert!(host.is_empty());
     }
     let file=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/fault-capture.json");assert!(!file.exists());std::fs::write(file,serde_json::to_string_pretty(&captures).unwrap()).unwrap();
