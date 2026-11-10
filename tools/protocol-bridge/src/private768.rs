@@ -2,7 +2,7 @@
 //! Pinned protocol.json «packet_position» / «Slot». Не alias payload769.
 //! Незавершённые формы возвращают отказ; public admission не изменяется.
 use std::collections::{BTreeMap,BTreeSet};
-use crate::{State,Direction,JavaVersion,ids::{RegistryKind,IdTranslationError},wire::{self,Cursor,uint,Error}};
+use crate::{State,Direction,JavaVersion,ids::{RegistryKind,IdTranslationError},wire::{Cursor,uint,Error}};
 #[path="generated_private768.rs"]
 mod tables;
 

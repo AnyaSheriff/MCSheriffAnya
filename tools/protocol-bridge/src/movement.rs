@@ -44,6 +44,8 @@ impl Delta {
                 };
                 Self { on_ground: properties & 1 != 0, motion }
             }
+            #[cfg(feature="private-768")]
+            JavaVersion::V1_21_3 => return Err(Error::UnsupportedVersion),
             JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
         };
         Ok((value, cursor.offset))
@@ -73,6 +75,8 @@ impl Delta {
                     }
                 }
             },
+            #[cfg(feature="private-768")]
+            JavaVersion::V1_21_3 => return Err(Error::UnsupportedVersion),
             JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
         }
         Ok(out)

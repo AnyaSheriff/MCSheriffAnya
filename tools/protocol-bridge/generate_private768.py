@@ -16,7 +16,7 @@ def generate(cache,fetch):
             for k,r in manifest['versions'][str(version)]['files'].items()}
     text='// Сгенерировано generate_private768.py из pinned client-chain-sources.json.\n'
     text+='// Отдельное ребро768/769; неизвестная цель не воздух. Не public admission.\n'
-    text+='use crate::{State,Direction,ids::RegistryKind};\n'
+    text+='use crate::{State,Direction,ids::RegistryKind};\ntype Ranges=(u32, &\'static [(u32,u32,i32)]);\n'
     arrays=[];branches=[];packets=[];report={'scope':'private768 edge tables ONLY; no runtime/public support','registries':{},'changed_packets':{}}
     for source,target in ((768,769),(769,768)):
         for kind in KINDS:
@@ -36,7 +36,7 @@ def generate(cache,fetch):
                 arrays.append(f'static {symbol}: &[(&str,u16,bool)] = &[\n'+''.join(rows)+'];\n')
                 packets.append(f'        (State::{title},Direction::{suffix},{source}) => Some({symbol}),\n')
                 report['changed_packets'][f'{phase}/{direction}/{source}']=changed
-    text+="pub(super) fn ranges(kind:RegistryKind,source:u16)->Option<(u32,&'static [(u32,u32,i32)])>{\n    match (kind,source) {\n"+''.join(branches)+'        _=>None,\n    }\n}\n'
+    text+="pub(super) fn ranges(kind:RegistryKind,source:u16)->Option<Ranges>{\n    match (kind,source) {\n"+''.join(branches)+'        _=>None,\n    }\n}\n'
     text+="pub(super) fn packets(state:State,direction:Direction,source:u16)->Option<&'static [(&'static str,u16,bool)]>{\n    match (state,direction,source) {\n"+''.join(packets)+'        _=>None,\n    }\n}\n'
     return text+''.join(arrays),report
 

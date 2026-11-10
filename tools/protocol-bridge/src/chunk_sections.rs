@@ -26,6 +26,8 @@ fn block_bits(version: JavaVersion) -> Result<u8, Error> {
     match version {
         JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(15),
         JavaVersion::V26_3 => Ok(16),
+        #[cfg(feature="private-768")]
+        JavaVersion::V1_21_3 => Err(Error::UnsupportedVersion),
         JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion),
     }
 }

@@ -261,6 +261,8 @@ fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static
         JavaVersion::V1_21_6 => crate::generated_payload_771::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
         JavaVersion::V1_21_8 => crate::generated_payload_772::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
         JavaVersion::V1_21_9 => crate::generated_payload_773::LAYOUTS.iter().find(|r|r.0==kind).map(|r|r.1).ok_or_else(||failure(Error::UnknownKind(kind))),
+        #[cfg(feature="private-768")]
+        JavaVersion::V1_21_3 => Err(wire::Error::UnsupportedVersion(version)),
         JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
     }
 }

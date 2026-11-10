@@ -1,7 +1,8 @@
 // Сгенерировано generate_private768.py из pinned client-chain-sources.json.
 // Отдельное ребро768/769; неизвестная цель не воздух. Не public admission.
 use crate::{State,Direction,ids::RegistryKind};
-pub(super) fn ranges(kind:RegistryKind,source:u16)->Option<(u32,&'static [(u32,u32,i32)])>{
+type Ranges=(u32, &'static [(u32,u32,i32)]);
+pub(super) fn ranges(kind:RegistryKind,source:u16)->Option<Ranges>{
     match (kind,source) {
         (RegistryKind::Item,768) => Some((1375,ITEM_768)),
         (RegistryKind::Block,768) => Some((1084,BLOCK_768)),
