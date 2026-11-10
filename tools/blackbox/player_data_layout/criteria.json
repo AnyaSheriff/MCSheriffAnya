@@ -1,5 +1,5 @@
 {
-  "schema": "one-original-player-data-layout-v1",
+  "schema": "one-original-player-data-layout-v2-transport-only",
   "protocol": 777,
   "states": [
     "empty",
@@ -26,9 +26,15 @@
   "first_complete_freeze": true,
   "expected_command_results": "discovery: retain errors/missing fields without guessing root/Inventory layouts or parity",
   "readiness": "actual full46 inventory seed and all deltas; positive item/count/damage/enchant fixture, both actual marker receipts; full raw equipment+configuration+RCON frames",
-  "RCON": "Isolated authenticated TCP per query; send target command and ordinary list command with distinct IDs; concatenate target frames in TCP order until actual bounded list response ID; then require EOF after client write-half-close, reject trailing frames. Preserve full request and response frames. StrictUTF8 only after concat. No timeout/content-length completion.",
+  "RCON": "Isolated authenticated TCP perquery: send target; require first actual target-ID/type0 frame; only then send ordinary list with distinctID. Collect targetchunks through actual bounded list response ID, concatstrictUTF8 then close. No half-close, no EOF-wait, no first-packet/timeout fallback. Immediate already-buffered trailing frames rejected; arbitrary later same-IDcorruption not inferable.",
   "transport_semantics_unverified": false,
   "complex_custom_data": "positive typed custom_data component intmcsa_layout1/stringmarkerLAYOUT_FIXED plusrawNBT hex; enchant/damage exact and observerequipment before queries",
   "transport_protocol_reference": "https://minecraft.wiki/w/RCON#Fragmentation",
-  "transport_actual_original_unexecuted": true
+  "transport_actual_original_unexecuted": true,
+  "technical_fix_prior_run": {
+    "run": 42807720145,
+    "status": "FAILURE-technicalINVALID",
+    "layout_queries": 0,
+    "reason": "EOF during startup firstlist with old halfclose; retainedunchanged"
+  }
 }

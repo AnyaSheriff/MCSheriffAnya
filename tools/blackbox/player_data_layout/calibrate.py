@@ -115,7 +115,7 @@ def imported_own_files():
    if path.suffix=='.py' and path.is_relative_to(ROOT):result.append(str(path.relative_to(ROOT)))
  return sorted(set(result))
 def capture(output):
- pin=preflight(output);signal.signal(signal.SIGALRM,lambda *_: (_ for _ in ()).throw(TimeoutError('finite capture deadline')));signal.alarm(300);output.mkdir();work=output/'original';work.mkdir();clients=[];configurations=[];startup_attempts=[];proc=None;control=None;log=None
+ pin=preflight(output);signal.signal(signal.SIGALRM,lambda *_: (_ for _ in ()).throw(TimeoutError('finite capture deadline')));signal.alarm(300);output.mkdir();work=output/'original';work.mkdir();clients=[];configurations=[];startup_attempts=[];cleanup_control=None;proc=None;control=None;log=None
  result=dict(status='INVALID',source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),original_only=True,core_executed=False,compiled=False);commands=[];states=[];life={}
  try:
   for port in [26230,26231]:
@@ -135,7 +135,7 @@ def capture(output):
    if startup_done:break
    time.sleep(.1)
   assert startup_done,'Done readiness deadline'
-  candidate=IsolatedRcon(26231,'local-layout-fixture')
+  candidate=IsolatedRcon(26231,'local-layout-fixture');cleanup_control=candidate
   try:
    startup_status=semantic_startup(candidate,startup_done,lambda:status_query(26230))
   except BaseException as error:
@@ -183,6 +183,7 @@ def capture(output):
  except BaseException:
   (output/'error.txt').write_text(traceback.format_exc());raise
  finally:
+  signal.alarm(0)
   write(output/'commands.json',commands)
   write(output/'startup-attempts.json',startup_attempts)
   write(output/'configuration.json',configurations)
@@ -191,8 +192,8 @@ def capture(output):
   write(output/'raw-clients.json',[dict(entity=c.entity,events=c.events,wire_sent=c.wire_sent,failure=c.failure) for c in clients])
   for c in clients:c.close()
   if proc is not None:
-   life['cleanup_errors']=[];life['cleanup']=stop_process(proc,CleanupAdapter(control,life['cleanup_errors']) if control else None,identity=life['identity'])
-  write(output/'raw-rcon-frames.json',control.calls if control else [])
+   life['cleanup_errors']=[];life['cleanup']=stop_process(proc,CleanupAdapter(cleanup_control,life['cleanup_errors']) if cleanup_control else None,identity=life['identity'])
+  write(output/'raw-rcon-frames.json',cleanup_control.calls if cleanup_control else [])
   used=imported_own_files();missing=[n for n in used if n not in pin['source_files']]
   if missing:result.update(status='INVALID',unfrozen_imports=missing)
   write(output/'own-import-closure.json',used)
