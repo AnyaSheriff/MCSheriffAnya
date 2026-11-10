@@ -1,0 +1,44 @@
+name: One candidate93 offhand replay against immutable original
+on:
+  push:
+    branches: ['test/crossbow-offhand-candidate-20261110']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  candidate-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Offline candidate guards and unchanged recorder contracts
+        env:
+          MCSA_EXTENDED_PROBE_REPO: ${{ github.workspace }}
+        run: |
+          mkdir -p candidate-check-logs
+          python3 -B -m unittest discover -s tools/blackbox/crossbow_ub_extended -p 'test_*probe.py' -v 2>&1 | tee candidate-check-logs/extended-unit.log
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_record777.py' -v 2>&1 | tee candidate-check-logs/recorder-unit.log
+      - name: Download the two exact immutable ZIPs without build or original execution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/AnyaSheriff/MCSheriffAnya/actions/artifacts/13738606105/zip > "$RUNNER_TEMP/immutable-original.zip"
+          gh api repos/AnyaSheriff/MCSheriffAnya/actions/artifacts/13710052720/zip > "$RUNNER_TEMP/verified-runtime93.zip"
+      - name: One fresh candidate93 replay; no original, natural, compilation or retry
+        run: |
+          python3 -B tools/blackbox/crossbow_ub_extended/candidate_only.py --output offhand-candidate-evidence --original-zip "$RUNNER_TEMP/immutable-original.zip" --runtime-zip "$RUNNER_TEMP/verified-runtime93.zip" 2>&1 | tee candidate-check-logs/candidate-entry.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offhand-candidate93-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            candidate-check-logs/
+            offhand-candidate-evidence/
+          retention-days: 7
+          if-no-files-found: warn

@@ -1,0 +1,23 @@
+{
+  "schema": "one-offhand-candidate-v1",
+  "scenario": "crossbow-ub-offhand-commandloaded-777",
+  "original_run": 42762306427,
+  "original_artifact": 13738606105,
+  "original_source": "3bd9af804b1d0467fef799f5cacc0835535681db",
+  "original_zip_sha256": "91ed6959f913bc54555171ec60c3fbc5716879dc51c8fe1712fff220b1a549e6",
+  "original_source_archive_sha256": "1fe3419054d0ff44cbb4fdfd8a89048781e6bbec889e1a86dff5f33781fb0ca5",
+  "original_recorder_sha256": "5f0ce820fc9f39fd26ce8d405d5cc7e64ebd4551e7d233f42e31349f54c6915b",
+  "original_raw_sha256": "178b9b57069ecc584990b346513f70264ad495e83a9468d9c6445678b8154bfa",
+  "criteria_sha256": "24e96f7b79c34111d6239c80bb16cb04f3c602895147e93ee881f3a366ea1cbe",
+  "scenario_sha256": "874da43ce136390ae1d4b67cb2af8e33adf34c227c1099d38a75519f339eda12",
+  "runtime_source": "93bbae85da4d2b90df9979b5ba3a5f7c965ee21f",
+  "runtime_run": 42690720281,
+  "runtime_artifact": 13710052720,
+  "runtime_zip_sha256": "72961169c5235ea2390d8334ef7c574e8f5324a9efcee085825bef4baba42077",
+  "runtime_sha256": "4a456bd552edd3a46bd3755b40055c731a97e199a5116cb7d9bdae1d5aa65110",
+  "runtime_lock_sha256": "9675f5683ab3b533faad08f32352dffbd79242c9043b7cec4b0caf8d8512ea35",
+  "gameplay_base": "e3e90d74f60f0750459ebe964c709195f92b49ef",
+  "no_new_original": true,
+  "no_natural": true,
+  "no_recompile": true
+}

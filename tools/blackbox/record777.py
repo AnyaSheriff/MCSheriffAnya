@@ -283,6 +283,51 @@ def allow_causal_original_reference(args, github_actions):
             and len(args.scenarios)==1 and args.scenarios[0] in allowed)
 
 
+def allow_causal_candidate_reference(args, github_actions, run_attempt):
+    """Явный offhand-only replay в новый output, без неявного resume."""
+    return (github_actions=='true' and run_attempt=='1' and args.version==777 and args.causal_menu_readiness
+            and args.core_only and args.isolate_vitals
+            and not (args.resume or args.parallel or args.official_only or args.causal_original_reference)
+            and args.scenarios==['crossbow-ub-offhand-commandloaded-777']
+            and not args.output.exists() and args.causal_candidate_reference.is_dir()
+            and args.causal_candidate_input_proof and args.causal_candidate_input_proof.is_file()
+            and args.causal_candidate_reference.resolve() not in args.output.resolve().parents
+            and args.output.resolve() not in args.causal_candidate_reference.resolve().parents)
+
+
+def checked_causal_candidate_reference(args, scenario):
+    """Immutable original проверяется отдельно от прежнего saved-reference режима."""
+    pin=json.loads((ROOT/'tools/blackbox/crossbow_ub_extended/candidate-pin.json').read_text())
+    reference=args.causal_candidate_reference
+    proof=json.loads(args.causal_candidate_input_proof.read_text())
+    for which in ['original','runtime']:
+        assert proof['actual_zip_sha256'][which]==pin[which+'_zip_sha256']
+        assert proof['api'][which]['artifact']['digest']=='sha256:'+pin[which+'_zip_sha256']
+        assert proof['api'][which]['run']['head_sha']==pin[which+'_source'] and proof['api'][which]['run']['conclusion']=='success'
+    digest=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+    raw_path=reference/'FIRST-ORIGINAL/original-raw.json'
+    assert digest(raw_path)==pin['original_raw_sha256']
+    assert digest(reference/'criteria.json')==pin['criteria_sha256']
+    assert digest(reference/'scenario.json')==pin['scenario_sha256']
+    assert digest(ROOT/'tools/blackbox/scenarios'/f"{scenario['name']}.json")==pin['scenario_sha256']
+    assert digest(args.binary)==pin['runtime_sha256'] and scenario['name']==pin['scenario']
+    capture=json.loads((reference/'capture-receipt.json').read_text())
+    original_pin=json.loads((reference/'FIRST-ORIGINAL/original-first-pin.json').read_text())
+    assert capture['source']==original_pin['capture_source']==pin['original_source']
+    assert capture['requested_capture_sides']==['official'] and capture['raw_sha256']==pin['original_raw_sha256']
+    assert capture['recorder_sha256']==pin['original_recorder_sha256'] and capture['criteria_sha256']==pin['criteria_sha256']
+    ledger=json.loads((reference/'files.json').read_text())
+    assert ledger['own-source.tar.gz']['sha256']==pin['original_source_archive_sha256']
+    manifests=list((reference/'recordings').glob('run-*.json'));assert len(manifests)==1
+    manifest=json.loads(manifests[0].read_text())
+    assert manifest['causal_original_reference'] and manifest['requested_capture_sides']==['official']
+    assert manifest['recorder_sha256']==pin['original_recorder_sha256'] and manifest['scenario_sha256']=={pin['scenario']:pin['scenario_sha256']}
+    for name,expected in manifest['data_sha256'].items():assert digest(args.data/name)==expected
+    raw=checked_reference(json.loads(raw_path.read_text()),scenario,args.version,args.isolate_vitals)
+    assert raw['capture_side']=='official' and raw['recorder_sha256']==pin['original_recorder_sha256']
+    return raw,pin['original_raw_sha256']
+
+
 def window_click_payload(window,state,action):
     # Та же форма, что у bot.js: без предполагаемых изменённых ячеек и курсора.
     return varint(window)+varint(state)+struct.pack('>hb',action['slot'],action.get('button',0))+varint(action.get('mode',0))+b'\0\0'
@@ -798,7 +843,9 @@ def run_scenario_sides(args, scenario, servers, protocol, speed_attribute, previ
         if not matches:raise ValueError('saved official reference has no matching previous source/data manifest')
         return raw
 
-    if args.core_only:
+    if getattr(args,'causal_candidate_reference',None):
+        reference,reference_sha256=checked_causal_candidate_reference(args,scenario)
+    elif args.core_only:
         # Явный --core-only использует только завершённую сохранённую опору.
         reference = saved_reference()
         reference_sha256=hashlib.sha256((args.output/f'{name}-official.json').read_bytes()).hexdigest()
@@ -852,12 +899,18 @@ def main():
     p.add_argument('--isolate-vitals',action='store_true')
     p.add_argument('--causal-menu-readiness',action='store_true',help='isolated fresh paired probe: wait TP/ACK and full menu; global arrow cleanup through own RCON')
     p.add_argument('--causal-original-reference',action='store_true',help='GitHub-only original-first UB reference; three fixed scenarios only')
+    p.add_argument('--causal-candidate-reference',type=Path,help='GitHub-only fresh offhand candidate against the exact immutable original')
+    p.add_argument('--causal-candidate-input-proof',type=Path,help='checked API and actual ZIP receipts for explicit candidate mode only')
     p.add_argument('--core-debug',action='store_true')
     p.add_argument('scenarios',nargs='*')
     a=p.parse_args()
     if a.causal_original_reference and not allow_causal_original_reference(a,os.environ.get('GITHUB_ACTIONS')):
         p.error('--causal-original-reference requires GitHub fresh official-only777 and one declared UB scenario')
-    if a.causal_menu_readiness and (a.version!=777 or a.resume or a.core_only or (a.official_only and not a.causal_original_reference)):
+    if a.causal_candidate_input_proof and not a.causal_candidate_reference:
+        p.error('--causal-candidate-input-proof needs explicit candidate reference mode')
+    if a.causal_candidate_reference and not allow_causal_candidate_reference(a,os.environ.get('GITHUB_ACTIONS'),os.environ.get('GITHUB_RUN_ATTEMPT')):
+        p.error('--causal-candidate-reference requires fresh GitHub core-only777 offhand without resume/parallel/overwrite')
+    if a.causal_menu_readiness and (a.version!=777 or a.resume or (a.core_only and not a.causal_candidate_reference) or (a.official_only and not a.causal_original_reference)):
         p.error('--causal-menu-readiness requires a fresh paired777 recording')
     if a.skip_recorded_core:
         p.error('--skip-recorded-core disabled: re-record ours to verify runtime identity')
@@ -881,6 +934,8 @@ def main():
         raw=(a.data/'protocol.json').read_bytes()
         assert hashlib.sha256(raw).hexdigest()=='0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3','pinned775 protocol mismatch'
         tables={'protocol.json':json.loads(raw)}
+    if a.causal_candidate_reference:
+        checked_causal_candidate_reference(a,json.loads((ROOT/'tools/blackbox/scenarios'/f'{a.scenarios[0]}.json').read_text()))
     saved_manifests=[json.loads(path.read_text()) for path in a.output.glob('run-*.json')] if a.resume else []
     a.output.mkdir(parents=True,exist_ok=a.resume)
     selected=a.scenarios or sorted({v.stem for pattern in ('pvp-*','cow-crit*','sword-sweep-*','itemaudit4-knockback*','*shield*') for v in (ROOT/'tools/blackbox/scenarios').glob(pattern+'.json')})
@@ -889,6 +944,10 @@ def main():
     if a.causal_original_reference:
         manifest['causal_original_reference']=True
         manifest['requested_capture_sides']=['official']
+    if a.causal_candidate_reference:
+        manifest['causal_candidate_reference']={'original_raw_sha256':'178b9b57069ecc584990b346513f70264ad495e83a9468d9c6445678b8154bfa','original_artifact_zip_sha256':'91ed6959f913bc54555171ec60c3fbc5716879dc51c8fe1712fff220b1a549e6'}
+        manifest['requested_capture_sides']=['ours']
+        manifest['causal_candidate_reference']['input_proof_sha256']=hashlib.sha256(a.causal_candidate_input_proof.read_bytes()).hexdigest()
     manifest['comparison_sha256']={name:hashlib.sha256((Path(__file__).parent/name).read_bytes()).hexdigest() for name in ('bot.js','compare.js','analyze777.py','replay777.js')}
     (a.output/f'run-{time.time_ns()}.json').write_text(json.dumps(manifest,indent=2)+'\n')
     servers=[]
