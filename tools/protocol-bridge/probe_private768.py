@@ -183,7 +183,12 @@ def run_session(cache,java,server,port,relay,output,protocol,stone,index):
                 report['movement_before']=before
             if report['errors'] or any(text in (output/'client.log').read_text() for text in ('Failed to handle packet','Failed to load chunk')):raise RuntimeError('actual native decode failure')
             report['completed']=True
-        except Exception as e:report['errors'].append(repr(e))
+        except Exception as e:
+            report['errors'].append(repr(e))
+            if client is not None and client.poll() is None:
+                try:report['failure_frame_sha256']=capture(client,output/'failure.png')
+                except Exception as capture_error:report['failure_frame_error']=repr(capture_error)
+            else:report['failure_frame_error']='client already exited; no live own display'
         finally:
             ending.set()
             for peer in peers:
