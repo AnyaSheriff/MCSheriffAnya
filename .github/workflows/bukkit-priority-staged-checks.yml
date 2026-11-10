@@ -53,6 +53,7 @@ jobs:
           include-hidden-files: true
           retention-days: 7
   old-host-new-components:
+    if: ${{ always() && !cancelled() }}
     needs: optional-abi
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -95,4 +96,47 @@ jobs:
         with:
           name: staged-old-host-${{ github.run_id }}
           path: old-host-evidence/
+          retention-days: 7
+
+  strict-workspace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify pinned dependencies and immutable translated inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py reuse
+      - uses: Swatinem/rust-cache@v2
+      - name: Build own Rust component fixtures for the existing default suite
+        run: |
+          rustup target add wasm32-wasip2
+          set -o pipefail
+          cargo build --manifest-path plugins-examples/Cargo.toml --release --target wasm32-wasip2 2>&1 | tee staged-evidence/rust-fixtures.log
+      - name: Strict complete workspace Clippy
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee staged-evidence/clippy.log
+      - name: Complete default and no-default workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace 2>&1 | tee staged-evidence/default-tests.log
+          cargo test --release --locked --workspace --no-default-features 2>&1 | tee staged-evidence/no-default-tests.log
+      - name: Complete release workspace build
+        run: |
+          set -o pipefail
+          cargo build --release --locked --workspace 2>&1 | tee staged-evidence/build.log
+      - name: Preserve strict source and receipt on every outcome
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py finish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staged-strict-${{ github.run_id }}
+          path: staged-evidence/
+          include-hidden-files: true
           retention-days: 7
