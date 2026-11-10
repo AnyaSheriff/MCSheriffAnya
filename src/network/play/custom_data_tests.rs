@@ -164,6 +164,51 @@ fn creative_slot_roundtrip_keeps_known_tnt_kind() {
     }
 }
 
+/// Поле кейса фикстуры в схеме {cases:[{id,snbt,raw_hex},...]} — всегда
+/// строка; serde читает только строковые поля, raw_hex здесь не
+/// используется и настоящие байты не выдумываются.
+fn fixture_case_field(case: &serde_json::Value, key: &str) -> String {
+    case.get(key).and_then(|value| value.as_str())
+        .unwrap_or_else(|| panic!("поле \"{key}\" кейса фикстуры — не строка"))
+        .to_owned()
+}
+
+/// Все 13 строк фикстуры коллекций проходят настоящий путь, как в
+/// известном тесте про tnt: команда → стек из каталога Preview26_3 →
+/// нативный creative-slot для V26_3 → декодирование обратно. Проверяем
+/// личность предмета, количество и все довески, а не только сырые
+/// байты custom_data; float при этом нигде не активируется.
+#[test]
+fn collections_fixture_command_stacks_survive_creative_slot() {
+    let fixture = include_str!("../../../testdata/custom-data-collections-26.3.json");
+    let document = serde_json::from_str::<serde_json::Value>(fixture)
+        .expect("фикстура — валидный JSON");
+    let cases = document["cases"].as_array().expect("схема {cases:[...]}").clone();
+    assert_eq!(cases.len(), 13, "ровно 13 оригинальных строк");
+    for case in &cases {
+        let id = fixture_case_field(case, "id");
+        let snbt = fixture_case_field(case, "snbt");
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let spec = format!("stone[minecraft:custom_data={snbt}]");
+        let stack = crate::commands::stack_from_spec_for_catalog(catalog, &spec, 7)
+            .expect("команда должна собираться в стек каталога")
+            .expect("стек должен собраться");
+        let expected = CustomData::from_snbt(&snbt)
+            .unwrap_or_else(|| panic!("{id}: snbt должен разбираться: {snbt}"));
+        assert_eq!(stack.extras().custom_data.as_ref(), Some(&expected), "{id}: стек из команды");
+
+        let payload = received_payload(stack, 36, mcsa_protocol::JavaVersion::V26_3);
+        let mut player = player();
+        assert!(read_creative_slot_with_catalog(&payload, &mut player, catalog).is_none(), "{id}");
+        assert_eq!(player.inventory.slot(36), Some(stack), "{id}: личность, количество и довески целиком");
+        assert_eq!(
+            player.inventory.slot(36).unwrap().extras().custom_data,
+            Some(expected.clone()),
+            "{id}: custom_data по полям, не только по байтам",
+        );
+    }
+}
+
 #[test]
 fn untyped_nested_custom_data_components_fail_explicitly() {
     for spec in [

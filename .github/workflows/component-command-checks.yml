@@ -1,7 +1,7 @@
 name: Custom data command parser/splitter source checks only
 on:
   push:
-    branches: ['feature/custom-data-command-20261110']
+    branches: ['feature/custom-data-collections-20261110']
 permissions:
   contents: read
 jobs:
@@ -44,6 +44,11 @@ jobs:
           rustup target add wasm32-wasip2
           cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 --message-format=json-render-diagnostics 2>&1 | tee command-component-evidence/own-examples-build.log
           python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output command-component-evidence
+      - name: Strict default workspace Clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee command-component-evidence/default-clippy.log
       - name: Focused mcsheriffanya custom_data command and split_components tests
         shell: bash
         run: |
@@ -74,11 +79,6 @@ jobs:
         run: |
           set -o pipefail
           cargo test --release --locked --workspace --no-default-features --message-format=json-render-diagnostics 2>&1 | tee command-component-evidence/no-default-tests.log
-      - name: Strict default workspace Clippy
-        shell: bash
-        run: |
-          set -o pipefail
-          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee command-component-evidence/default-clippy.log
       - name: Build one ordinary runtime without executing it
         shell: bash
         run: |

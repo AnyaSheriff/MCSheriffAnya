@@ -141,7 +141,33 @@ fn duplicate_custom_data_alias_rejected() {
     assert!(parse_item_spec("stone[custom_data={x:1b}]").is_ok());
 }
 
-/// Float и списки, битый SNBT и неизвестное экранирование отвергаются.
+/// Намеренно старые негативные случаи с однородными списками и
+/// типизированными массивами B/I/L теперь позитивные: типы и байты
+/// выставляются точно, без пережатия через f64/JSON.
+#[test]
+fn homogeneous_lists_and_typed_b_i_l_arrays_supported() {
+    for snbt in ["{x:[1b,2b]}", "{x:[1L,2L]}", "{x:[B;1b,2b]}", "{x:[I;1,2]}", "{x:[L;1L,2L]}"] {
+        let parsed = CustomData::from_snbt(snbt)
+            .unwrap_or_else(|| panic!("коллекции теперь поддерживаются: {snbt}"));
+        assert_eq!(CustomData::from_bytes(parsed.as_bytes()), Some(parsed), "{snbt}");
+    }
+    for spec in [
+        "stone[custom_data={x:[1b]}]",
+        "stone[custom_data={x:[B;1b]}]",
+        "stone[custom_data={x:[I;1]}]",
+        "stone[custom_data={x:[L;1L]}]",
+    ] {
+        let (_, data) = parse_item_spec(spec)
+            .unwrap_or_else(|error| panic!("командный случай теперь позитивный: {spec}: {error:?}"));
+        assert!(data.custom_data.is_some(), "{spec}");
+        let bytes = crate::stackdata::to_bytes(&data);
+        let restored = crate::stackdata::from_bytes(&bytes).expect("довески переживают сериализацию");
+        assert_eq!(restored.custom_data, data.custom_data, "{spec}");
+    }
+}
+
+/// Float, смешанный список [1,2L] и массив неверной ширины [I;1L],
+/// битый SNBT и неизвестное экранирование по-прежнему отвергаются.
 #[test]
 fn unsupported_types_and_broken_snbt_rejected() {
     for bad_snbt in [
@@ -149,14 +175,15 @@ fn unsupported_types_and_broken_snbt_rejected() {
         "{x:1.5f}",
         "{x:1.5d}",
         "{x:1.0}",
-        "{x:[1b,2b]}",
+        "{x:[1,2L]}",
+        "{x:[I;1L]}",
         "{x:",
         "{x:q",
         r#"{m:"a\qb"}"#,
     ] {
         assert!(CustomData::from_snbt(bad_snbt).is_none(), "{bad_snbt}");
     }
-    for bad_spec in ["stone[custom_data={x:1.5}]", "stone[custom_data={x:[1b]}]"] {
+    for bad_spec in ["stone[custom_data={x:1.5}]", "stone[custom_data={x:[I;1L]}]"] {
         assert!(parse_item_spec(bad_spec).is_err(), "{bad_spec}");
     }
 }
@@ -185,4 +212,45 @@ fn whole_extras_limit_held_for_large_quoted_marker() {
     let marker = "B".repeat(70000);
     let spec = format!("stone[custom_data={{marker:\"{marker}\"}}]");
     assert!(parse_item_spec(&spec).is_err());
+}
+
+/// Поле кейса фикстуры в схеме {cases:[{id,snbt,raw_hex},...]} — всегда
+/// строка; serde читает только строковые поля, без перевода в NBT.
+fn case_field(case: &serde_json::Value, key: &str) -> String {
+    case.get(key).and_then(|value| value.as_str())
+        .unwrap_or_else(|| panic!("поле \"{key}\" кейса фикстуры — не строка"))
+        .to_owned()
+}
+
+/// Фикстура реальных оригинальных предметов 26.3 с коллекциями
+/// (однородные списки и типизированные B/I/L-массивы) в custom_data:
+/// ровно 13 строк. Для каждой оригинальный SNBT и raw_hex из
+/// оригинального пакета дают одинаковое custom_data; сырая команда
+/// stone[minecraft:custom_data=SNBT] совпадает по компоненту, а довески
+/// переживают сериализацию целой стопки.
+#[test]
+fn collections_fixture_original_snbt_matches_original_wire() {
+    let fixture = include_str!("../../../testdata/custom-data-collections-26.3.json");
+    let document = serde_json::from_str::<serde_json::Value>(fixture)
+        .expect("фикстура — валидный JSON");
+    let cases = document["cases"].as_array().expect("схема {cases:[...]}").clone();
+    assert_eq!(cases.len(), 13, "ровно 13 оригинальных строк");
+    for case in &cases {
+        let id = case_field(case, "id");
+        let snbt = case_field(case, "snbt");
+        let raw_hex = case_field(case, "raw_hex");
+        let from_raw = CustomData::from_bytes(&hex_bytes(&raw_hex))
+            .unwrap_or_else(|| panic!("{id}: raw_hex должен читаться как NBT"));
+        let from_snbt = CustomData::from_snbt(&snbt)
+            .unwrap_or_else(|| panic!("{id}: snbt должен разбираться: {snbt}"));
+        assert_eq!(from_raw, from_snbt, "{id}: SNBT и сырой NBT совпадают");
+
+        let spec = format!("stone[minecraft:custom_data={snbt}]");
+        let (_, data) = parse_item_spec(&spec)
+            .unwrap_or_else(|error| panic!("{id}: сырая команда должна разбираться: {error:?}"));
+        assert_eq!(data.custom_data.as_ref(), Some(&from_raw), "{id}: компонент в команде");
+        let bytes = crate::stackdata::to_bytes(&data);
+        let restored = crate::stackdata::from_bytes(&bytes).expect("довески переживают сериализацию");
+        assert_eq!(restored.custom_data, data.custom_data, "{id}: довески сохранены");
+    }
 }
