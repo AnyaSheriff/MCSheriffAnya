@@ -1,0 +1,15 @@
+package mcsa:priority-events@0.1.0;
+
+/// Необязательный протокол только native BlockBreakEvent; старый world неизменён.
+interface block-break {
+    use mcsa:api/types@0.1.0.{player, block-pos};
+    enum frame-error { missing, duplicate, capacity, order, priority }
+    begin: func(id: u64, who: player, pos: block-pos, block: string, cancelled: bool) -> result<_, frame-error>;
+    phase: func(id: u64, priority: u8, cancelled: bool) -> result<bool, frame-error>;
+    finish: func(id: u64, cancelled: bool) -> result<_, frame-error>;
+}
+
+world staged-bukkit-plugin {
+    include mcsa:api/bukkit-plugin@0.1.0;
+    export block-break;
+}

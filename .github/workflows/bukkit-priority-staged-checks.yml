@@ -1,0 +1,29 @@
+name: Staged native Bukkit BlockBreak prototype
+on:
+  push:
+    branches: ['feature/bukkit-priority-staged-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  optional-abi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Parse cross-package WIT and generate actual C API
+        run: |
+          mkdir staged-evidence
+          set -o pipefail
+          python3 -B tools/plugin-translator/check-priority-wit.py 2>&1 | tee staged-evidence/wit.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staged-wit-${{ github.run_id }}
+          path: staged-evidence/
