@@ -20,6 +20,9 @@ class Guards(unittest.TestCase):
         base=b'\0'+varint(768)+string('127.0.0.1')+(26269).to_bytes(2,'big')
         self.assertEqual(read_handshake(base+b'\1',26269),1)
         self.assertEqual(read_handshake(base+b'\2',26269),2)
+        self.assertEqual(read_handshake(bytes.fromhex('008006096c6f63616c686f7374669d02'),26269),2)
+        wronghost=b'\0'+varint(768)+string('example.com')+(26269).to_bytes(2,'big')+b'\2'
+        with self.assertRaises(ValueError):read_handshake(wronghost,26269)
         for raw in (base+b'\3',base+b'\2\0',base[:-1]+b'\0\2',base[:-1]):
             with self.assertRaises((ValueError,EOFError)):read_handshake(raw,26269)
     def test_varint_negative_overflow_truncated(self):

@@ -180,7 +180,7 @@ def require_runtime(allow_normal_native_loading=False):
 
 def read_handshake(body, relay_port):
     data=io.BytesIO(body)
-    if uint(data)!=0 or uint(data)!=768 or read_string(data)!='127.0.0.1' or struct.unpack('>H',exact(data,2))[0]!=relay_port:
+    if uint(data)!=0 or uint(data)!=768 or read_string(data) not in ('127.0.0.1','localhost') or struct.unpack('>H',exact(data,2))[0]!=relay_port:
         raise ValueError('opaque client handshake mismatch')
     state=uint(data);require_end(data,'Handshake')
     if state not in (1,2):raise ValueError('unsupported initial state')
