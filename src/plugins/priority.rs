@@ -2,6 +2,8 @@
 use std::time::Duration;
 
 #[derive(Clone, Copy, Debug, wasmtime::component::ComponentType, wasmtime::component::Lift, wasmtime::component::Lower)]
+// Варианты создаёт component lifting, не обычный Rust constructor.
+#[allow(dead_code)]
 #[component(enum)]
 #[repr(u8)]
 pub(super) enum FrameError {

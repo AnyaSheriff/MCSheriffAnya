@@ -1,0 +1,6 @@
+name: java-priority-mutator
+version: '1.0'
+main: fixtures.Mutator
+commands:
+  mutator:
+    description: Собственная проверка staged native frame

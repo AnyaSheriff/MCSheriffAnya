@@ -120,3 +120,50 @@ fn translated_bukkit_staged_frames_reject_invalid_order_replay_and_capacity() {
     host.unload_all();assert!(host.is_empty());
     println!("PRIORITY_FRAME_NEGATIVES_PASS missing duplicate zero invalid-priority out-of-order early-finish phase-replay id-replay finish-replay capacity unload");
 }
+
+#[test]
+#[ignore = "requires actual translated staged safety fixtures"]
+fn translated_bukkit_staged_monitor_epoch_nested_trap_and_empty() {
+    let spec:serde_json::Value=serde_json::from_str(include_str!("../../tools/plugin-translator/fixtures/priority-safety-expected.json")).unwrap();
+    let mut rows=Vec::new();
+    for case in spec["cases"].as_array().unwrap() {
+        let mode=case["mode"].as_str().unwrap();let root=server_root(&format!("priority-safety-{mode}"));
+        let names=if mode=="empty" {vec!["observer","empty"]} else {vec!["observer","mutator"]};
+        for suffix in names.iter().copied().chain(std::iter::once("failed")) {
+            let name=format!("java-priority-{suffix}");let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/plugins").join(&name);let folder=root.join("plugins").join(&name);std::fs::create_dir_all(&folder).unwrap();
+            for file in ["plugin.wasm","plugin.toml"] {std::fs::copy(source.join(file),folder.join(file)).unwrap();}
+        }
+        let shared=shared();java_info(&shared);let mut host=Host::new(Arc::clone(&shared),root).unwrap();
+        assert!(host.load("java-priority-failed").is_err());assert!(host.is_empty());
+        for name in &names {host.load(&format!("java-priority-{name}")).unwrap();}
+        assert!(host.block_break_mode().contains("общим приоритетам"));
+        for command in ["observer","mutator"] {
+            if command=="mutator"&&mode=="empty" {continue;}
+            let sender=wit::Sender{kind:wit::SenderKind::Player,uuid:Some(crate::network::login::format_uuid(&[1;16])),name:"Первый".into()};
+            assert!(host.run_command(sender,command,&[mode.into()]).unwrap().0);
+        }
+        shared.players.lock().unwrap().take_orders(&[1;16]);
+        let verdict=if host.block_break(&view(),&wit::BlockPos{dimension:wit::Dimension::Overworld,x:3,y:70,z:0},"minecraft:stone")==Verdict::Deny {"deny"} else {"allow"};
+        assert_eq!(verdict,case["verdict"].as_str().unwrap());assert_eq!(host.loaded.len(),case["survivors"].as_u64().unwrap() as usize);
+        let messages:Vec<_>=shared.players.lock().unwrap().take_orders(&[1;16]).into_iter().filter_map(|order|match order {crate::players::Order::Message{component}=>Some(component),_=>None}).collect();
+        assert_eq!(messages,[crate::network::nbt::text_component(case["message"].as_str().unwrap())]);
+        let raw:Vec<String>=messages.iter().map(|m|m.iter().map(|b|format!("{b:02x}")).collect()).collect();
+        let row=serde_json::json!({"mode":mode,"verdict":verdict,"survivors":host.loaded.len(),"raw_message_nbt_hex":raw});println!("PRIORITY_SAFETY {row}");rows.push(row);
+        if mode=="trap"||mode=="fuel" {assert!(host.command_level("mutator").is_none());}
+        host.unload_all();assert!(host.is_empty());
+    }
+    let file=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/safety-capture.json");assert!(!file.exists());std::fs::write(file,serde_json::to_string_pretty(&rows).unwrap()).unwrap();
+}
+
+#[test]
+#[ignore = "requires actual translated staged fixture"]
+fn translated_bukkit_staged_empty_fuel_quarantines_and_reload_is_fresh() {
+    let root=server_root("staged-budget-quarantine");let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/plugins/java-priority-a");let folder=root.join("plugins/java-priority-a");std::fs::create_dir_all(&folder).unwrap();
+    for file in ["plugin.toml","plugin.wasm"] {std::fs::copy(source.join(file),folder.join(file)).unwrap();}
+    let shared=shared();java_info(&shared);let mut host=Host::new(shared,root).unwrap();host.load("java-priority-a").unwrap();host.priority_test_fuel(1);
+    let pos=wit::BlockPos{dimension:wit::Dimension::Overworld,x:3,y:70,z:0};
+    // begin не подтверждён: прежнее false; store с незавершённым frame удаляется.
+    assert_eq!(host.block_break(&view(),&pos,"minecraft:stone"),Verdict::Allow);assert!(host.is_empty());assert!(host.command_level("prioritya").is_none());
+    host.load("java-priority-a").unwrap();assert_eq!(host.block_break(&view(),&pos,"minecraft:stone"),Verdict::Allow);assert_eq!(host.loaded.len(),1);host.unload_all();
+    println!("PRIORITY_BUDGET_QUARANTINE_PASS fresh-reload command-cleanup no-refill");
+}

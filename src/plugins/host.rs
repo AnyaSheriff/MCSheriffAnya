@@ -1107,6 +1107,12 @@ impl Host {
         if denied { Verdict::Deny } else { Verdict::Allow }
     }
 
+    pub fn block_break_mode(&self) -> &'static str {
+        if self.loaded.is_empty() {"нет участников"}
+        else if self.loaded.iter().all(|p|p.priority.is_some()) {"по общим приоритетам (BlockBreak prototype)"}
+        else {"прежний порядок компонентов (есть legacy)"}
+    }
+
     pub fn block_break(&mut self, who: &PlayerView, pos: &mcsa::api::types::BlockPos, block: &str) -> Verdict {
         let who = who.to_wit();
 
@@ -1120,15 +1126,13 @@ impl Host {
     pub(super) fn priority_probe(&mut self, operation: u8, id: u64, priority: u8, cancelled: bool, who: &PlayerView) -> Result<bool,String> {
         let now=self.shared_tick();let plugin=&mut self.loaded[0];let extension=plugin.priority.ok_or("Нет staged extension")?;
         plugin.call(now,|_,store| match operation {
-            0=>{let (v,)=extension.begin.call(&mut *store,(id,who.to_wit(),mcsa::api::types::BlockPos{dimension:mcsa::api::types::Dimension::Overworld,x:3,y:70,z:0},"minecraft:stone".into(),cancelled))?;extension.begin.post_return(&mut *store)?;v.map(|()|false).map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
-            1=>{let (v,)=extension.phase.call(&mut *store,(id,priority,cancelled))?;extension.phase.post_return(&mut *store)?;v.map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
-            2=>{let (v,)=extension.finish.call(&mut *store,(id,cancelled))?;extension.finish.post_return(&mut *store)?;v.map(|()|false).map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
+            0=>{let (v,)=extension.begin.call(&mut *store,(id,who.to_wit(),mcsa::api::types::BlockPos{dimension:mcsa::api::types::Dimension::Overworld,x:3,y:70,z:0},"minecraft:stone".into(),cancelled))?;v.map(|()|false).map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
+            1=>{let (v,)=extension.phase.call(&mut *store,(id,priority,cancelled))?;v.map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
+            2=>{let (v,)=extension.finish.call(&mut *store,(id,cancelled))?;v.map(|()|false).map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
             _=>Err(wasmtime::Error::msg("Неизвестная test operation")),
         })
     }
 
-    #[cfg(test)]
-    pub(super) fn priority_test_force_legacy(&mut self) { for plugin in &mut self.loaded {plugin.priority=None;} }
     #[cfg(test)]
     pub(super) fn priority_test_fuel(&mut self, fuel: u64) {for plugin in &mut self.loaded {plugin.limits.fuel=fuel;} }
 
@@ -1145,7 +1149,6 @@ impl Host {
             let extension=plugin.priority.unwrap();
             let result=plugin.priority_call(now,&mut budgets[index],|store| {
                 let (value,)=extension.begin.call(&mut *store,(id,who.clone(),pos,block.into(),false))?;
-                extension.begin.post_return(&mut *store)?;
                 value.map_err(|error| wasmtime::Error::msg(format!("Native begin: {error:?}")))
             });
             match result { Ok(())=>alive[index]=true,Err(reason)=>crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason}) }
@@ -1156,7 +1159,6 @@ impl Host {
                 let extension=plugin.priority.unwrap();
                 let result=plugin.priority_call(now,&mut budgets[index],|store| {
                     let (value,)=extension.phase.call(&mut *store,(id,priority,cancelled))?;
-                    extension.phase.post_return(&mut *store)?;
                     value.map_err(|error| wasmtime::Error::msg(format!("Native phase: {error:?}")))
                 });
                 match result {Ok(value)=>cancelled=value,Err(reason)=>{alive[index]=false;crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason});}}
@@ -1167,7 +1169,6 @@ impl Host {
             let extension=plugin.priority.unwrap();
             if let Err(reason)=plugin.priority_call(now,&mut budgets[index],|store| {
                 let (value,)=extension.finish.call(&mut *store,(id,cancelled))?;
-                extension.finish.post_return(&mut *store)?;
                 value.map_err(|error| wasmtime::Error::msg(format!("Native finish: {error:?}")))
             }) {crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason});}
         }

@@ -307,7 +307,7 @@ static bool priority_result(int code,exports_mcsa_priority_events_block_break_fr
     if(code < -5)abort();
     *err=(exports_mcsa_priority_events_block_break_frame_error_t)(-code-1);return false;
 }
-static void priority_id(uint64_t id) {char s[32];snprintf(s,sizeof(s),"%llu",(unsigned long long)id);text(s);}
+static void priority_id(uint64_t id) {char s[32];snprintf(s,sizeof(s),"%016llx",(unsigned long long)id);text(s);}
 bool exports_mcsa_priority_events_block_break_begin(uint64_t id,mcsa_api_types_player_t *who,mcsa_api_types_block_pos_t *pos,plugin_string_t *block,bool cancelled,exports_mcsa_priority_events_block_break_frame_error_t *err) {
     clear();priority_id(id);integer(cancelled);player(who);integer(pos->dimension);integer(pos->x);integer(pos->y);integer(pos->z);string(*block);
     return priority_result(dispatch(40),err);

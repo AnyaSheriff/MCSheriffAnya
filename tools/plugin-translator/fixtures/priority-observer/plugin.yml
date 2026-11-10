@@ -1,0 +1,6 @@
+name: java-priority-observer
+version: '1.0'
+main: fixtures.Observer
+commands:
+  observer:
+    description: Собственная проверка staged native frame
