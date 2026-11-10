@@ -1,0 +1,64 @@
+{
+  "schema": "distances-two-original-login-v2",
+  "scope": "Actual26.3PlayLogin view/simulation minimum2 and8/2 control; not hopper ticking or memory residency",
+  "protocol_json_sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+  "official_jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "original_capture": "parallel-20261109/mechanisms/active_distance_run/capture-01/official-raw.json",
+  "original_raw_sha256": "1ef9825511b60034c9613799811e200d7436c96beb4b6ad334b71bc35ac1c5bc",
+  "original_collector_sha256": "8e496ec1e402bfd44296b5604ddd39731120beece04091b1ec436e145f4fddab",
+  "original_criteria_sha256": "49d1071bd1a6eb81bdb57ead632284c0ea9fe57c4db4a9c395f517652fa2644e",
+  "original_requested_properties": {
+    "view-distance": 8,
+    "simulation-distance": 2
+  },
+  "original_play_login": {
+    "raw_sha256": "1ef9825511b60034c9613799811e200d7436c96beb4b6ad334b71bc35ac1c5bc",
+    "play_login_packet_name": "login",
+    "play_login_payload_hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414080200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c010000010000c1ffffff0f0000",
+    "play_login_payload_sha256": "4ab17e31033c5228cca21b0690597eba9333b7edb960ed84ae53cfa301565aee",
+    "play_login_at": 3926.346260871,
+    "actual_client_requested_view": 8,
+    "actual_play_login_view": 8,
+    "actual_play_login_simulation": 2,
+    "new_actual_capture": true
+  },
+  "historical_old_core_rejected_simulation10": {
+    "raw_sha256": "031c2191613a414b9e2da6850bbee302c08f0debed7ac7a0237dad16eca9f1f5",
+    "play_login_packet_name": "login",
+    "play_login_payload_hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414080a00010000136d696e6563726166743a6f766572776f726c6400000000000000000100000000003f0000",
+    "play_login_payload_sha256": "a697f66f39da73a663434f501da47a6ec8b3bf2e8b46043ff7a99abe6168f78c",
+    "play_login_at": 3939.821533891,
+    "actual_client_requested_view": 8,
+    "actual_play_login_view": 8,
+    "actual_play_login_simulation": 10,
+    "new_actual_capture": true
+  },
+  "historical_runtime_sha256": "0b60f3cdb3ecb78eb08601a3f8f99faa0a7b5978ee2c6da9552c848ca5551553",
+  "frozen_original_before_old_core": true,
+  "original_two_two": {
+    "raw_sha256": "8281cb9fd5ea1a482c7da183c2b479e95c256a174c53d703a17bfc2c2645cc25",
+    "raw_capture": "parallel-20261109/mechanisms/frozen_read_v2/capture-01/official-raw.json",
+    "play_login_payload_hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c010000010000c1ffffff0f0000",
+    "play_login_payload_sha256": "8d08e22e76f100a9a070817d987b0a1833cd822423c02e04cafd4dc1fe1faaf8",
+    "collector_sha256": "c533cf167bfcf390fe4f5ac8f9511a673fd82e8189a5d9e9c27c518389c55832",
+    "criteria_sha256": "61fe8b55b5299a1ed85962f8c054fc66870c56b590cd3fbd1380870000523095",
+    "requested_properties": {
+      "view-distance": 2,
+      "simulation-distance": 2
+    },
+    "client_requested_view": 2
+  },
+  "historical_old_core_ten_ten": {
+    "raw_sha256": "f19c5e4239450c8fd3bb19ba57021c1ff9222578e34b7b382544614b6103fca5",
+    "raw_capture": "parallel-20261109/mechanisms/frozen_read_v2/capture-01/ours-raw.json",
+    "play_login_payload_hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e64140a0a00010000136d696e6563726166743a6f766572776f726c6400000000000000000100000000003f0000",
+    "play_login_payload_sha256": "e27c00e21f6e38bdb4025774ede14856cd15095bee3378dc1c1d3799a95d8764",
+    "collector_sha256": "c533cf167bfcf390fe4f5ac8f9511a673fd82e8189a5d9e9c27c518389c55832",
+    "criteria_sha256": "61fe8b55b5299a1ed85962f8c054fc66870c56b590cd3fbd1380870000523095",
+    "requested_properties": {
+      "view-distance": 2,
+      "simulation-distance": 2
+    },
+    "client_requested_view": 2
+  }
+}

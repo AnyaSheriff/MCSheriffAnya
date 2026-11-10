@@ -1,0 +1,71 @@
+name: Distances2 locked production Login proof
+'on':
+  push:
+    branches: ['fix/simulation-distance-two-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  CARGO_BUILD_JOBS: '4'
+defaults:
+  run:
+    shell: bash
+jobs:
+  production-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Freeze unchanged Rust and manifest reference plus exact compiler graph
+        run: |
+          mkdir -p ci-logs
+          python3 -B tools/blackbox/simulation_distance_ci.py --verify-rust-reference --output ci-logs/reused-rust-validation.json
+          cp tools/blackbox/ci/simulation-distance-two-runtime.lock Cargo.lock
+          rustc -Vv > ci-logs/rustc.txt
+          cargo -V > ci-logs/cargo.txt
+      - uses: Swatinem/rust-cache@v2
+      - name: First-response persistence and rejection guards
+        run: python3 -B -m unittest discover -s tools/blackbox -p 'test_simulation_distance_ci.py' -v 2>&1 | tee ci-logs/login-guards.log
+      - name: Single locked production binary
+        run: |
+          cargo build --release --locked 2>&1 | tee ci-logs/build.log
+          sha256sum target/release/mcsheriffanya > ci-logs/runtime.sha256
+      - name: Fresh lightweight original then production-config Login pair
+        run: |
+          python3 -B tools/blackbox/simulation_distance_ci.py --output simulation-evidence 2>&1 | tee ci-logs/production-config-pair.log
+          sha256sum --check ci-logs/runtime.sha256
+      - name: Compact exact source, lock and job receipt
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,shutil,subprocess
+          out=Path('ci-logs');out.mkdir(exist_ok=True)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          selected=['src/config/server_properties.rs','tools/blackbox/simulation_distance_ci.py','tools/blackbox/test_simulation_distance_ci.py','tools/blackbox/ci/simulation-distance-two-primary.json','tools/blackbox/ci/simulation-distance-two-rust-reference.json','tools/blackbox/ci/simulation-distance-two-runtime.lock','.github/workflows/simulation-distance-checks.yml']
+          for name in selected:
+              target=out/'source'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(name,target)
+          locks={}
+          for name in ['Cargo.lock']:
+              p=Path(name)
+              if p.exists():locks[name]=sha(p);shutil.copy2(p,out/name)
+          binary=Path('target/release/mcsheriffanya')
+          receipt={'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'base':'e3e90d74f60f0750459ebe964c709195f92b49ef','status_before_receipt':os.environ['MCSA_JOB_STATUS'],'source_sha256':{p:sha(Path(p)) for p in selected},'lock_sha256':locks,'runtime_sha256':sha(binary) if binary.exists() else None,'Rust_tests_rerun':False,'Rust_reference_source':'fd706e601bdcb8624526481f159129376d134b37','Rust_reference_run_id':42763159183,'full_hopper_or_active_distance_tested':False,'local_builds':False}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulation-distance-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ci-logs
+            simulation-evidence
+          retention-days: 30
