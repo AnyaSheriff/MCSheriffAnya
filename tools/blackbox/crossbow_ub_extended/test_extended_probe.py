@@ -5,7 +5,8 @@ R=Path(os.environ['MCSA_EXTENDED_PROBE_REPO'])
 def fixture(group,emitted=1,survived=False,control=False):
  c=p.cases(group)[0 if control else 2];enchant={'minecraft:unbreaking':3} if c['unbreaking'] else {}
  if c['natural']:enchant['minecraft:multishot']=1
- charges=[dict(item='arrow',count=1)]*3
+ charges=(json.loads((p.BASE/'mainhand-natural-old-reference-pin.json').read_text())['exact_natural_projectiles']
+          if c['natural'] else [dict(item='arrow',count=1)]*3)
  initial=dict(item='crossbow',count=1,damage=c['damage'],named_enchantments=enchant,projectiles=[] if c['natural'] else charges)
  loaded=dict(initial,projectiles=charges)
  final=dict(initial,damage=3 if control else 464,projectiles=[]) if survived else None

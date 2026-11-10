@@ -49,7 +49,9 @@ def validate_case(c,e):
  for stack in [initial,loaded]:
   assert stack and stack['item']=='crossbow' and stack['count']==1 and stack.get('damage',0)==c['damage']
   assert stack['named_enchantments']==expected
- assert loaded.get('projectiles')==[dict(item='arrow',count=1)]*3
+ expected_charges=([dict(item='arrow',count=1),dict(item='arrow',count=1,intangible=True),dict(item='arrow',count=1,intangible=True)]
+                   if c['natural'] else [dict(item='arrow',count=1)]*3)
+ assert loaded.get('projectiles')==expected_charges
  assert e['no_break_before_fire']
  assert e['actual_hands']==[c['hand']]*(2 if c['natural'] else 1)
  assert e['actual_yaw_pitch']==[(0.,-20.)]*len(e['actual_hands'])

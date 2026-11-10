@@ -1,0 +1,196 @@
+{
+  "status": "FROZEN-before-reading-new-natural-statistics",
+  "current_capture_run": 42767030823,
+  "new_statistics_not_read": true,
+  "new_raw_not_reanalyzed": true,
+  "old_source": "93bbae85da4d2b90df9979b5ba3a5f7c965ee21f",
+  "old_run": 42690720281,
+  "old_artifact_zip_sha256": "72961169c5235ea2390d8334ef7c574e8f5324a9efcee085825bef4baba42077",
+  "old_runtime_sha256": "4a456bd552edd3a46bd3755b40055c731a97e199a5116cb7d9bdae1d5aa65110",
+  "old_reference_files": {
+    "run.json": "aa3a2c584636289f29db2b4f4515ec7ff672a68604a39de4ffcc47d54e799a20",
+    "hands-loading20/expected-before-candidate.json": "b1f913d0ad18468e6806c4e2b69c432b105a27e2dc209f60250e438d836717c1",
+    "hands-loading20/strict-observations.json": "a4d4e262b7906567118c9cff46d8d047b3861b20942bdf1deed7828751b7a43e",
+    "hands-loading20/crossbow-hands-loading-discovery-777-official.json": "c05ca4c8d0f6a8829257fd5174b13eff53a7c1d40a9fc14c2d1c5aff39ec3691",
+    "hands-loading20/crossbow-hands-loading-discovery-777-ours.json": "db3029496b584a8e1e841e8dabff66fe2a71670ba1853be392f63b940078ec95"
+  },
+  "old_frozen_git_fixture": "tools/protocol-bridge/testdata/crossbow-hands-loading-observations-777.json",
+  "old_frozen_git_fixture_sha256": "b1f913d0ad18468e6806c4e2b69c432b105a27e2dc209f60250e438d836717c1",
+  "exact_natural_projectiles": [
+    {
+      "item": "arrow",
+      "count": 1
+    },
+    {
+      "item": "arrow",
+      "count": 1,
+      "intangible": true
+    },
+    {
+      "item": "arrow",
+      "count": 1,
+      "intangible": true
+    }
+  ],
+  "exact_commandloaded_projectiles": [
+    {
+      "item": "arrow",
+      "count": 1
+    },
+    {
+      "item": "arrow",
+      "count": 1
+    },
+    {
+      "item": "arrow",
+      "count": 1
+    }
+  ],
+  "old_natural_loaded_fields": {
+    "official": {
+      "16": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        }
+      ],
+      "17": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        }
+      ],
+      "18": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        }
+      ],
+      "19": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        }
+      ]
+    },
+    "ours": {
+      "16": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        }
+      ],
+      "17": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        }
+      ],
+      "18": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        }
+      ],
+      "19": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        },
+        {
+          "item": "arrow",
+          "count": 1,
+          "intangible": true
+        }
+      ]
+    }
+  },
+  "unchanged": [
+    "N",
+    "bounds",
+    "family",
+    "hand",
+    "hold",
+    "ammo",
+    "fire",
+    "break",
+    "menus",
+    "cleanup",
+    "old_PRIMARY"
+  ]
+}

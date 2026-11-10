@@ -328,6 +328,23 @@ def checked_causal_candidate_reference(args, scenario):
     return raw,pin['original_raw_sha256']
 
 
+def mainhand_natural_import_guard():
+    from crossbow_ub_extended import mainhand_natural_reference
+    return mainhand_natural_reference
+
+
+def checked_mainhand_natural_candidate_reference(args, scenario):
+    """ЕдинственноеknownFAILreference, признанноеrootпослеloaded-onlycorrection."""
+    assert scenario['name']=='crossbow-ub-mainhand-natural-777'
+    module=mainhand_natural_import_guard()
+    proof=json.loads(args.causal_mainhand_natural_input_proof.read_text())
+    raw,digest,_,_=module.load_reference(args.causal_mainhand_natural_reference,proof,ROOT,args.binary)
+    manifests=list((args.causal_mainhand_natural_reference/'recordings').glob('run-*.json'));assert len(manifests)==1
+    original_manifest=json.loads(manifests[0].read_text())
+    for name,expected in original_manifest['data_sha256'].items():assert hashlib.sha256((args.data/name).read_bytes()).hexdigest()==expected
+    return raw,digest
+
+
 def window_click_payload(window,state,action):
     # Та же форма, что у bot.js: без предполагаемых изменённых ячеек и курсора.
     return varint(window)+varint(state)+struct.pack('>hb',action['slot'],action.get('button',0))+varint(action.get('mode',0))+b'\0\0'
@@ -843,7 +860,9 @@ def run_scenario_sides(args, scenario, servers, protocol, speed_attribute, previ
         if not matches:raise ValueError('saved official reference has no matching previous source/data manifest')
         return raw
 
-    if getattr(args,'causal_candidate_reference',None):
+    if getattr(args,'causal_mainhand_natural_reference',None):
+        reference,reference_sha256=checked_mainhand_natural_candidate_reference(args,scenario)
+    elif getattr(args,'causal_candidate_reference',None):
         reference,reference_sha256=checked_causal_candidate_reference(args,scenario)
     elif args.core_only:
         # Явный --core-only использует только завершённую сохранённую опору.
@@ -901,16 +920,22 @@ def main():
     p.add_argument('--causal-original-reference',action='store_true',help='GitHub-only original-first UB reference; three fixed scenarios only')
     p.add_argument('--causal-candidate-reference',type=Path,help='GitHub-only fresh offhand candidate against the exact immutable original')
     p.add_argument('--causal-candidate-input-proof',type=Path,help='checked API and actual ZIP receipts for explicit candidate mode only')
+    p.add_argument('--causal-mainhand-natural-reference',type=Path,help='exact known technical-FAIL original with approved deterministic loaded-only reanalysis')
+    p.add_argument('--causal-mainhand-natural-input-proof',type=Path,help='API and actual immutable ZIP proof for this narrow exception')
     p.add_argument('--core-debug',action='store_true')
     p.add_argument('scenarios',nargs='*')
     a=p.parse_args()
+    if a.causal_mainhand_natural_input_proof and not a.causal_mainhand_natural_reference:
+        p.error('mainhand-natural input proof needs its explicit narrow reference mode')
+    if a.causal_mainhand_natural_reference and not mainhand_natural_import_guard().allow_fresh_mode(a,os.environ.get('GITHUB_ACTIONS'),os.environ.get('GITHUB_RUN_ATTEMPT')):
+        p.error('mainhand-natural exception requires GitHub attempt1 fresh core-only777 exact scenario and no other reference modes')
     if a.causal_original_reference and not allow_causal_original_reference(a,os.environ.get('GITHUB_ACTIONS')):
         p.error('--causal-original-reference requires GitHub fresh official-only777 and one declared UB scenario')
     if a.causal_candidate_input_proof and not a.causal_candidate_reference:
         p.error('--causal-candidate-input-proof needs explicit candidate reference mode')
     if a.causal_candidate_reference and not allow_causal_candidate_reference(a,os.environ.get('GITHUB_ACTIONS'),os.environ.get('GITHUB_RUN_ATTEMPT')):
         p.error('--causal-candidate-reference requires fresh GitHub core-only777 offhand without resume/parallel/overwrite')
-    if a.causal_menu_readiness and (a.version!=777 or a.resume or (a.core_only and not a.causal_candidate_reference) or (a.official_only and not a.causal_original_reference)):
+    if a.causal_menu_readiness and (a.version!=777 or a.resume or (a.core_only and not(a.causal_candidate_reference or a.causal_mainhand_natural_reference)) or (a.official_only and not a.causal_original_reference)):
         p.error('--causal-menu-readiness requires a fresh paired777 recording')
     if a.skip_recorded_core:
         p.error('--skip-recorded-core disabled: re-record ours to verify runtime identity')
@@ -936,6 +961,8 @@ def main():
         tables={'protocol.json':json.loads(raw)}
     if a.causal_candidate_reference:
         checked_causal_candidate_reference(a,json.loads((ROOT/'tools/blackbox/scenarios'/f'{a.scenarios[0]}.json').read_text()))
+    if a.causal_mainhand_natural_reference:
+        checked_mainhand_natural_candidate_reference(a,json.loads((ROOT/'tools/blackbox/scenarios'/f'{a.scenarios[0]}.json').read_text()))
     saved_manifests=[json.loads(path.read_text()) for path in a.output.glob('run-*.json')] if a.resume else []
     a.output.mkdir(parents=True,exist_ok=a.resume)
     selected=a.scenarios or sorted({v.stem for pattern in ('pvp-*','cow-crit*','sword-sweep-*','itemaudit4-knockback*','*shield*') for v in (ROOT/'tools/blackbox/scenarios').glob(pattern+'.json')})
@@ -948,6 +975,9 @@ def main():
         manifest['causal_candidate_reference']={'original_raw_sha256':'178b9b57069ecc584990b346513f70264ad495e83a9468d9c6445678b8154bfa','original_artifact_zip_sha256':'91ed6959f913bc54555171ec60c3fbc5716879dc51c8fe1712fff220b1a549e6'}
         manifest['requested_capture_sides']=['ours']
         manifest['causal_candidate_reference']['input_proof_sha256']=hashlib.sha256(a.causal_candidate_input_proof.read_bytes()).hexdigest()
+    if a.causal_mainhand_natural_reference:
+        manifest['requested_capture_sides']=['ours']
+        manifest['causal_mainhand_natural_reference']={'original_CI_run':42767030823,'original_CI_conclusion':'failure-known-loaded-parser-bug-RETAINED','original_raw_sha256':'d76814ff8c22b8e954a786877365553e983e4c35a1f1dff2464b6b548a96c686','correction_patch_sha256':'30f7fc259744e8b59513f3fa37cfbf0fa478b68c07dba0f1ec18056f2410ad3f','input_proof_sha256':hashlib.sha256(a.causal_mainhand_natural_input_proof.read_bytes()).hexdigest()}
     manifest['comparison_sha256']={name:hashlib.sha256((Path(__file__).parent/name).read_bytes()).hexdigest() for name in ('bot.js','compare.js','analyze777.py','replay777.js')}
     (a.output/f'run-{time.time_ns()}.json').write_text(json.dumps(manifest,indent=2)+'\n')
     servers=[]
