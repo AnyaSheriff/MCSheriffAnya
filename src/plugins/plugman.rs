@@ -100,6 +100,7 @@ fn info(host: &super::host::Host, name: &str) -> Result<String, String> {
     let mut text = format!("{} {} ({})", manifest.name, manifest.version, if plugin.trusted { "модуль" } else { "плагин, песочница" });
 
     text.push_str(&format!("\nBlockBreakEvent: {}",host.block_break_mode()));
+    text.push_str(&format!("\nBlockPlaceEvent: {}",host.block_place_mode()));
 
     if !manifest.author.is_empty() {
         text.push_str(&format!("\nАвтор: {}", manifest.author));

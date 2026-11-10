@@ -12,10 +12,13 @@ public final class Entry {
  @Export(name="mcsa_dispatch") public static int dispatch(int kind,Address data,int len){RuntimeState.callbackEpoch++;try{return dispatchEvent(kind,data,len);}catch(RuntimeException|Error failure){Host.call(23,"Ошибка обработчика Bukkit: "+failure);throw failure;}}
  private static int dispatchEvent(int kind,Address data,int len){
   byte[] bytes=new byte[len];for(int i=0;i<len;i++)bytes[i]=data.add(i).getByte();String[] a=Host.split(new String(bytes,StandardCharsets.UTF_8));
-  if(kind==0){try{RuntimeState.plugin.onDisable();EntityDataStore.flush();}finally{PriorityFrames.clear();}return 0;}
+  if(kind==0){try{RuntimeState.plugin.onDisable();EntityDataStore.flush();}finally{PriorityFrames.clear();PlacePriorityFrames.clear();}return 0;}
   if(kind==40)return PriorityFrames.begin(a);
   if(kind==41)return PriorityFrames.phase(a);
   if(kind==42)return PriorityFrames.finish(a);
+  if(kind==43)return PlacePriorityFrames.begin(a);
+  if(kind==44)return PlacePriorityFrames.phase(a);
+  if(kind==45)return PlacePriorityFrames.finish(a);
   if(kind==8){RuntimeState.scheduler.fire(Integer.parseInt(a[0]));return 0;}
   if(kind==7||kind==9){
    CommandSender sender;

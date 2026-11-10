@@ -1,0 +1,7 @@
+name: java-place-staged-a
+version: '1.0'
+main: fixtures.PlaceStagedAPlugin
+commands:
+  placestageda:
+    description: Собственный сценарий межкомпонентного порядка A
+    usage: /placestageda order|cancel|uncancel

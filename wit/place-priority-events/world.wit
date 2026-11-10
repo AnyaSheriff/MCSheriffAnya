@@ -1,0 +1,13 @@
+package mcsa:place-priority-events@0.1.0;
+interface block-place {
+    use mcsa:api/types@0.1.0.{player, block-pos};
+    enum frame-error { missing, duplicate, capacity, order, priority }
+    record state { cancelled: bool, can-build: bool }
+    begin: func(id: u64, who: player, pos: block-pos, block: string, initial: state) -> result<_, frame-error>;
+    phase: func(id: u64, priority: u8, current: state) -> result<state, frame-error>;
+    finish: func(id: u64, final-state: state) -> result<_, frame-error>;
+}
+world staged-place-bukkit-plugin {
+    include mcsa:priority-events/staged-bukkit-plugin@0.1.0;
+    export block-place;
+}

@@ -85,7 +85,7 @@ int64_t teavm_currentTimeNano(void) { struct timespec t;clock_gettime(CLOCK_MONO
     p.write_text(p.read_text().replace("int main(int argc, char** argv)", "int teavm_main(int argc, char** argv)"))
 
 
-def translate(jar, output, check_only=False, report=None, staged_block_break=False, adapter=None):
+def translate(jar, output, check_only=False, report=None, staged_block_break=False, adapter=None, staged_block_place=False):
     if jar.stat().st_size > 64 * 1024 * 1024:
         raise ValueError("JAR больше 64 МиБ")
     with tempfile.TemporaryDirectory(prefix="translate-", dir=TARGET) as temp:
@@ -119,12 +119,15 @@ def translate(jar, output, check_only=False, report=None, staged_block_break=Fal
         port_runtime(work / "c")
         wit = work / "wit"
         wit_package = REPO / "wit/mcsa-api.wit"
-        if staged_block_break:
+        if staged_block_place:
+            from place_priority_wit import prepare
+            wit_package = prepare(work / "place-priority-package")
+        elif staged_block_break:
             from priority_wit import prepare
             wit_package = prepare(work / "priority-package")
-        run(CHAIN / "wit-bindgen-0.63.0-x86_64-linux/wit-bindgen", "c", "--world", "staged-bukkit-plugin" if staged_block_break else "bukkit-plugin", "--rename-world", "plugin", "--out-dir", wit, wit_package)
+        run(CHAIN / "wit-bindgen-0.63.0-x86_64-linux/wit-bindgen", "c", "--world", "staged-place-bukkit-plugin" if staged_block_place else "staged-bukkit-plugin" if staged_block_break else "bukkit-plugin", "--rename-world", "plugin", "--out-dir", wit, wit_package)
         # Java требует переполнения по модулю; поля и представления TeaVM разделяют память.
-        run(CHAIN / "wasi-sdk-34.0-x86_64-linux/bin/clang", "--target=wasm32-wasip2", "-mexec-model=reactor", "-O2", "-fwrapv", "-fno-strict-aliasing", "-mllvm", "-wasm-enable-sjlj", "-mllvm", "-wasm-use-legacy-eh=false", "-mexception-handling", "-Wno-parentheses-equality", "-Wno-pointer-sign", "-Wno-unused-value", *(["-DMCSA_STAGED_BLOCK_BREAK=1"] if staged_block_break else []), "-include", ROOT / "bridge.h", "-I", wit, work / "c/all.c", adapter or ROOT / "adapter.c", wit / "plugin.c", wit / "plugin_component_type.o", "-Wl,--max-memory=33554432", "-Wl,-z,stack-size=1048576", "-lsetjmp", "-lm", "-o", work / "plugin.wasm")
+        run(CHAIN / "wasi-sdk-34.0-x86_64-linux/bin/clang", "--target=wasm32-wasip2", "-mexec-model=reactor", "-O2", "-fwrapv", "-fno-strict-aliasing", "-mllvm", "-wasm-enable-sjlj", "-mllvm", "-wasm-use-legacy-eh=false", "-mexception-handling", "-Wno-parentheses-equality", "-Wno-pointer-sign", "-Wno-unused-value", *(["-DMCSA_STAGED_BLOCK_BREAK=1"] if staged_block_break or staged_block_place else []), *(["-DMCSA_STAGED_BLOCK_PLACE=1"] if staged_block_place else []), "-include", ROOT / "bridge.h", "-I", wit, work / "c/all.c", adapter or ROOT / "adapter.c", wit / "plugin.c", wit / "plugin_component_type.o", "-Wl,--max-memory=33554432", "-Wl,-z,stack-size=1048576", "-lsetjmp", "-lm", "-o", work / "plugin.wasm")
         run(CHAIN / "wasm-tools-1.262.0-x86_64-linux/wasm-tools", "validate", "--features", "all", work / "plugin.wasm")
         output.mkdir(parents=True, exist_ok=True)
         # Публикация только полностью собранного компонента, без изменения существующих плагинов.
@@ -147,12 +150,13 @@ def main():
     parser.add_argument("--check-only", action="store_true", help="Только статическая проверка; без гарантии компиляции TeaVM")
     parser.add_argument("--report", type=Path, help="JSON: точные отсутствующие API и места обращений, в том числе при отказе")
     parser.add_argument("--staged-block-break", action="store_true", help="Необязательный prototype только native BlockBreakEvent")
+    parser.add_argument("--staged-block-place", action="store_true", help="Ограниченный native BlockPlaceEvent с двумя состояниями")
     parser.add_argument("--build-sdk", action="store_true", help="Собрать SDK и инструменты без перевода")
     args = parser.parse_args()
     try:
         bootstrap(toolchain=bool(args.jar and not args.check_only))
         if args.jar:
-            translate(args.jar.resolve(), args.output.resolve(), args.check_only, args.report, args.staged_block_break)
+            translate(args.jar.resolve(), args.output.resolve(), args.check_only, args.report, args.staged_block_break, staged_block_place=args.staged_block_place)
         elif not args.build_sdk:
             parser.error("нужен JAR или --build-sdk")
     except (subprocess.CalledProcessError, OSError, ValueError) as error:
