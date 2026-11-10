@@ -1116,6 +1116,22 @@ impl Host {
         self.verdict(|instance, store| instance.mcsa_api_events().call_on_block_break(store, &who, *pos, block))
     }
 
+    #[cfg(test)]
+    pub(super) fn priority_probe(&mut self, operation: u8, id: u64, priority: u8, cancelled: bool, who: &PlayerView) -> Result<bool,String> {
+        let now=self.shared_tick();let plugin=&mut self.loaded[0];let extension=plugin.priority.ok_or("Нет staged extension")?;
+        plugin.call(now,|_,store| match operation {
+            0=>{let (v,)=extension.begin.call(&mut *store,(id,who.to_wit(),mcsa::api::types::BlockPos{dimension:mcsa::api::types::Dimension::Overworld,x:3,y:70,z:0},"minecraft:stone".into(),cancelled))?;extension.begin.post_return(&mut *store)?;v.map(|()|false).map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
+            1=>{let (v,)=extension.phase.call(&mut *store,(id,priority,cancelled))?;extension.phase.post_return(&mut *store)?;v.map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
+            2=>{let (v,)=extension.finish.call(&mut *store,(id,cancelled))?;extension.finish.post_return(&mut *store)?;v.map(|()|false).map_err(|e|wasmtime::Error::msg(format!("{e:?}")))},
+            _=>Err(wasmtime::Error::msg("Неизвестная test operation")),
+        })
+    }
+
+    #[cfg(test)]
+    pub(super) fn priority_test_force_legacy(&mut self) { for plugin in &mut self.loaded {plugin.priority=None;} }
+    #[cfg(test)]
+    pub(super) fn priority_test_fuel(&mut self, fuel: u64) {for plugin in &mut self.loaded {plugin.limits.fuel=fuel;} }
+
     fn staged_block_break(&mut self, who: mcsa::api::types::Player, pos: mcsa::api::types::BlockPos, block: &str) -> Verdict {
         // Весь job синхронен: load/unload/tick не вклинивается в этот snapshot.
         let Some(id) = self.priority_id.checked_add(1) else {

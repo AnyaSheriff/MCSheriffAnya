@@ -1,20 +1,30 @@
 // Actual translated WASM; старые 12 baseline не меняются.
 #[test]
 #[ignore = "requires actual translated staged fixtures"]
-fn translated_bukkit_staged_priority_contract() {
+fn translated_bukkit_staged_priority_contract() { capture_priority_contract("java-priority-staged",true); }
+
+#[test]
+#[ignore = "requires exact old/staged mixed components"]
+fn translated_bukkit_staged_mixed_a_uses_full_legacy_fallback() { capture_priority_contract("java-priority-mixed-a",false); }
+
+#[test]
+#[ignore = "requires exact old/staged mixed components"]
+fn translated_bukkit_staged_mixed_b_uses_full_legacy_fallback() { capture_priority_contract("java-priority-mixed-b",false); }
+
+fn capture_priority_contract(fixture_folder: &str, public: bool) {
     use std::io::Write as _;
     let spec: serde_json::Value = serde_json::from_str(include_str!("../../tools/plugin-translator/fixtures/priority-expected.json")).unwrap();
     let cohorts = spec["cohorts"].as_array().unwrap();
     assert_eq!(cohorts.len(), 12);
     let mut labels = std::collections::BTreeSet::new();
     for cohort in cohorts {
-        for reference in ["public_contract", "public_contract"] {
+        for reference in ["source_predicted_legacy", "public_contract"] {
             for label in cohort[reference]["trace"].as_array().unwrap() {
                 labels.insert(label.as_str().unwrap().to_string());
             }
         }
     }
-    let capture_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/capture");
+    let capture_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp").join(fixture_folder).join("capture");
     std::fs::create_dir_all(&capture_dir).unwrap();
     let mut recorded = Vec::new();
     let mut public_mismatches = 0;
@@ -23,7 +33,7 @@ fn translated_bukkit_staged_priority_contract() {
         let root = server_root(&format!("staged-priority-{}", order.join("-")));
         for letter in order {
             let name = format!("java-priority-{letter}");
-            let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/plugins").join(&name);
+            let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp").join(fixture_folder).join("plugins").join(&name);
             let folder = root.join("plugins").join(&name);
             std::fs::create_dir_all(folder.join("data")).unwrap();
             for file in ["plugin.toml", "plugin.wasm"] {
@@ -68,17 +78,45 @@ fn translated_bukkit_staged_priority_contract() {
             let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(capture_dir.join(format!("{}-{}.json", name, std::process::id()))).unwrap();
             writeln!(file, "{}", serde_json::to_string_pretty(&row).unwrap()).unwrap();
             recorded.push(row.clone());
-            assert_eq!(row["trace"], reference["public_contract"]["trace"], "неожиданная staged последовательность: {name}");
-            assert_eq!(row["verdict"], reference["public_contract"]["verdict"]);
-            assert!(public_match, "staged contract mismatch {name}");
+            assert_eq!(row["trace"], reference[if public {"public_contract"} else {"source_predicted_legacy"}]["trace"], "неожиданная staged последовательность: {name}");
+            assert_eq!(row["verdict"], reference[if public {"public_contract"} else {"source_predicted_legacy"}]["verdict"]);
+            assert_eq!(public_match,if public {true} else {reference["expected_contract_match"].as_bool().unwrap()}, "contract mismatch {name}");
         }
         host.unload_all();
         assert!(host.is_empty());
     }
-    assert_eq!((recorded.len(), public_mismatches, verdict_mismatches), (12, 0, 0));
+    assert_eq!((recorded.len(), public_mismatches, verdict_mismatches), if public {(12,0,0)} else {(12,6,2)});
     let output = serde_json::json!({"baseline_kind":"staged-native-block-break-only","wasm_rust_runtime_executed":true,"cohorts":recorded,"public_contract_mismatches":public_mismatches,"public_verdict_mismatches":verdict_mismatches});
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("tmp/java-priority-staged/staged-capture-{}.json", std::process::id()));
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("tmp/{fixture_folder}/staged-capture-{}.json", std::process::id()));
     let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&path).unwrap();
     writeln!(file, "{}", serde_json::to_string_pretty(&output).unwrap()).unwrap();
     println!("PRIORITY_CAPTURE {}", path.display());
+}
+
+#[test]
+#[ignore = "requires actual translated staged fixtures"]
+fn translated_bukkit_staged_frames_reject_invalid_order_replay_and_capacity() {
+    let root=server_root("staged-frame-negatives");let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/plugins/java-priority-a");
+    let folder=root.join("plugins/java-priority-a");std::fs::create_dir_all(&folder).unwrap();
+    for file in ["plugin.toml","plugin.wasm"] {std::fs::copy(source.join(file),folder.join(file)).unwrap();}
+    let shared=shared();java_info(&shared);let mut host=Host::new(shared,root).unwrap();host.load("java-priority-a").unwrap();
+    let who=view();
+    for operation in [1,2] {assert!(host.priority_probe(operation,1,0,false,&who).unwrap_err().contains("Missing"));}
+    assert!(host.priority_probe(0,0,0,false,&who).unwrap_err().contains("Missing"));
+    host.priority_probe(0,1,0,false,&who).unwrap();
+    assert!(host.priority_probe(0,1,0,false,&who).unwrap_err().contains("Duplicate"));
+    assert!(host.priority_probe(1,1,6,false,&who).unwrap_err().contains("Priority"));
+    assert!(host.priority_probe(1,1,1,false,&who).unwrap_err().contains("Order"));
+    assert!(host.priority_probe(2,1,0,false,&who).unwrap_err().contains("Order"));
+    host.priority_probe(1,1,0,false,&who).unwrap();
+    assert!(host.priority_probe(1,1,0,false,&who).unwrap_err().contains("Order"));
+    for priority in 1..6 {host.priority_probe(1,1,priority,false,&who).unwrap();}
+    host.priority_probe(2,1,0,true,&who).unwrap();
+    assert!(host.priority_probe(0,1,0,false,&who).unwrap_err().contains("Order"));
+    assert!(host.priority_probe(2,1,0,false,&who).unwrap_err().contains("Missing"));
+    // До вызова handlers map остаётся bounded.
+    for id in 2..34 {host.priority_probe(0,id,0,false,&who).unwrap();}
+    assert!(host.priority_probe(0,34,0,false,&who).unwrap_err().contains("Capacity"));
+    host.unload_all();assert!(host.is_empty());
+    println!("PRIORITY_FRAME_NEGATIVES_PASS missing duplicate zero invalid-priority out-of-order early-finish phase-replay id-replay finish-replay capacity unload");
 }

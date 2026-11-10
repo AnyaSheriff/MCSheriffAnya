@@ -3,6 +3,7 @@ use std::time::Duration;
 
 #[derive(Clone, Copy, Debug, wasmtime::component::ComponentType, wasmtime::component::Lift, wasmtime::component::Lower)]
 #[component(enum)]
+#[repr(u8)]
 pub(super) enum FrameError {
     #[component(name = "missing")]
     Missing,

@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
+env:
+  CARGO_BUILD_JOBS: '4'
 jobs:
   optional-abi:
     runs-on: ubuntu-24.04
@@ -13,16 +16,20 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - uses: Swatinem/rust-cache@v2
       - name: Compile all actual Rust targets first
-        run: cargo check --release --all-targets
+        run: |
+          mkdir -p staged-evidence
+          set -o pipefail
+          cargo check --release --all-targets 2>&1 | tee staged-evidence/check.log
       - name: Parse cross-package WIT and generate actual C API
         run: |
-          mkdir staged-evidence
+          mkdir -p staged-evidence
           set -o pipefail
           python3 -B tools/plugin-translator/check-priority-wit.py 2>&1 | tee staged-evidence/wit.log
       - name: Build two unchanged own fixture JARs and translate optional world
@@ -32,20 +39,26 @@ jobs:
           for letter in a b; do
             python3 -B tools/plugin-translator/translate.py tools/plugin-translator/target/priority-$letter.jar --staged-block-break --output tmp/java-priority-staged/plugins 2>&1 | tee staged-evidence/translate-$letter.log
           done
+      - name: Verify immutable old components and build mixed inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py inputs
       - name: Actual Rust budget contracts and staged host
         run: |
           set -o pipefail
           cargo test --release --bin mcsheriffanya plugins::priority::tests -- --nocapture --test-threads=1 2>&1 | tee staged-evidence/budget.log
-          cargo test --release --bin mcsheriffanya plugins::tests::translated_bukkit_staged_priority_contract -- --ignored --exact --nocapture --test-threads=1 2>&1 | tee staged-evidence/native.log
-      - name: Preserve actual raw capture and selected source
+          for test in translated_bukkit_staged_priority_contract translated_bukkit_staged_frames_reject_invalid_order_replay_and_capacity translated_bukkit_staged_mixed_a_uses_full_legacy_fallback translated_bukkit_staged_mixed_b_uses_full_legacy_fallback translated_bukkit_legacy_priority_baseline translated_bukkit_jars translated_bukkit_listener_unregistration translated_bukkit_enchantment_removal_reaches_native_inventory; do
+            cargo test --release --bin mcsheriffanya plugins::tests::$test -- --ignored --exact --nocapture --test-threads=1 2>&1 | tee staged-evidence/$test.log
+          done
+      - name: Preserve compact source raw and receipts even after failure
         if: always()
-        run: |
-          mkdir -p staged-evidence
-          test ! -d tmp/java-priority-staged || cp -r tmp/java-priority-staged staged-evidence/native
-          git rev-parse HEAD > staged-evidence/source-commit.txt
-          git diff 354a0d137b60dbd89d32246c3e0aef2ddbd062c1 HEAD > staged-evidence/source.patch
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py finish
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: staged-prototype-${{ github.run_id }}
           path: staged-evidence/
+          include-hidden-files: true
+          retention-days: 7
