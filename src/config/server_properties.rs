@@ -113,8 +113,8 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         .and_then(|v| v.parse::<u16>().ok())
         .unwrap_or(defaults.server_port);
 
-    // Дальность вида сохраняет прежние границы 3..=32. Для симуляции
-    // значение 2 подтверждено пакетом Login оригинала 26.3.
+    // Минимум 2 для обеих дальностей подтверждён пакетами Login оригинала
+    // 26.3. Прежнюю верхнюю границу 32 сохраняем.
     let view_distance = distance(&values, "view-distance", defaults.view_distance);
     let simulation_distance = distance(
         &values,
@@ -226,18 +226,18 @@ fn seed_of(value: &str) -> Option<i64> {
     Some(hash)
 }
 
-/// Дальность в чанках: вид 3..=32, симуляция 2..=32.
+/// Дальность в чанках из настроек: число от 2 до 32.
 ///
 /// Всё, что вне этих границ или вовсе не число, заменяется значением
 /// по умолчанию: лучше работать, чем падать из-за опечатки в настройках.
 fn distance(values: &HashMap<String, String>, key: &str, default: i32) -> i32 {
-    let least = if key == "simulation-distance" { 2 } else { 3 };
+    const LEAST: i32 = 2;
     const MOST: i32 = 32;
 
     values
         .get(key)
         .and_then(|value| value.parse::<i32>().ok())
-        .filter(|distance| (least..=MOST).contains(distance))
+        .filter(|distance| (LEAST..=MOST).contains(distance))
         .unwrap_or(default)
 }
 
@@ -616,7 +616,7 @@ mod tests {
 
     /// Проверяем настоящий путь чтения файла, включая прежние fallback-значения.
     #[test]
-    fn simulation_distance_two_is_loaded_from_file() {
+    fn distances_two_are_loaded_from_file() {
         let unique = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH).expect("часы")
             .as_nanos();
@@ -628,10 +628,12 @@ mod tests {
         let defaults = ServerProperties::default();
         let cases = [
             ("view-distance=8\nsimulation-distance=2\n", 8, 2),
-            ("view-distance=2\nsimulation-distance=2\n", defaults.view_distance, 2),
+            ("view-distance=2\nsimulation-distance=2\n", 2, 2),
             ("view-distance=3\nsimulation-distance=3\n", 3, 3),
             ("view-distance=32\nsimulation-distance=32\n", 32, 32),
             ("view-distance=8\n", 8, defaults.simulation_distance),
+            ("simulation-distance=2\n", defaults.view_distance, 2),
+            ("motd=проверка\n", defaults.view_distance, defaults.simulation_distance),
         ];
         for (text, view, simulation) in cases {
             fs::write(&path, text).expect("настройки");
@@ -647,7 +649,14 @@ mod tests {
             let actual = load_server_properties(path.to_str().expect("путь"))
                 .expect("прочитать негодные настройки");
             assert_eq!((actual.view_distance, actual.simulation_distance),
-                (defaults.view_distance, defaults.simulation_distance), "{invalid}");
+                (2, defaults.simulation_distance), "simulation-distance={invalid}");
+            fs::write(&path, format!(
+                "view-distance={invalid}\nsimulation-distance=2\n"
+            )).expect("негодная дальность вида");
+            let actual = load_server_properties(path.to_str().expect("путь"))
+                .expect("прочитать негодную дальность вида");
+            assert_eq!((actual.view_distance, actual.simulation_distance),
+                (defaults.view_distance, 2), "view-distance={invalid}");
         }
         fs::remove_dir_all(&directory).expect("удалить только свою папку");
     }

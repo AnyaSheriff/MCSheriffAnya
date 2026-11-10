@@ -1,4 +1,4 @@
-name: Simulation distance real-file and production Login proof
+name: View and simulation distance2 real-file and production Login proof
 'on':
   push:
     branches: ['fix/simulation-distance-two-*']
@@ -29,7 +29,7 @@ jobs:
           rustup target add wasm32-wasip2
           cargo build --release --target wasm32-wasip2 --manifest-path plugins-examples/Cargo.toml 2>&1 | tee ci-logs/wasm.log
       - name: Targeted actual tempfile load unit
-        run: cargo test --release simulation_distance_two_is_loaded_from_file -- --nocapture 2>&1 | tee ci-logs/real-file-unit.log
+        run: cargo test --release distances_two_are_loaded_from_file -- --nocapture 2>&1 | tee ci-logs/real-file-unit.log
       - name: Strict workspace Clippy
         run: cargo clippy --release --all-targets --workspace -- -D warnings 2>&1 | tee ci-logs/clippy.log
       - name: Default workspace tests

@@ -1,6 +1,6 @@
 {
-  "schema": "simulation-distance-two-original-login-v1",
-  "scope": "Opaque actual26.3PlayLogin distance fields only; not hopper ticking or memory residency",
+  "schema": "distances-two-original-login-v2",
+  "scope": "Actual26.3PlayLogin view/simulation minimum2 and8/2 control; not hopper ticking or memory residency",
   "protocol_json_sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
   "official_jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
   "original_capture": "parallel-20261109/mechanisms/active_distance_run/capture-01/official-raw.json",
@@ -34,5 +34,31 @@
     "new_actual_capture": true
   },
   "historical_runtime_sha256": "0b60f3cdb3ecb78eb08601a3f8f99faa0a7b5978ee2c6da9552c848ca5551553",
-  "frozen_original_before_old_core": true
+  "frozen_original_before_old_core": true,
+  "original_two_two": {
+    "raw_sha256": "8281cb9fd5ea1a482c7da183c2b479e95c256a174c53d703a17bfc2c2645cc25",
+    "raw_capture": "parallel-20261109/mechanisms/frozen_read_v2/capture-01/official-raw.json",
+    "play_login_payload_hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c010000010000c1ffffff0f0000",
+    "play_login_payload_sha256": "8d08e22e76f100a9a070817d987b0a1833cd822423c02e04cafd4dc1fe1faaf8",
+    "collector_sha256": "c533cf167bfcf390fe4f5ac8f9511a673fd82e8189a5d9e9c27c518389c55832",
+    "criteria_sha256": "61fe8b55b5299a1ed85962f8c054fc66870c56b590cd3fbd1380870000523095",
+    "requested_properties": {
+      "view-distance": 2,
+      "simulation-distance": 2
+    },
+    "client_requested_view": 2
+  },
+  "historical_old_core_ten_ten": {
+    "raw_sha256": "f19c5e4239450c8fd3bb19ba57021c1ff9222578e34b7b382544614b6103fca5",
+    "raw_capture": "parallel-20261109/mechanisms/frozen_read_v2/capture-01/ours-raw.json",
+    "play_login_payload_hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e64140a0a00010000136d696e6563726166743a6f766572776f726c6400000000000000000100000000003f0000",
+    "play_login_payload_sha256": "e27c00e21f6e38bdb4025774ede14856cd15095bee3378dc1c1d3799a95d8764",
+    "collector_sha256": "c533cf167bfcf390fe4f5ac8f9511a673fd82e8189a5d9e9c27c518389c55832",
+    "criteria_sha256": "61fe8b55b5299a1ed85962f8c054fc66870c56b590cd3fbd1380870000523095",
+    "requested_properties": {
+      "view-distance": 2,
+      "simulation-distance": 2
+    },
+    "client_requested_view": 2
+  }
 }
