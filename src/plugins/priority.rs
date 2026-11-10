@@ -26,13 +26,15 @@ pub(super) type Finish = wasmtime::component::TypedFunc<(u64, bool), (Result<(),
 pub(super) struct Extension { pub begin: Begin, pub phase: Phase, pub finish: Finish }
 
 // Остатки одного логического события, не восемь отдельных полных выдач.
-pub(super) struct Budget { pub fuel: u64, pub guest: Duration, pub native: u64 }
+pub(super) struct Budget { pub fuel: u64, pub guest: Duration, pub native: u64, pub native_time: Duration }
 impl Budget {
-    pub fn new(fuel: u64, guest: Duration, native: u64) -> Self { Self { fuel, guest, native } }
+    pub fn new(fuel: u64, guest: Duration, native: u64) -> Self { Self { fuel, guest, native, native_time: Duration::from_millis(native.saturating_mul(10)) } }
     pub fn available(&self) -> bool { self.fuel > 0 && !self.guest.is_zero() }
     pub fn charge(&mut self, fuel: u64, elapsed: Duration, native: u64, native_elapsed: Duration) -> Result<(), String> {
         if fuel > self.fuel || native > self.native { return Err("Рост остатка бюджета native frame".into()); }
-        let guest = elapsed.saturating_sub(native_elapsed);
+        let credited=native_elapsed.min(self.native_time);
+        self.native_time=self.native_time.saturating_sub(credited);
+        let guest = elapsed.saturating_sub(credited);
         let exceeded = guest > self.guest;
         self.fuel = fuel; self.native = native; self.guest = self.guest.saturating_sub(guest);
         if exceeded { Err("Исчерпан суммарный срок native frame".into()) } else { Ok(()) }

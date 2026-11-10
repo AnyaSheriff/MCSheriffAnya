@@ -167,3 +167,36 @@ fn translated_bukkit_staged_empty_fuel_quarantines_and_reload_is_fresh() {
     host.load("java-priority-a").unwrap();assert_eq!(host.block_break(&view(),&pos,"minecraft:stone"),Verdict::Allow);assert_eq!(host.loaded.len(),1);host.unload_all();
     println!("PRIORITY_BUDGET_QUARANTINE_PASS fresh-reload command-cleanup no-refill");
 }
+
+#[test]
+#[ignore = "requires actual own translated fault component; bounded by CI timeout"]
+fn translated_bukkit_staged_faults_and_cumulative_native_budgets() {
+    use std::time::Duration;
+    let spec:serde_json::Value=serde_json::from_str(include_str!("../../tools/plugin-translator/fixtures/priority-budget-expected.json")).unwrap();let mut captures=Vec::new();
+    for fault in spec["faults"].as_array().unwrap() {
+        let fault=fault.as_str().unwrap();let root=server_root(&format!("priority-fault-{fault}"));
+        for suffix in ["a","fault","empty"] {
+            let name=format!("java-priority-{suffix}");let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/plugins").join(&name);let folder=root.join("plugins").join(&name);std::fs::create_dir_all(&folder).unwrap();for file in ["plugin.wasm","plugin.toml"]{std::fs::copy(source.join(file),folder.join(file)).unwrap();}
+        }
+        let shared=shared();java_info(&shared);let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("java-priority-a").unwrap();host.load("java-priority-fault").unwrap();host.load("java-priority-empty").unwrap();
+        let sender=wit::Sender{kind:wit::SenderKind::Player,uuid:Some(crate::network::login::format_uuid(&[1;16])),name:"Первый".into()};assert!(host.run_command(sender,"prioritya",&["cancel".into()]).unwrap().0);shared.players.lock().unwrap().take_orders(&[1;16]);
+        if fault=="fuel" {host.priority_test_fuel(50_000_000);}
+        if fault=="guest" {host.priority_test_fuel(u64::MAX);host.priority_test_budget(100,Duration::from_millis(1000),Duration::ZERO);}
+        if fault=="native" {host.priority_test_budget(40,Duration::from_millis(400),Duration::from_millis(250));}
+        let pos=wit::BlockPos{dimension:wit::Dimension::Overworld,x:3,y:70,z:0};
+        assert_eq!(host.block_break(&view(),&pos,&format!("test:{fault}")),Verdict::Deny,"fault={fault}");
+        assert_eq!(host.loaded.len(),2,"fault={fault}");assert!(host.is_loaded("java-priority-empty"));assert!(host.is_loaded("java-priority-a"));assert!(!host.is_loaded("java-priority-fault"));
+        let rows=host.priority_test_trace().to_vec();
+        let failed:Vec<_>=rows.iter().filter(|r|r["plugin"]=="java-priority-fault"&&r["ok"]==false).collect();assert_eq!(failed.len(),1,"fault={fault} rows={rows:?}");
+        assert_eq!(failed[0]["stage"],if fault=="begin" {"begin"} else if fault=="finish" {"finish"} else {"phase"});
+        let successful_phases=rows.iter().filter(|r|r["plugin"]=="java-priority-fault"&&r["stage"]=="phase"&&r["ok"]==true).count();
+        if matches!(fault,"fuel"|"guest"|"native") {assert!(successful_phases>=1&&successful_phases<6,"must exhaust BETWEEN phases: {fault} rows={rows:?}");}
+        if fault=="native" {assert_eq!(failed[0]["native_epochs"],0);assert_eq!(failed[0]["native_ns"],0);}
+        if fault=="fuel" {assert_eq!(failed[0]["fuel"],0);}
+        for healthy in ["java-priority-a","java-priority-empty"] {assert!(rows.iter().any(|r|r["plugin"]==healthy&&r["stage"]=="finish"&&r["ok"]==true&&r["cancelled"]==true));}
+        let messages:Vec<_>=shared.players.lock().unwrap().take_orders(&[1;16]).into_iter().filter_map(|order|match order {crate::players::Order::Message{component}=>Some(component),_=>None}).collect();assert_eq!(messages,vec![crate::network::nbt::text_component("trace A0 c0>1"),crate::network::nbt::text_component("trace A5 c1")]);
+        let row=serde_json::json!({"fault":fault,"boundaries":rows,"survivors":2,"verdict":"deny","raw_message_nbt_hex":messages.iter().map(|m|m.iter().map(|b|format!("{b:02x}")).collect::<String>()).collect::<Vec<_>>()});println!("PRIORITY_CUMULATIVE_FAULT {row}");captures.push(row);
+        host.load("java-priority-fault").unwrap();assert_eq!(host.block_break(&view(),&pos,"minecraft:stone"),Verdict::Deny);assert_eq!(host.loaded.len(),3);host.unload_all();assert!(host.is_empty());
+    }
+    let file=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/fault-capture.json");assert!(!file.exists());std::fs::write(file,serde_json::to_string_pretty(&captures).unwrap()).unwrap();
+}

@@ -209,6 +209,10 @@ pub struct Host {
     test_call_epochs: Option<u64>,
     native_wait: Arc<NativeWait>,
     priority_id: u64,
+    #[cfg(test)]
+    priority_budget_override: Option<(u64,Duration)>,
+    #[cfg(test)]
+    priority_trace: Vec<serde_json::Value>,
     /// Сколько хозяин тратит на такт целиком (задачи всех плагинов).
     pub tick_stats: Stats,
 }
@@ -289,6 +293,10 @@ impl Host {
             test_call_epochs: None,
             native_wait: Arc::new(NativeWait::default()),
             priority_id: 0,
+            #[cfg(test)]
+            priority_budget_override: None,
+            #[cfg(test)]
+            priority_trace: Vec::new(),
             tick_stats: Stats::default(),
         })
     }
@@ -398,6 +406,8 @@ impl Host {
         crate::log_info!("[{}] HTTPS: {}", manifest.name, network.description());
         let ctx = PluginCtx {
             native_wait: Arc::clone(&self.native_wait),
+            #[cfg(test)]
+            test_storage_latency: Duration::ZERO,
             pending_mobs: HashMap::new(),
             network,
             chests: Default::default(),
@@ -1134,6 +1144,14 @@ impl Host {
     }
 
     #[cfg(test)]
+    pub(super) fn priority_test_budget(&mut self, native: u64, guest: Duration, latency: Duration) {
+        self.priority_budget_override=Some((native,guest));
+        for p in &mut self.loaded {p.store.data_mut().test_storage_latency=latency;}
+    }
+    #[cfg(test)]
+    pub(super) fn priority_test_trace(&self)->&[serde_json::Value] {&self.priority_trace}
+
+    #[cfg(test)]
     pub(super) fn priority_test_fuel(&mut self, fuel: u64) {for plugin in &mut self.loaded {plugin.limits.fuel=fuel;} }
 
     fn staged_block_break(&mut self, who: mcsa::api::types::Player, pos: mcsa::api::types::BlockPos, block: &str) -> Verdict {
@@ -1144,13 +1162,20 @@ impl Host {
         self.priority_id=id;
         let now=self.shared_tick();let mut cancelled=false;let mut crashes=Vec::new();
         let mut alive=vec![false;self.loaded.len()];
-        let mut budgets: Vec<_> = self.loaded.iter().map(|p| super::priority::Budget::new(p.limits.fuel,EPOCH.saturating_mul(p.limits.epochs.min(u32::MAX as u64) as u32),NATIVE_WAIT_EPOCHS)).collect();
+        let mut budgets: Vec<_> = self.loaded.iter().map(|p| {
+            let native=NATIVE_WAIT_EPOCHS;let guest=EPOCH.saturating_mul(p.limits.epochs.min(u32::MAX as u64) as u32);
+            #[cfg(test)]
+            let (native,guest)=self.priority_budget_override.unwrap_or((native,guest));
+            super::priority::Budget::new(p.limits.fuel,guest,native)
+        }).collect();
         for (index,plugin) in self.loaded.iter_mut().enumerate() {
             let extension=plugin.priority.unwrap();
             let result=plugin.priority_call(now,&mut budgets[index],|store| {
                 let (value,)=extension.begin.call(&mut *store,(id,who.clone(),pos,block.into(),false))?;
                 value.map_err(|error| wasmtime::Error::msg(format!("Native begin: {error:?}")))
             });
+            #[cfg(test)]
+            self.priority_trace.push(serde_json::json!({"id":id,"plugin":plugin.manifest.name,"stage":"begin","ok":result.is_ok(),"error":result.as_ref().err(),"fuel":budgets[index].fuel,"guest_ns":budgets[index].guest.as_nanos(),"native_epochs":budgets[index].native,"native_ns":budgets[index].native_time.as_nanos()}));
             match result { Ok(())=>alive[index]=true,Err(reason)=>crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason}) }
         }
         for priority in 0..6 {
@@ -1161,16 +1186,21 @@ impl Host {
                     let (value,)=extension.phase.call(&mut *store,(id,priority,cancelled))?;
                     value.map_err(|error| wasmtime::Error::msg(format!("Native phase: {error:?}")))
                 });
+                #[cfg(test)]
+                self.priority_trace.push(serde_json::json!({"id":id,"plugin":plugin.manifest.name,"stage":"phase","phase":priority,"ok":result.is_ok(),"error":result.as_ref().err(),"fuel":budgets[index].fuel,"guest_ns":budgets[index].guest.as_nanos(),"native_epochs":budgets[index].native,"native_ns":budgets[index].native_time.as_nanos()}));
                 match result {Ok(value)=>cancelled=value,Err(reason)=>{alive[index]=false;crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason});}}
             }
         }
         for (index,plugin) in self.loaded.iter_mut().enumerate() {
             if !alive[index] {continue;}
             let extension=plugin.priority.unwrap();
-            if let Err(reason)=plugin.priority_call(now,&mut budgets[index],|store| {
+            let result=plugin.priority_call(now,&mut budgets[index],|store| {
                 let (value,)=extension.finish.call(&mut *store,(id,cancelled))?;
                 value.map_err(|error| wasmtime::Error::msg(format!("Native finish: {error:?}")))
-            }) {crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason});}
+            });
+            #[cfg(test)]
+            self.priority_trace.push(serde_json::json!({"id":id,"plugin":plugin.manifest.name,"stage":"finish","ok":result.is_ok(),"error":result.as_ref().err(),"cancelled":cancelled,"fuel":budgets[index].fuel,"guest_ns":budgets[index].guest.as_nanos(),"native_epochs":budgets[index].native,"native_ns":budgets[index].native_time.as_nanos()}));
+            if let Err(reason)=result {crashes.push(Crash{plugin:plugin.manifest.name.clone(),reason});}
         }
         // Trap: последнее подтверждённое cancellation остаётся, side effects не откатываем.
         // Удаление store очищает даже frame, который уже нельзя безопасно вызвать.

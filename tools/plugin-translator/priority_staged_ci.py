@@ -49,7 +49,7 @@ def finish():
   if src.exists():shutil.copytree(src,OUT/name,dirs_exist_ok=False)
  selected=[]
  for base in ['src/plugins','tools/plugin-translator','wit']:
-  selected.extend(p for p in (ROOT/base).rglob('*') if p.is_file() and not any(x in p.relative_to(ROOT/base).parts for x in ['target','.toolchain','__pycache__']) and p.suffix in ['.rs','.java','.py','.c','.h','.wit','.xml','.yml'])
+  selected.extend(p for p in (ROOT/base).rglob('*') if p.is_file() and not any(x in p.relative_to(ROOT/base).parts for x in ['target','.toolchain','__pycache__']) and p.suffix in ['.rs','.java','.py','.c','.h','.wit','.xml','.yml','.json'])
  selected += [ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'.github/workflows/bukkit-priority-staged-checks.yml']
  for p in selected:
   if p.exists():
