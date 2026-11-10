@@ -187,6 +187,7 @@ class PilotClient(base.Client):
 def peer_positions(events, decoder, entity):
     """Реконструкция только действительных tracker packets777, не local pose."""
     pos = None
+    binding_eligible = False
     rows = []
     for event in events:
         name = event['name']
@@ -199,18 +200,21 @@ def peer_positions(events, decoder, entity):
             if name == 'sync_entity_position' and value['positionType'] == 'stepped':
                 for step in value['steps']:
                     pos = [step[k] for k in ('x', 'y', 'z')]
-                    rows.append(dict(at=event['at'], position=list(pos), source=name, tickOffset=step['tickOffset']))
+                    binding_eligible = step['tickOffset'] == 0
+                    rows.append(dict(at=event['at'], position=list(pos), source=name, tickOffset=step['tickOffset'], binding_eligible=binding_eligible))
                 continue
             if name == 'entity_teleport' and any(value['flags'].values()):
                 raise ValueError('relative peer teleport requires separate proof')
             pos = [value[k] for k in ('x', 'y', 'z')]
+            binding_eligible = True
         else:
             assert pos is not None, 'delta without peer base'
+            binding_eligible &= all(step.get('tickOffset', 0) == 0 for step in value['move']['steps'])
             for step in value['move']['steps']:
                 pos = [pos[i] + step['delta'][i] / 4096 for i in range(3)]
-                rows.append(dict(at=event['at'], position=list(pos), source=name, onGround=value['move']['onGround']))
+                rows.append(dict(at=event['at'], position=list(pos), source=name, onGround=value['move']['onGround'], tickOffset=step.get('tickOffset', 0), binding_eligible=binding_eligible))
             continue
-        rows.append(dict(at=event['at'], position=list(pos), source=name, onGround=value.get('onGround')))
+        rows.append(dict(at=event['at'], position=list(pos), source=name, onGround=value.get('onGround'), binding_eligible=binding_eligible))
     return rows
 
 
@@ -263,7 +267,7 @@ def audit(raw, protocol, items, block_states):
     # Доставка tracker может прийти после Attack, но только до следующего
     # движения: не используем поздний landing pose как pre-hit evidence.
     nextmove = next(e['at'] for e in clients[0]['moves'] if e['at'] > attack)
-    bound = [p for p in peers if moves[-1]['at'] - .025 <= p['at'] < nextmove]
+    bound = [p for p in peers if p['binding_eligible'] and moves[-1]['at'] - .025 <= p['at'] < nextmove]
     assert any(100.49 <= p['position'][0] <= 100.51 and 64.02 <= p['position'][1] <= 64.06
                and 100.49 <= p['position'][2] <= 100.51 and not p.get('onGround', False) for p in bound), 'INCONCLUSIVE_SERVER_POSE'
     damages = [e for e in events[1] if e['name'] == 'damage_event' and attack <= e['at'] <= attack + 1
@@ -277,6 +281,8 @@ def audit(raw, protocol, items, block_states):
     hp = [(e['at'], e['value']['health']) for e in events[1] if e['name'] == 'update_health']
     pre = [h for at, h in hp if trial['reset_at'] <= at < attack]
     post = [h for at, h in hp if attack <= at < attack+1]
+    low = [h for at,h in hp if trial['reset_at'] <= at < trial['heal_at']]
+    assert low and 0 < low[-1] < 200, 'INCONCLUSIVE_RESET_HP_RECEIPT'
     assert pre and pre[-1] == 200 and post and 0 < post[0] < 200 and all(h > 0 for at,h in hp if at >= trial['reset_at']), 'INCONCLUSIVE_HP'
     ages = [[(e['at'], e['value']['age']) for e in side if e['name'] == 'update_time'] for side in events]
     for side in ages:
@@ -450,7 +456,15 @@ class Experiment:
             self.command('clear ' + name)
             self.command('effect clear ' + name)
             self.command('damage ' + name + ' 1 minecraft:generic')
+        self.frames(4)
+        for c in self.clients:
+            health_packets = [e for e in c.events if e['name'] == 'update_health' and e['at'] >= row['reset_at']]
+            assert health_packets and 0 < c.health < 200, 'fresh damaged HP receipt before heal'
+        row['heal_at'] = time.monotonic()
+        for name in ('blackbox', 'blackboxb'):
             self.command('effect give ' + name + ' instant_health 1 10')
+        self.frames(4)
+        assert all(c.health == 200 for c in self.clients), 'fresh restored HP receipt'
         for i in range(2):
             self.teleport(i, [100.5, 64., 102.5])
         # Изменение U подтверждается реальным block-change и named if-block.

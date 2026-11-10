@@ -24,13 +24,13 @@ def event(name, at, value):
 def fixture():
     actor, victim = 1, 2
     attack, end = 20.461, 24.6
-    trial = dict(index=0, material='air', reset_at=10., quiet_at=15., start_tp_at=20.,
+    trial = dict(index=0, material='air', reset_at=10., heal_at=10.3, quiet_at=15., start_tp_at=20.,
                  attack_at=attack, end_at=end, cell_change_at=11., echo='unique_live',
                  victim_inventory_receipt={'response':'blackboxb has the following entity data: []'})
     clients = []
     for entity in (actor, victim):
         events = [event('login', 0., {}), event('game_state_change', 1., dict(reason='change_game_mode',gameMode=0)),
-                  event('abilities', 1., dict(flags=0)), event('update_health',10.5,dict(health=200)),
+                  event('abilities', 1., dict(flags=0)), event('update_health',10.2,dict(health=199)), event('update_health',10.5,dict(health=200)),
                   event('block_change',11.1,dict(location=dict(x=100,y=63,z=100),type=0))]
         events += [event('update_time',float(t),dict(age=(t-10)*20)) for t in range(15,25)]
         events.append(event('system_chat',25.,dict(text='unique_live')))
@@ -101,6 +101,21 @@ class EvidenceGuards(unittest.TestCase):
                        lambda r:r.update(protocol=768)]:
             raw=fixture();mutate(raw)
             with self.assertRaises(AssertionError):self.check(raw)
+
+    def test_nonzero_peer_offset_does_not_qualify(self):
+        raw=fixture()
+        e=next(e for e in raw['clients'][1]['events'] if e['name']=='sync_entity_position')
+        v=json.loads(bytes.fromhex(e['hex']))
+        v.update(positionType='stepped',steps=[dict(x=100.5,y=64.04,z=100.5,tickOffset=1)])
+        e['hex']=json.dumps(v).encode().hex()
+        with self.assertRaisesRegex(AssertionError,'INCONCLUSIVE_SERVER_POSE'):self.check(raw)
+        v['steps'][0]['tickOffset']=0;e['hex']=json.dumps(v).encode().hex()
+        self.assertEqual(self.check(raw)['status'],'qualified-observation')
+
+    def test_coalesced_reset_health_does_not_qualify(self):
+        raw=fixture()
+        raw['clients'][1]['events']=[e for e in raw['clients'][1]['events'] if not (e['name']=='update_health' and e['at']==10.2)]
+        with self.assertRaisesRegex(AssertionError,'INCONCLUSIVE_RESET_HP_RECEIPT'):self.check(raw)
 
     def test_feedback_ownership_and_wire_order(self):
         velocity=dict(entityId=1,velocity=dict(x=0,y=.01,z=0))
