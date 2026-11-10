@@ -36,14 +36,18 @@ jobs:
         run: |
           set -o pipefail
           python3 -B tools/plugin-translator/build-priority-fixtures.py 2>&1 | tee staged-evidence/fixtures.log
+          mkdir -p staged-evidence/sdk-inputs
           for letter in a b; do
             python3 -B tools/plugin-translator/translate.py tools/plugin-translator/target/priority-$letter.jar --staged-block-break --output tmp/java-priority-staged/plugins 2>&1 | tee staged-evidence/translate-$letter.log
+            cp tools/plugin-translator/target/mcsa-bukkit.jar staged-evidence/sdk-inputs/sdk-$letter.jar
           done
           python3 -B tools/plugin-translator/build-priority-safety.py 2>&1 | tee staged-evidence/safety-fixtures.log
           for suffix in observer mutator empty failed; do
             python3 -B tools/plugin-translator/translate.py tools/plugin-translator/target/priority-$suffix.jar --staged-block-break --output tmp/java-priority-staged/plugins 2>&1 | tee staged-evidence/translate-$suffix.log
+            cp tools/plugin-translator/target/mcsa-bukkit.jar staged-evidence/sdk-inputs/sdk-$suffix.jar
           done
           python3 -B tools/plugin-translator/build-priority-faults.py 2>&1 | tee staged-evidence/translate-fault.log
+          cp tools/plugin-translator/target/mcsa-bukkit.jar staged-evidence/sdk-inputs/sdk-fault.jar
       - name: Verify immutable old components and build mixed inputs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -52,7 +56,7 @@ jobs:
         run: |
           set -o pipefail
           cargo test --release --bin mcsheriffanya plugins::priority::tests -- --nocapture --test-threads=1 2>&1 | tee staged-evidence/budget.log
-          for test in translated_bukkit_staged_faults_and_cumulative_native_budgets translated_bukkit_staged_monitor_epoch_nested_trap_and_empty translated_bukkit_staged_empty_fuel_quarantines_and_reload_is_fresh translated_bukkit_staged_priority_contract translated_bukkit_staged_frames_reject_invalid_order_replay_and_capacity translated_bukkit_staged_mixed_a_uses_full_legacy_fallback translated_bukkit_staged_mixed_b_uses_full_legacy_fallback translated_bukkit_legacy_priority_baseline translated_bukkit_jars translated_bukkit_listener_unregistration translated_bukkit_enchantment_removal_reaches_native_inventory; do
+          for test in translated_bukkit_staged_partial_and_wrong_type_are_not_legacy translated_bukkit_staged_faults_and_cumulative_native_budgets translated_bukkit_staged_monitor_epoch_nested_trap_and_empty translated_bukkit_staged_empty_fuel_quarantines_and_reload_is_fresh translated_bukkit_staged_priority_contract translated_bukkit_staged_frames_reject_invalid_order_replay_and_capacity translated_bukkit_staged_mixed_a_uses_full_legacy_fallback translated_bukkit_staged_mixed_b_uses_full_legacy_fallback translated_bukkit_legacy_priority_baseline translated_bukkit_jars translated_bukkit_listener_unregistration translated_bukkit_enchantment_removal_reaches_native_inventory; do
             timeout 180s cargo test --release --bin mcsheriffanya plugins::tests::$test -- --ignored --exact --nocapture --test-threads=1 2>&1 | tee staged-evidence/$test.log
           done
       - name: Preserve compact source raw and receipts even after failure

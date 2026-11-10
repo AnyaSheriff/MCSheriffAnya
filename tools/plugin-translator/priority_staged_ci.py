@@ -37,6 +37,20 @@ def inputs():
     path=destination/relative;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(z.read(name));hashes[str(relative)]=sha(path)
    assert len(hashes)==(4 if label=='baseline' else 10)
   write(OUT/(label+'-input.json'),dict(api=api,files=hashes,archive_sha256=digest));archive.unlink()
+ # Только собственный component: меняются имена optional exports, длины binary строк прежние.
+ # Оба malformed bytes проходят wasm-tools validate до проверки host type gate.
+ original=(ROOT/'tmp/java-priority-staged/plugins/java-priority-empty/plugin.wasm').read_bytes()
+ assert b'\x05phase' in original and b'\x05begin' in original
+ variants={
+  'missing':original.replace(b'\x05phase',b'\x05phaze'),
+  'type':original.replace(b'\x05phase',b'\x05zzzzz').replace(b'\x05begin',b'\x05phase').replace(b'\x05zzzzz',b'\x05begin'),
+ }
+ for label,content in variants.items():
+  target=ROOT/('tmp/java-priority-staged/plugins/java-priority-invalid-'+label);target.mkdir()
+  (target/'plugin.wasm').write_bytes(content)
+  (target/'plugin.toml').write_text('name = "java-priority-invalid-'+label+'"\nversion = "1.0"\napi = "0.1"\nmain = "plugin.wasm"\n')
+  subprocess.run([str(ROOT/'tools/plugin-translator/.toolchain/wasm-tools-1.262.0-x86_64-linux/wasm-tools'),'validate','--features','all',str(target/'plugin.wasm')],check=True)
+ write(OUT/'invalid-components.json',{label:hashlib.sha256(value).hexdigest() for label,value in variants.items()})
  for staged_letter in 'ab':
   target=ROOT/f'tmp/java-priority-mixed-{staged_letter}/plugins';target.mkdir(parents=True)
   for letter in 'ab':
@@ -55,6 +69,11 @@ def finish():
   if p.exists():
    d=OUT/'source'/p.relative_to(ROOT);d.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,d)
  rust={str(p.relative_to(ROOT)):sha(p) for p in sorted((ROOT/'src').rglob('*.rs'))};write(OUT/'all-rust-sha256.json',rust)
+ jars=ROOT/'tools/plugin-translator/target'
+ for p in jars.glob('priority-*.jar'):
+  target=OUT/'own-jars'/p.name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,target)
+ binaries={str(p.relative_to(ROOT)):dict(sha256=sha(p),bytes=p.stat().st_size) for p in (ROOT/'target/release/deps').glob('mcsheriffanya-*') if p.is_file() and os.access(p,os.X_OK)}
+ write(OUT/'runtime-test-binaries.json',binaries)
  files={str(p.relative_to(OUT)):dict(sha256=sha(p),bytes=p.stat().st_size) for p in sorted(OUT.rglob('*')) if p.is_file()}
  write(OUT/'receipt.json',dict(source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),run_id=os.environ.get('GITHUB_RUN_ID'),status=os.environ.get('MCSA_JOB_STATUS'),files=files))
 if __name__=='__main__':{'inputs':inputs,'finish':finish}[sys.argv[1]]()

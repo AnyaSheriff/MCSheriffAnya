@@ -470,7 +470,11 @@ impl Host {
                     phase: raw.get_typed_func(&mut store,&phase)?,
                     finish: raw.get_typed_func(&mut store,&finish)?,
                 })
-            })().map_err(|error| short(&error))?;
+            })().map_err(|error| {
+                self.drop_registrations(&manifest.name);
+                crate::presentation::release(&self.shared,&manifest.name);
+                short(&error)
+            })?;
             Some(extension)
         } else { None };
         let completion = raw.get_export_index(&mut store, None, "mcsa:api/completion@0.1.0")
@@ -1166,7 +1170,7 @@ impl Host {
             let native=NATIVE_WAIT_EPOCHS;let guest=EPOCH.saturating_mul(p.limits.epochs.min(u32::MAX as u64) as u32);
             #[cfg(test)]
             let (native,guest)=self.priority_budget_override.unwrap_or((native,guest));
-            super::priority::Budget::new(p.limits.fuel,guest,native)
+            super::priority::Budget::new(p.limits.fuel,guest,native,EPOCH)
         }).collect();
         for (index,plugin) in self.loaded.iter_mut().enumerate() {
             let extension=plugin.priority.unwrap();
