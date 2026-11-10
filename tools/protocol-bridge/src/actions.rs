@@ -55,7 +55,7 @@ pub(crate) fn gui(name: &str, input: &mut Cursor<'_>, out: &mut Vec<u8>) -> Resu
             }
         }
         "name_item" => string(input, out)?,
-        "enchant_item" => { uint(out, input.uint()?); uint(out, input.count(2)? as u32); }
+        "enchant_item" => crate::container_button::translate(input,out,JavaVersion::V26_1_2,JavaVersion::V26_2)?,
         "select_trade" => uint(out, input.uint()?),
         "set_slot_state" => {
             uint(out, input.uint()?); uint(out, input.uint()?);

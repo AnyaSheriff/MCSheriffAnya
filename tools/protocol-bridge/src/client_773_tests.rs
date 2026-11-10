@@ -43,9 +43,12 @@ fn predictions_remap_component_ids_and_reject_invalid_clicks() {
     roundtrip(Direction::Serverbound,"window_click",&payload);
     let mut bad=payload;bad[5]=7;
     assert!(translate_play(Direction::Serverbound,LOWER,&packet(Direction::Serverbound,LOWER,"window_click",&bad),Context::default()).is_err());
-    for value in [0,1,2] {roundtrip(Direction::Serverbound,"enchant_item",&[3,value]);}
-    for value in [3,127,255] {
-        for from in [LOWER,UPPER] {assert!(translate_play(Direction::Serverbound,from,&packet(Direction::Serverbound,from,"enchant_item",&[3,value]),Context::default()).is_err());}
+    for value in [0,1,2,3,7,100,127] {roundtrip(Direction::Serverbound,"enchant_item",&[3,value]);}
+    // У774 signed i8:128/255 — не допустимые положительные номера кнопки.
+    for value in [128u32,255] {
+        let mut payload=vec![3];uint(&mut payload,value);
+        assert!(translate_play(Direction::Serverbound,LOWER,&packet(Direction::Serverbound,LOWER,"enchant_item",&payload),Context::default()).is_err());
+        assert!(translate_play(Direction::Serverbound,UPPER,&packet(Direction::Serverbound,UPPER,"enchant_item",&[3,value as u8]),Context::default()).is_err());
     }
 }
 #[test]

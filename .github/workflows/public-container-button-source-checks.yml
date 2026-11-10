@@ -1,0 +1,92 @@
+name: Public ContainerButton source checks only
+on:
+  push:
+    branches: ['review/public-container-button-20261110']
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Freeze public source and exact CI lock
+        run: |
+          python3 -B tools/protocol-bridge/public_container_button_ci.py prepare --output public-container-button-evidence
+          rustc -vV > public-container-button-evidence/rustc-version.log
+          cargo -vV > public-container-button-evidence/cargo-version.log
+      - name: Prepare six mandatory own WASM components with verified public guest lock
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output public-container-button-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 --message-format=json-render-diagnostics 2>&1 | tee public-container-button-evidence/own-examples-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output public-container-button-evidence
+      - name: Verify all pinned field schemas and retention ownership guards
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/audit_container_button_fields.py --cache "$RUNNER_TEMP/container-button-json" --fetch 2>&1 | tee public-container-button-evidence/container-button-fields.log
+          python3 -B -m unittest discover -s tools/protocol-bridge -p test_public_container_button_ci.py -v 2>&1 | tee public-container-button-evidence/retention-guards.log
+      - name: Focused public adapters in Default and Preview contexts
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked -p mcsa-protocol --message-format=json-render-diagnostics container_button::tests:: -- --nocapture --test-threads=1 2>&1 | tee public-container-button-evidence/button-default.log
+      - name: Actual native777 reader and real menu guards in both catalogues
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics container_button_menu_tests:: -- --nocapture --test-threads=1 2>&1 | tee public-container-button-evidence/focused-runtime.log
+      - name: Full default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --message-format=json-render-diagnostics 2>&1 | tee public-container-button-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features --message-format=json-render-diagnostics 2>&1 | tee public-container-button-evidence/no-default-tests.log
+      - name: Strict default workspace Clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee public-container-button-evidence/default-clippy.log
+      - name: Build one ordinary runtime without executing it
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee public-container-button-evidence/default-build.log
+          cp target/release/mcsheriffanya public-container-button-evidence/default-runtime-elf
+      - name: Always preserve source, data, own components, logs and actual test executables
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/protocol-bridge/public_container_button_ci.py archive --output public-container-button-evidence
+      - name: Remove only isolated job test-created tmp
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import shutil
+          temporary=Path('tmp')
+          if temporary.is_dir() and not temporary.is_symlink():shutil.rmtree(temporary)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-container-button-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: public-container-button-evidence/
+          retention-days: 7
+          if-no-files-found: error

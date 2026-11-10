@@ -77,14 +77,7 @@ pub(crate) fn translate_selected(direction:Direction,from:JavaVersion,to:JavaVer
         }
         (Direction::Serverbound, "window_click") => crate::actions::click_with_context(&mut input, &mut out, from, to, context.items)?,
         (Direction::Serverbound, "enchant_item") => {
-            uint(&mut out, input.uint()?);
-            let selected = if from == JavaVersion::V1_21_9 { input.count(2)? as u8 } else {
-                let value = input.take(1)?[0];
-                if value > 2 { return Err(Error::Invalid); }
-                value
-            };
-            // VarInt0..2 и i8 имеют одну и ту же однобайтовую запись.
-            out.push(selected);
+            crate::container_button::translate(&mut input,&mut out,from,to)?;
         }
         (Direction::Serverbound, "chat_command_signed") => {
             let command = input.string()?;

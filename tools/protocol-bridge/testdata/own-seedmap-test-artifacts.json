@@ -1,0 +1,119 @@
+{
+  "source": "b258a32b5914da7082fbc30e1f91d6610e7fb414",
+  "run": 42801012519,
+  "artifact": 13757758856,
+  "scope": "actual own Cargo compiler metadata, not invented ELF or runtime capture",
+  "messages": [
+    {
+      "log": "default-tests.log",
+      "message": {
+        "reason": "compiler-artifact",
+        "package_id": "path+file:///home/runner/work/MCSheriffAnya/MCSheriffAnya/tools/seedmap#seedmap-core@0.1.0",
+        "manifest_path": "/home/runner/work/MCSheriffAnya/MCSheriffAnya/tools/seedmap/Cargo.toml",
+        "target": {
+          "kind": [
+            "cdylib",
+            "rlib"
+          ],
+          "crate_types": [
+            "cdylib",
+            "rlib"
+          ],
+          "name": "seedmap_core",
+          "src_path": "/home/runner/work/MCSheriffAnya/MCSheriffAnya/tools/seedmap/src/lib.rs",
+          "edition": "2024",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        },
+        "profile": {
+          "opt_level": "3",
+          "debuginfo": 0,
+          "debug_assertions": false,
+          "overflow_checks": false,
+          "test": true
+        },
+        "features": [],
+        "filenames": [
+          "/home/runner/work/MCSheriffAnya/MCSheriffAnya/target/release/deps/seedmap_core-2e68c20d7cd03165"
+        ],
+        "executable": "/home/runner/work/MCSheriffAnya/MCSheriffAnya/target/release/deps/seedmap_core-2e68c20d7cd03165",
+        "fresh": false
+      }
+    },
+    {
+      "log": "no-default-tests.log",
+      "message": {
+        "reason": "compiler-artifact",
+        "package_id": "path+file:///home/runner/work/MCSheriffAnya/MCSheriffAnya/tools/seedmap#seedmap-core@0.1.0",
+        "manifest_path": "/home/runner/work/MCSheriffAnya/MCSheriffAnya/tools/seedmap/Cargo.toml",
+        "target": {
+          "kind": [
+            "cdylib",
+            "rlib"
+          ],
+          "crate_types": [
+            "cdylib",
+            "rlib"
+          ],
+          "name": "seedmap_core",
+          "src_path": "/home/runner/work/MCSheriffAnya/MCSheriffAnya/tools/seedmap/src/lib.rs",
+          "edition": "2024",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        },
+        "profile": {
+          "opt_level": "3",
+          "debuginfo": 0,
+          "debug_assertions": false,
+          "overflow_checks": false,
+          "test": true
+        },
+        "features": [],
+        "filenames": [
+          "/home/runner/work/MCSheriffAnya/MCSheriffAnya/target/release/deps/seedmap_core-e191ac8c905c551e"
+        ],
+        "executable": "/home/runner/work/MCSheriffAnya/MCSheriffAnya/target/release/deps/seedmap_core-e191ac8c905c551e",
+        "fresh": false
+      }
+    },
+    {
+      "log": "private-tests.log",
+      "message": {
+        "reason": "compiler-artifact",
+        "package_id": "path+file:///home/runner/work/MCSheriffAnya/MCSheriffAnya/tools/seedmap#seedmap-core@0.1.0",
+        "manifest_path": "/home/runner/work/MCSheriffAnya/MCSheriffAnya/tools/seedmap/Cargo.toml",
+        "target": {
+          "kind": [
+            "cdylib",
+            "rlib"
+          ],
+          "crate_types": [
+            "cdylib",
+            "rlib"
+          ],
+          "name": "seedmap_core",
+          "src_path": "/home/runner/work/MCSheriffAnya/MCSheriffAnya/tools/seedmap/src/lib.rs",
+          "edition": "2024",
+          "doc": true,
+          "doctest": true,
+          "test": true
+        },
+        "profile": {
+          "opt_level": "3",
+          "debuginfo": 0,
+          "debug_assertions": false,
+          "overflow_checks": false,
+          "test": true
+        },
+        "features": [],
+        "filenames": [
+          "/home/runner/work/MCSheriffAnya/MCSheriffAnya/target/release/deps/seedmap_core-2e68c20d7cd03165"
+        ],
+        "executable": "/home/runner/work/MCSheriffAnya/MCSheriffAnya/target/release/deps/seedmap_core-2e68c20d7cd03165",
+        "fresh": true
+      }
+    }
+  ]
+}

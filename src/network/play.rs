@@ -148,6 +148,8 @@ mod disconnect_tests;
 mod save_conservation_tests;
 #[cfg(test)]
 mod window_persistence_tests;
+#[cfg(test)]
+mod container_button_menu_tests;
 mod small;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
