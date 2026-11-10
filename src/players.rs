@@ -146,6 +146,8 @@ pub struct Gear {
     pub sleeping: Option<(i32, i32, i32)>,
     /// Частицы эффектов (ARGB, нули — нет): остальным — свойством 10.
     pub effect_colors: [i32; crate::survival::EFFECT_PARTICLES],
+    /// Активные эффекты цели ведьмы: Slowness, Poison, Weakness.
+    pub witch_effects: u8,
     /// Здоровье: остальным — свойством 9.
     pub health: f32,
     /// Воздух в лёгких: остальным — свойством 1.
@@ -259,7 +261,7 @@ pub enum Order {
     CommandDamage { amount: f32, source: crate::survival::Source, origin: crate::combat::DamageOrigin },
     /// Мгновенный урон зелья с известным бросившим игроком.
     /// `from` — брошенное зелье: номер снаряда и точка удара (урон «indirect_magic» с отдачей).
-    MagicHit { amount: f32, killer: Option<(String, [u8; 16])>, from: Option<(i32, (f64, f64, f64))> },
+    MagicHit { amount: f32, killer: Option<(String, [u8; 16])>, from: Option<(i32, (f64, f64, f64), i32)> },
     /// Команда `experience`: добавить или задать очки либо уровни.
     Experience { set: bool, amount: i32, levels: bool },
     /// Игрок подобрал шарики опыта на такте мира: очки прибавляются, клиент

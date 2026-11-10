@@ -832,6 +832,7 @@ pub(super) fn guardian_spikes(shared: &Shared, player: &mut PlayerState, guardia
         amount,
         source: Source::Thorns,
         direct: guardian,
+        cause: 0,
         hurt_yaw: Some((toward - player.yaw).rem_euclid(360.0)),
         push: Some(if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { crate::mob::look_direction(player.yaw) }),
         announced, quiet_thorns: false,
@@ -1016,6 +1017,7 @@ fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players:
             amount,
             source: Source::Thorns,
             direct: victim,
+            cause: 0,
             hurt_yaw: Some((toward - player.yaw).rem_euclid(360.0)),
             push: {
                 let away = (player.x - victim_at.0, player.z - victim_at.2);

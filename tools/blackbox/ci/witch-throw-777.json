@@ -1,0 +1,17 @@
+{
+  "schema": "witch-throw-bounded-v1",
+  "base_evidence": {
+    "near_official_sha256": "7865ddd57334e13967045402ade23b9ce369647cac8fab3527dda9114bd1d816",
+    "far_official_sha256": "bb5f3c4dfcee7eba17fd06ec08b9482fad64ced0e8e90d393685b4e531759b2e",
+    "noai_official_sha256": "afac089598bd5a1304b66e055f8fb54144a8e58dff6f543bad702ef577abe277",
+    "wall_and_creative": "parallel-20261109/survival/matrix/capture-02/extracted.json"
+  },
+  "fixed_attempts": {"near": 3, "far": 3, "wall": 1, "creative": 1, "noai": 1},
+  "positive_each_side_each_distance": "Across all three attempts, require real witch-owned splash spawn and potion metadata, a real Poison player effect and a separate actual harming DamageEvent type indirect_magic with cause witch+1 and direct an observed harming projectile+1. Record all attempts; no retry or selection by outcome. A missing official positive control means INCONCLUSIVE, never candidate PASS.",
+  "controls": "NoAI, creative, and wall each require a valid complete observation and no splash projectile from the witch. A wall bypass, disappearance, dead player, absent mode, late command, missing live HP, missing entity, or incomplete window is INVALID, not an absence success.",
+  "timing": "No exact throw count, timing, probability, velocity distribution or cross-run RNG equality; use nominal tick only to locate controlled window. Do not claim full witch AI parity.",
+  "provenance": "One real witch with spawn identity; each considered potion entity must have owner=witch id and packet metadata potion_contents; impact is a real corresponding entity destroy and level event, player effect or harmful damage is real and inside observation. No synthetic IDs, missing packet, console success or inferred zero accepted as evidence.",
+  "scope": "Java26.3 Normal, one stationary survival player with Resistance V, near2/far9 on explicit level floor, one witch in loaded area. Player mode, actual HP, actual movement and witch position must be documented; NoAI metadata bit and unbroken wall path must be validated. Duration is sufficient for observation, not a new timing rule.",
+  "combat_regression": "Run the existing four fire-protection and thorns semantic controls once on the same candidate binary, unchanged.",
+  "source_runtime": "Pin exact source commit, runtime SHA256, ELF and approved Java26.3 protocol/entity/item/block SHA; preserve raw records, server logs, lifecycle and cleanup for independent decoding."
+}

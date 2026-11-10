@@ -108,6 +108,8 @@ pub(super) struct Pending {
     pub source: Source,
     /// Номер сущности виновника (динамит); 0 — нет.
     pub direct: i32,
+    /// Кто выпустил снаряд; не задаёт Player UUID и прогресс.
+    pub cause: i32,
     /// Направление анимации ушиба (шипы) и виновник для сообщения о смерти.
     pub hurt_yaw: Option<f32>,
     pub killer: Option<(String, [u8; 16])>,
@@ -849,7 +851,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
             log_debug!("Play: {} приземлился с уроном {} на {:.2} {:.2} {:.2} (шаг {:.3})", player.name, damage, player.x, player.y, player.z, dy);
 
             let announced = announce_fall(player, shared, damage, env.below);
-            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, hurt_yaw: None, killer: None, push: None, announced, quiet_thorns: false });
+            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, cause: 0, hurt_yaw: None, killer: None, push: None, announced, quiet_thorns: false });
         }
     } else if player.game_mode == GAME_MODE_CREATIVE && !player.vit.dead {
         // Творческий: урона от падения нет, но высота падения копится — от неё
@@ -2629,7 +2631,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         player.net.announced = pending.announced;
         player.net.announced_health = None;
 
-        let done = hit_by_breached_with_feedback(stream,shared,player,pending.amount,pending.source,pending.direct,0,killer,pending.hurt_yaw,1.0,None,None,pending.quiet_thorns).await?;
+        let done = hit_by_breached_with_feedback(stream,shared,player,pending.amount,pending.source,pending.direct,pending.cause,killer,pending.hurt_yaw,1.0,None,None,pending.quiet_thorns).await?;
 
         if pending.source == Source::Fall
             && let Some(vy) = player.net.landing_velocity.take()
@@ -3570,6 +3572,15 @@ pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut Player
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn witch_potion_damage_keeps_distinct_owner_and_projectile_ids() {
+        assert_eq!(super::damage_fields(crate::survival::Source::IndirectMagic, 21, 19), (23, 20, 22));
+        // Бросок игрока тоже сохраняет его собственный entity ID.
+        assert_eq!(super::damage_fields(crate::survival::Source::IndirectMagic, 21, 4), (23, 5, 22));
+        // Исходный fallback без владельца не меняется этим черновиком.
+        assert_eq!(super::damage_fields(crate::survival::Source::IndirectMagic, 21, 0), (23, 22, 22));
+    }
+
     use super::*;
 
     #[tokio::test]

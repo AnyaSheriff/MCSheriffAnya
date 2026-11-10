@@ -202,6 +202,14 @@ pub struct Shot {
     pub crossbow: bool,
 }
 
+/// Решение ведьмы: тик мира создаёт снаряд через общий thrown.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct WitchPotion {
+    pub from: (f64, f64, f64),
+    pub aim: (f64, f64, f64),
+    pub potion: &'static str,
+}
+
 /// Состояние охоты.
 #[derive(Clone, Debug, Default)]
 pub struct State {
@@ -506,7 +514,7 @@ fn prey(mob: &Mob, ctx: &Ctx) -> Vec<Watcher> {
     ctx.mates
         .iter()
         .filter(|mate| (mate.kind == Kind::Villager || (johnny && !crate::raid::joins(mate.kind) && mate.kind != Kind::Vex && !mate.kind.object())) && dist2(mob, mate.x, mate.y, mate.z) <= range * range)
-        .map(|mate| Watcher { id: mate.id, x: mate.x, y: mate.y, z: mate.z, eye: if mate.baby { 0.81 } else { 1.62 }, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false })
+        .map(|mate| Watcher { id: mate.id, x: mate.x, y: mate.y, z: mate.z, eye: if mate.baby { 0.81 } else { 1.62 }, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false , witch_health: 20.0, witch_effects: 0, })
         .collect()
 }
 
@@ -604,7 +612,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         Kind::Skeleton | Kind::Stray | Kind::Bogged if mob.h.bow => skeleton(mob, view, ctx, &target, &mut plan, dist_sq, sight, rng, grounded),
         Kind::Skeleton | Kind::Stray | Kind::Bogged => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
         Kind::Enderman => enderman_chase(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
-        Kind::Witch => witch_keep(mob, view, &target, &mut plan, dist_sq, grounded),
+        Kind::Witch => witch_keep(mob, view, &target, &mut plan, dist_sq, grounded, rng),
         _ => {}
     }
 
@@ -1660,10 +1668,9 @@ pub fn bullet(mob: &mut Mob, view: &dyn View, ctx: &Ctx) -> Plan {
 // Ведьма
 // ---------------------------------------------------------------------------
 //
-// Вики (Witch): пьёт зелья — подводного дыхания (под водой, 15 %), огнестойкости
-// (горит, 15 %), лечения (ранена, 5 %), стремительности (цель в 11 блоках и
-// дальше, 50 %); пьёт 1,6 с. Бросок взрывных зелий — когда они будут в ядре
-// [проверить: бросков пока нет]; к цели подходит на 10 блоков и стоит.
+// Вики (Witch): пьёт защитные и бросает вредные зелья.
+// Выбор замедления/яда/слабости/урона — по расстоянию, состоянию цели
+// и вики; timing/RNG/прицел остаются [проверить] для 26.3.
 
 /// Сколько тактов ведьма пьёт: у оригинала от «пьёт» (свойство 17) до
 /// «допила» 33 такта (чёрный ящик, witch-stand; вики: «1.6 seconds»).
@@ -1719,10 +1726,29 @@ pub fn witch_drink(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) {
 }
 
 /// Ведьма с целью: подходит на 10 блоков и смотрит на неё.
-fn witch_keep(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_sq: f64, grounded: bool) {
+fn witch_keep(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_sq: f64, grounded: bool, rng: &mut Rng) {
     ai::look_at_point(mob, target.x, target.y + target.eye, target.z);
+    let sight = line_of_sight(mob, view, target);
+    // Вики Witch: до 10 блоков и около трёх секунд; точный сброс [проверить].
+    if victim(target) && sight && dist_sq <= 100.0 && mob.h.drinking == 0 {
+        if mob.h.throw_wait == 0 { mob.h.throw_wait = 60; }
+        mob.h.throw_wait -= 1;
+        if mob.h.throw_wait == 0 {
+            let flags = target.witch_effects;
+            let potion = if dist_sq >= 64.0 && flags & 1 == 0 { "slowness" }
+                else if target.witch_health >= 8.0 && flags & 2 == 0 { "poison" }
+                else if dist_sq < 9.0 && flags & 4 == 0 && (target.witch_health <= 8.0 || flags & 2 != 0) && rng.below(4) == 0 { "weakness" }
+                else { "harming" };
+            let from = (mob.x, mob.y + mob.eye() - 0.1, mob.z);
+            // Подъём добавляет общий arrow::launch; его коэффициент,
+            // скорость и неточность зелья [проверить] отдельными опытами.
+            let aim = (target.x, target.y + 0.6, target.z);
+            plan.witch_potion = Some(WitchPotion { from, aim, potion });
+            mob.h.throw_wait = 60;
+        }
+    }
 
-    if dist_sq <= 10.0 * 10.0 && line_of_sight(mob, view, target) {
+    if dist_sq <= 10.0 * 10.0 && sight {
         mob.brain.stop();
         return;
     }

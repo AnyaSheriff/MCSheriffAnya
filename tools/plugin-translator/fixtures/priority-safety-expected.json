@@ -1,0 +1,13 @@
+{
+ "scope":"native homogeneous BlockBreak only",
+ "cases":[
+  {"mode":"epoch","verdict":"allow","message":"safety epoch cancelled=false","survivors":2},
+  {"mode":"nested","verdict":"allow","message":"safety nested cancelled=false","survivors":2},
+  {"mode":"monitor","verdict":"allow","message":"safety monitor cancelled=false","survivors":2},
+  {"mode":"trap","verdict":"deny","message":"safety trap cancelled=true","survivors":1},
+  {"mode":"fuel","verdict":"deny","message":"safety fuel cancelled=true","survivors":1},
+  {"mode":"empty","verdict":"deny","message":"safety empty cancelled=true","survivors":2}
+ ],
+ "failed_enable_participant":false,
+ "limitations":["same Event recursive callEvent and cross-component recursion not covered here","equal priority cross-component order is stable load order only"]
+}

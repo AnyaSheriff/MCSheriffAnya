@@ -123,7 +123,7 @@ mod tests {
         let mut items = crate::items::Items::new(); items.add_mob(zombie);
         let target = super::super::ai::Watcher { id: 2, x: 0.5, y: 64.0, z: 1.5, eye: 1.62,
             holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false,
-            sprinting: false, riding: false, gold_armor: false };
+            sprinting: false, riding: false, gold_armor: false , witch_health: 20.0, witch_effects: 0, };
         let mut rng = Rng::new(2);
         let mut attack = None;
         for tick in 0..30 {

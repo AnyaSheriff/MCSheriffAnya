@@ -7001,7 +7001,7 @@ async fn read_and_log_play_packets(
                 Order::CommandDamage { amount, source, origin } => {
                     vitals::command_hit(stream, shared, player, amount, source, origin).await?;
                 }
-                Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false, quiet_thorns: false }),
+                Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, cause: 0, hurt_yaw: None, killer: None, push: None, announced: false, quiet_thorns: false }),
                 Order::Health { value } => vitals::set_health(stream, shared, player, value).await?,
                 Order::PluginFlight {owner,field,value} => {
                     if !player.apply_plugin_flight(owner, field, value) { continue; }
@@ -7043,7 +7043,7 @@ async fn read_and_log_play_packets(
                 // Брошенное зелье бьёт как indirect_magic: Damage Event с виновником и
                 // снарядом, анимация ушиба и отдача от точки удара (чёрный ящик,
                 // itemaudit2-instant-damage-undead: тип 23, скорость 0; 0,275; −0,218).
-                Order::MagicHit { amount, killer, from: Some((potion, at)) } => {
+                Order::MagicHit { amount, killer, from: Some((potion, at, cause)) } => {
                     let (dx, dz) = (player.x - at.0, player.z - at.2);
                     let length = dx.hypot(dz);
                     let yaw = ((at.2 - player.z).atan2(at.0 - player.x).to_degrees() - f64::from(player.yaw)) as f32;
@@ -7052,13 +7052,14 @@ async fn read_and_log_play_packets(
                         amount,
                         source: crate::survival::Source::IndirectMagic,
                         direct: potion,
+                        cause,
                         hurt_yaw: Some(yaw),
                         killer,
                         push: (length > 1.0e-4).then(|| (dx / length, dz / length)),
                         announced: false, quiet_thorns: false,
                     });
                 }
-                Order::MagicHit { amount, killer, from: None } => player.net.hits.push(vitals::Pending { amount, source: crate::survival::Source::Magic, direct: 0, hurt_yaw: None, killer, push: None, announced: false, quiet_thorns: false }),
+                Order::MagicHit { amount, killer, from: None } => player.net.hits.push(vitals::Pending { amount, source: crate::survival::Source::Magic, direct: 0, cause: 0, hurt_yaw: None, killer, push: None, announced: false, quiet_thorns: false }),
                 Order::Progress(event) => player.progress.event(event),
                 Order::Advancement { grant, ids, criterion, revision } => {
                     if revision != 0 { player.advancement_revision = revision; }
@@ -12996,6 +12997,7 @@ impl PlayerState {
             air: self.vit.air,
             sleeping: self.sleeping,
             effect_colors: self.vit.effect_colors(),
+            witch_effects: self.vit.witch_effects(),
             health: self.net.announced_health.unwrap_or(self.vit.health),
             sprinting: self.vit.sprinting,
             burning: self.net.fire_flag,

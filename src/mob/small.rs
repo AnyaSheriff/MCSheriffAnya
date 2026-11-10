@@ -573,7 +573,7 @@ mod tests {
     }
     fn watcher() -> ai::Watcher {
         ai::Watcher { id:2,x:2.0,y:1.0,z:0.5,eye:1.62,holding:[None,None],spectator:false,targetable:true,
-            look:(0.0,0.0),pumpkin:false,gold_armor:false,sprinting:false,riding:false }
+            look:(0.0,0.0),pumpkin:false,gold_armor:false,sprinting:false,riding:false , witch_health: 20.0, witch_effects: 0, }
     }
     #[test]
     fn armadillo_rolls_for_sprinters_and_riders_but_ignores_spectators() {

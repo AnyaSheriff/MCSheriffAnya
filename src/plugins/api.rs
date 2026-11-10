@@ -69,6 +69,8 @@ pub type CommandRegistry = Arc<Mutex<HashMap<String, String>>>;
 /// Состояние одного плагина (`Store<PluginCtx>`).
 pub struct PluginCtx {
     pub(super) native_wait: Arc<super::host::NativeWait>,
+    #[cfg(test)]
+    pub(super) test_storage_latency: std::time::Duration,
     pub pending_mobs: HashMap<[u8;16], (Dimension,crate::mob::Mob)>,
     pub network: super::network::Access,
     pub chests: super::inventory::Chests,
@@ -899,6 +901,8 @@ impl mcsa::api::storage::Host for PluginCtx {
 
     fn write(&mut self, name: String, data: Vec<u8>) -> Result<(), String> {
         let _wait = self.native_wait.enter();
+        #[cfg(test)]
+        if !self.test_storage_latency.is_zero() {std::thread::sleep(self.test_storage_latency);}
         write_file(&data_path(&self.data_dir(), &name)?, &data)
     }
 
@@ -969,7 +973,7 @@ mod tests {
             crate::skins::Settings::default(),
         ));
         let mut ctx = PluginCtx {
-            native_wait: Default::default(), pending_mobs: Default::default(),
+            native_wait: Default::default(), test_storage_latency: std::time::Duration::ZERO, pending_mobs: Default::default(),
             network: super::super::network::Access::new(&[], &[]),
             chests: Default::default(), native_items: Default::default(),
             name: "catalog-test".into(), trusted: false, shared,

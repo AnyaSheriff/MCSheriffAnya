@@ -1,0 +1,37 @@
+name: Witch fresh paired 26.3 and combat controls
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  paired:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Audit harness guards
+        run: python3 -m unittest discover -s tools/blackbox -p test_witch_bounded_audit.py -v
+      - name: Build exact candidate source
+        run: cargo build --release
+      - name: Fresh paired observations and old combat controls
+        run: python3 tools/blackbox/witch_bounded_ci.py --output witch-paired-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: witch-paired-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            witch-paired-evidence/
+            target/release/mcsheriffanya
+          retention-days: 7
+          if-no-files-found: warn

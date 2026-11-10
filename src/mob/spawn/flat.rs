@@ -123,7 +123,7 @@ mod tests {
         fn biome(&self,_:i32,_:i32,_:i32)->&'static str {"plains"}
         fn light(&self,_:i32,_:i32,_:i32,sky:i32)->(u8,u8) {(sky as u8,0)}
     }
-    fn player() -> Watcher { Watcher { x: 1000.0, y: 1.0, z: 1000.0, id: 1, eye: 1.62, holding: [None; 2], spectator: false, targetable: true, look: (0.0,0.0), pumpkin: false, gold_armor: false, sprinting: false, riding: false } }
+    fn player() -> Watcher { Watcher { x: 1000.0, y: 1.0, z: 1000.0, id: 1, eye: 1.62, holding: [None; 2], spectator: false, targetable: true, look: (0.0,0.0), pumpkin: false, gold_armor: false, sprinting: false, riding: false ,  witch_health: 20.0, witch_effects: 0, } }
     #[test]
     fn plains_weights_groups_and_shared_chunks() {
         let mut rng=Rng::new(21); let mut counts=[0;6];

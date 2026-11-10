@@ -1,0 +1,167 @@
+name: Combined gameplay integration review
+on:
+  push:
+    branches: ['integration/gameplay-20261110']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Offline provenance and login guards
+        run: |
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_combined_config_ci.py' -v
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_simulation_distance_ci.py' -v
+      - name: Retrieve immutable translated components and locked dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -B tools/plugin-translator/priority_staged_ci.py reuse
+          cmp Cargo.lock tools/blackbox/ci/simulation-distance-two-runtime.lock
+          python3 -B tools/plugin-translator/priority_staged_ci.py inputs
+          mkdir -p combined-evidence
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: combined-gameplay-20261110
+      - name: Build Rust plugin fixtures
+        run: |
+          rustup target add wasm32-wasip2
+          set -o pipefail
+          cargo build --manifest-path plugins-examples/Cargo.toml --release --target wasm32-wasip2 2>&1 | tee combined-evidence/wasm.log
+          python3 -c 'import hashlib,json,os; from pathlib import Path; p=Path("combined-evidence/wasm.log"); Path("combined-evidence/wasm.success.json").write_text(json.dumps(dict(step="wasm",source=os.environ["GITHUB_SHA"],exit_code=0,log_sha256=hashlib.sha256(p.read_bytes()).hexdigest())))'
+      - name: Strict workspace Clippy
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee combined-evidence/clippy.log
+          python3 -c 'import hashlib,json,os; from pathlib import Path; p=Path("combined-evidence/clippy.log"); Path("combined-evidence/clippy.success.json").write_text(json.dumps(dict(step="clippy",source=os.environ["GITHUB_SHA"],exit_code=0,log_sha256=hashlib.sha256(p.read_bytes()).hexdigest())))'
+      - name: Fresh workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace 2>&1 | tee combined-evidence/workspace.log
+          python3 -c 'import hashlib,json,os; from pathlib import Path; p=Path("combined-evidence/workspace.log"); Path("combined-evidence/workspace.success.json").write_text(json.dumps(dict(step="workspace",source=os.environ["GITHUB_SHA"],exit_code=0,log_sha256=hashlib.sha256(p.read_bytes()).hexdigest())))'
+      - name: Fresh no-default workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features 2>&1 | tee combined-evidence/no-default.log
+          python3 -c 'import hashlib,json,os; from pathlib import Path; p=Path("combined-evidence/no-default.log"); Path("combined-evidence/no-default.success.json").write_text(json.dumps(dict(step="no-default",source=os.environ["GITHUB_SHA"],exit_code=0,log_sha256=hashlib.sha256(p.read_bytes()).hexdigest())))'
+      - name: Build integrated release runtime
+        run: |
+          set -o pipefail
+          cargo build --release --locked --workspace 2>&1 | tee combined-evidence/build.log
+          python3 -c 'import hashlib,json,os; from pathlib import Path; p=Path("combined-evidence/build.log"); Path("combined-evidence/build.success.json").write_text(json.dumps(dict(step="build",source=os.environ["GITHUB_SHA"],exit_code=0,log_sha256=hashlib.sha256(p.read_bytes()).hexdigest())))'
+          sha256sum target/release/mcsheriffanya > combined-evidence/runtime.sha256
+      - name: Real native Bukkit fixtures on integrated Host
+        run: |
+          set -o pipefail
+          cargo test --release --locked --bin mcsheriffanya plugins::priority::tests -- --nocapture --test-threads=1 2>&1 | tee staged-evidence/budget.log
+          python3 -B tools/plugin-translator/priority_staged_ci.py tests
+          sha256sum --check combined-evidence/runtime.sha256
+      - name: Frozen regression guards
+        run: |
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_armor_sources*.py' -v
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_crossbow_nearbreak_ci.py' -v
+      - name: Fresh armor 66 and prior combat
+        run: |
+          python3 -B tools/blackbox/armor_sources_sample.py ci --output armor-evidence
+          sha256sum --check combined-evidence/runtime.sha256
+      - name: Fresh crossbow 36
+        run: |
+          python3 -B tools/blackbox/crossbow_nearbreak_ci.py --output crossbow-evidence
+          sha256sum --check combined-evidence/runtime.sha256
+      - name: Fresh existing client routes through the actual runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B - <<'PY' 2>&1 | tee combined-evidence/public-driver.log
+          import json,os,subprocess,sys
+          from pathlib import Path
+          tools=Path('tools/protocol-bridge').resolve();sys.path.insert(0,str(tools))
+          from generate_client_chain import load
+          from generate_registry_26_2 import CANDIDATE,DEFAULT_OUTPUT,Sources
+          temporary=Path(os.environ['RUNNER_TEMP'])
+          cache=temporary/'via-client-chain'
+          load(cache,cache/'774',True)
+          registry=temporary/'via-registry-776'
+          sources=Sources(registry,True,json.loads(DEFAULT_OUTPUT.read_text())['sources'])
+          for kind in ['protocol','entities','items']:
+              sources.read(CANDIDATE,'data/pc/26.2/'+kind+'.json')
+          protocol776=registry/CANDIDATE[1]/'data/pc/26.2/protocol.json'
+          command=['python3','-B',str(tools/'probe_public_776.py'),
+              '--binary',str(Path('target/release/mcsheriffanya').resolve()),
+              '--protocol',str(protocol776),'--cache',str(registry),'--primary','777',
+              '--port','26184','--output',str(Path('combined-evidence/public777').resolve())]
+          for version in range(769,775):
+              command += [f'--protocol{version}',str(cache/str(version)/'protocol.json'),
+                  f'--cache{version}',str(cache/str(version)),f'--admit{version}']
+          # Только отдельная сеть GitHub runner; PC/live25565 не используются.
+          subprocess.run(['sudo','unshare','--net','--','bash','-c',
+              'ip link set lo up; exec "$@"','via-isolated-net',*command],check=True)
+          result=json.loads(Path('combined-evidence/public777/result.json').read_text())
+          assert result['status']=='pass' and len(result['checks'])==21
+          assert len(result['sessions'])==7
+          assert {row['client'] for row in result['sessions']}==set(range(769,775))|{776}
+          assert all(row['admitted'] and row['primary']=='26.3' and len(row['inventory'])==46 for row in result['sessions'])
+          assert all(row['exit']==0 and row['port_free'] and row['process_group_gone'] for row in result['shutdown'])
+          print(json.dumps({'status':'pass','clients':7,'checks':21,'primary':777}))
+          PY
+      - name: Fresh production Login2/2 and 8/2 control
+        run: |
+          sha256sum --check combined-evidence/runtime.sha256
+          python3 -B tools/blackbox/combined_config_ci.py --logs combined-evidence --output simulation-evidence
+          sha256sum --check combined-evidence/runtime.sha256
+      - name: Preserve staged fixture source and native receipts
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/priority_staged_ci.py finish
+      - name: Preserve source, lock and integrated binary receipt
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: |
+          python3 - <<'PY2'
+          import hashlib,json,os,shutil,subprocess
+          from pathlib import Path
+          out=Path('combined-evidence');out.mkdir(exist_ok=True)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          binary=Path('target/release/mcsheriffanya');locks={}
+          for name,dest in [('Cargo.lock','Cargo.lock'),('plugins-examples/Cargo.lock','plugins-examples-Cargo.lock')]:
+              p=Path(name)
+              if p.exists():shutil.copy2(p,out/dest);locks[name]=sha(p)
+          if binary.exists():
+              shutil.copy2(binary,out/'mcsheriffanya')
+              with (out/'elf-header.txt').open('w') as stream:subprocess.run(['readelf','--file-header',str(binary)],stdout=stream,check=True)
+          (out/'source-blobs.txt').write_bytes(subprocess.check_output(['git','ls-tree','-r','HEAD']))
+          files={str(p.relative_to(out)):{'sha256':sha(p),'bytes':p.stat().st_size} for p in out.rglob('*') if p.is_file()}
+          receipt={'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),'status':os.environ['MCSA_JOB_STATUS'],'locks':locks,'runtime':{'sha256':sha(binary),'bytes':binary.stat().st_size} if binary.exists() else None,'files':files,'scope':'Fresh combined regressions. Old Witch matrix remains inconclusive.'}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: combined-gameplay-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            combined-evidence/
+            staged-evidence/
+            armor-evidence/
+            crossbow-evidence/
+            simulation-evidence/
+            !crossbow-evidence/source.tar.gz
+            !crossbow-evidence/runtime/mcsheriffanya
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: warn

@@ -1221,6 +1221,8 @@ fn watchers(shared: &Shared, dimension: Dimension) -> Vec<crate::mob::ai::Watche
         .iter()
         .filter(|member| member.dimension == dimension)
         .map(|member| crate::mob::ai::Watcher {
+            witch_health: players.gear(&member.uuid).health,
+            witch_effects: players.gear(&member.uuid).witch_effects,
             id: member.entity_id,
             targetable: (member.game_mode == 0 || member.game_mode == 2) && players.gear(&member.uuid).health > 0.0,
             x: member.position.x,
@@ -1955,6 +1957,20 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         // Замок стрел — после предметов (shared.rs).
         let mut flying = shared.arrows.lock().expect("стрелы захвачены другим потоком");
         for arrow in arrows { flying.spawn(arrow); }
+    }
+
+    // [проверить] скорость и неточность выбраны по ограниченным сетевым
+    // записям; сам запуск — общий путь зелья, владелец остаётся ведьмой.
+    for (shooter, shot) in outcome.witch_potions {
+        let mut gauss = || {
+            let (a, b) = (rng.unit().max(1.0e-12), rng.unit());
+            (-2.0 * a.ln()).sqrt() * (std::f64::consts::TAU * b).cos()
+        };
+        let velocity = crate::arrow::launch(shot.from, shot.aim, 0.75, crate::mob::hostile::arrow_error(difficulty), &mut gauss);
+        if let Some(flying) = crate::thrown::Flying::mob_splash_potion(shared.next_entity_id(), dimension, shot.potion, shot.from, velocity, shooter) {
+            world.note_projectile_launch(flying.clone());
+            shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(flying);
+        }
     }
 
     for (shooter, (from, velocity)) in outcome.spits {

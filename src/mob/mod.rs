@@ -4029,6 +4029,7 @@ pub struct Outcome {
     /// Снежки снежных големов: кто бросил, откуда, скорость (mob/golem.rs).
     pub snowballs: Vec<(i32, golem::Throw)>,
     pub spits: Vec<(i32, golem::Throw)>,
+    pub witch_potions: Vec<(i32, hostile::WitchPotion)>,
     /// Заряды ветра бризов (mob/breeze.rs).
     pub wind_charges: Vec<(i32, golem::Throw)>,
 
@@ -4157,13 +4158,13 @@ pub fn step_all(
 
         let sense = if guardian::guardian(mob.kind) { &guardian_ctx } else if mob.kind==Kind::Drowned { &drowned_ctx } else { &ctx };
         let shot_weapon = equipment::slot(mob, 0);
-        let old_cooldown=mob.h.cooldown;let old_events=mob.events.len();
+        let old_cooldown=mob.h.cooldown;let old_throw_wait=mob.h.throw_wait;let old_events=mob.events.len();
         let mut plan = mob.tick(view, sense, rng);
         if crate::plugins::active() {
             let targets=mob.plugin_targets();
             let mut changed=false;
             for (slot,target) in targets.into_iter().enumerate() {if target!=mob.plugin_seen_targets[slot] {plugin_targets.push((mob.uuid,slot,target,mob.plugin_seen_targets[slot]));changed=true;}}
-            if changed {mob.h.cooldown=old_cooldown;mob.events.truncate(old_events);continue;}
+            if changed {mob.h.cooldown=old_cooldown;mob.h.throw_wait=old_throw_wait;mob.events.truncate(old_events);continue;}
         }
         // Вики, Strength/Weakness: +3L / −4L к melee; луч стража — магия.
         if !guardian::guardian(mob.kind) && let Some(melee) = &mut plan.melee {
@@ -4181,6 +4182,8 @@ pub fn step_all(
         if let Some((target, damage, push)) = plan.bite {
             bites.push((mob.entity_id, target, damage, push, plan.fling.then_some((mob.x, mob.y, mob.z))));
         }
+
+        if let Some(throw) = plan.witch_potion { outcome.witch_potions.push((mob.entity_id, throw)); }
 
         if let Some(spit) = plan.spit {
             outcome.spits.push((mob.entity_id, spit));
