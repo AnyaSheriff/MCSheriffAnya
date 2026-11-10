@@ -1,5 +1,7 @@
 name: Witch separate wall v2
 on:
+  push:
+    branches: ['feature/witch-throw-20261109']
   workflow_dispatch:
 permissions:
   contents: read
