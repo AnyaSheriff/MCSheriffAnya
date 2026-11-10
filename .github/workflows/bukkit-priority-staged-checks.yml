@@ -1,7 +1,7 @@
 name: Staged native Bukkit BlockBreak prototype
 on:
   push:
-    branches: ['feature/bukkit-priority-staged-*']
+    branches: ['feature/bukkit-priority-staged-*', 'feature/bukkit-priority-integration-20261110']
   workflow_dispatch:
 permissions:
   contents: read
