@@ -9,7 +9,7 @@
   "scenario": "crossbow-ub-offhand-natural-777",
   "criteria_sha256": "24e96f7b79c34111d6239c80bb16cb04f3c602895147e93ee881f3a366ea1cbe",
   "scenario_sha256": "b4aa0157a2e1df6251fd835359a07272d940bbb19b6a0d2a5e1179f9f1251a30",
-  "recorder_sha256": "7eb582965fdce46de00642138f659cf38f324bcf027448d6a688d2dbe1427d02",
+  "recorder_sha256": "8cf356f058047433dffd75090280dfd81c42e210e8505c2ef2140c1276abc59f",
   "gameplay_base": "e3e90d74f60f0750459ebe964c709195f92b49ef",
   "N": 128,
   "fresh_controls": 4,

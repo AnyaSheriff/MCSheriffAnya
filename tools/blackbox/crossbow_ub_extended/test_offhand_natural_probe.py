@@ -12,6 +12,15 @@ class OffhandNaturalOriginalTests(unittest.TestCase):
     with patch.dict(os.environ,env):
      with self.assertRaises(AssertionError):n.run(output,Path('no-zip'))
     self.assertFalse(output.exists())
+ def test_recorder_pin_matches_actual_file_before_workflow_download(self):
+  self.assertEqual(n.read(n.PIN)['recorder_sha256'],n.sha(R/'tools/blackbox/record777.py'))
+ def test_stale_recorder_pin_stops_before_fetch_API_or_Popen(self):
+  with tempfile.TemporaryDirectory() as directory:
+   root=Path(directory);pin=n.read(n.PIN);pin['recorder_sha256']='0'*64
+   # Реальный entry с несовпадающим pin обязан остановиться до любого внешнего действия.
+   with patch.dict(os.environ,dict(GITHUB_ACTIONS='true',GITHUB_RUN_ATTEMPT='1',RUNNER_TEMP=directory)),patch.object(n,'read',return_value=pin),patch.object(n.inputs,'validate_api') as api,patch.object(n.combat_ci,'fetch') as fetch,patch.object(n.subprocess,'Popen') as popen,patch.object(n,'git',return_value='unit-source'):
+    with self.assertRaisesRegex(AssertionError,'reuse exact already-tested recorder'):n.run(root/'output',root/'nonexistent.zip')
+    api.assert_not_called();fetch.assert_not_called();popen.assert_not_called()
  def test_frozen_offhand_real_charge_schedule(self):
   pin=n.read(n.PIN);self.assertEqual(n.GROUP,'offhand-natural');scenario=probe.scenario(n.GROUP,R)
   data=(json.dumps(scenario,ensure_ascii=False,indent=2)+'\n').encode();self.assertEqual(hashlib.sha256(data).hexdigest(),pin['scenario_sha256'])
