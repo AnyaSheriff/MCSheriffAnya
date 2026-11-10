@@ -113,8 +113,8 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         .and_then(|v| v.parse::<u16>().ok())
         .unwrap_or(defaults.server_port);
 
-    // Допустимые значения дальностей — от 3 до 32, как у оригинала:
-    // меньше трёх клиент не примет, больше тридцати двух незачем.
+    // Дальность вида сохраняет прежние границы 3..=32. Для симуляции
+    // значение 2 подтверждено пакетом Login оригинала 26.3.
     let view_distance = distance(&values, "view-distance", defaults.view_distance);
     let simulation_distance = distance(
         &values,
@@ -226,18 +226,18 @@ fn seed_of(value: &str) -> Option<i64> {
     Some(hash)
 }
 
-/// Дальность в чанках из настроек: число от 3 до 32.
+/// Дальность в чанках: вид 3..=32, симуляция 2..=32.
 ///
 /// Всё, что вне этих границ или вовсе не число, заменяется значением
 /// по умолчанию: лучше работать, чем падать из-за опечатки в настройках.
 fn distance(values: &HashMap<String, String>, key: &str, default: i32) -> i32 {
-    const LEAST: i32 = 3;
+    let least = if key == "simulation-distance" { 2 } else { 3 };
     const MOST: i32 = 32;
 
     values
         .get(key)
         .and_then(|value| value.parse::<i32>().ok())
-        .filter(|distance| (LEAST..=MOST).contains(distance))
+        .filter(|distance| (least..=MOST).contains(distance))
         .unwrap_or(default)
 }
 
@@ -612,6 +612,44 @@ mod tests {
 
         // Настройки нет вовсе — берётся значение по умолчанию, как у игры.
         assert_eq!(read("motd=привет"), (10, 10));
+    }
+
+    /// Проверяем настоящий путь чтения файла, включая прежние fallback-значения.
+    #[test]
+    fn simulation_distance_two_is_loaded_from_file() {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH).expect("часы")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "mcsa-simulation-distance-{}-{unique}", std::process::id()
+        ));
+        fs::create_dir(&directory).expect("своя временная папка");
+        let path = directory.join("server.properties");
+        let defaults = ServerProperties::default();
+        let cases = [
+            ("view-distance=8\nsimulation-distance=2\n", 8, 2),
+            ("view-distance=2\nsimulation-distance=2\n", defaults.view_distance, 2),
+            ("view-distance=3\nsimulation-distance=3\n", 3, 3),
+            ("view-distance=32\nsimulation-distance=32\n", 32, 32),
+            ("view-distance=8\n", 8, defaults.simulation_distance),
+        ];
+        for (text, view, simulation) in cases {
+            fs::write(&path, text).expect("настройки");
+            let actual = load_server_properties(path.to_str().expect("путь"))
+                .expect("прочитать настройки");
+            assert_eq!((actual.view_distance, actual.simulation_distance),
+                (view, simulation), "{text}");
+        }
+        for invalid in ["", "-1", "0", "1", "33", "100", "2.5", "далеко"] {
+            fs::write(&path, format!(
+                "view-distance=2\nsimulation-distance={invalid}\n"
+            )).expect("негодные настройки");
+            let actual = load_server_properties(path.to_str().expect("путь"))
+                .expect("прочитать негодные настройки");
+            assert_eq!((actual.view_distance, actual.simulation_distance),
+                (defaults.view_distance, defaults.simulation_distance), "{invalid}");
+        }
+        fs::remove_dir_all(&directory).expect("удалить только свою папку");
     }
 
     /// Строки с решёткой — примечания, и они не попадают в настройки.
