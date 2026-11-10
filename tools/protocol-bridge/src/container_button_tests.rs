@@ -17,8 +17,12 @@ fn id(version:JavaVersion)->u8{
     u8::from_str_radix(row["packet_id"].as_str().unwrap().trim_start_matches("0x"),16).unwrap()
 }
 fn packet(version:JavaVersion,payload:&[u8])->Vec<u8>{let mut b=vec![id(version)];b.extend(payload);b}
-fn actual_public_inbound(version:JavaVersion,body:&[u8])->Result<Vec<u8>,Error>{
-    let context=wire::Context::default();
+fn contexts()->[wire::Context;2]{
+    [wire::Context::default(),wire::Context{items:crate::items::Context{content:crate::content::ContentCodec::white_slab_preview(),..Default::default()},..Default::default()}]
+}
+fn actual_public_inbound(version:JavaVersion,body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
+    // Native775 в runtime packet reader возвращается до wire codec, в обоих каталогах.
+    if version==wire::INTERNAL{return Ok(body.to_vec());}
     Ok(match version {
         JavaVersion::V1_21_4=>crate::client_769::serverbound(body,context)?,
         JavaVersion::V1_21_5=>crate::client_770::serverbound(body,context)?,
@@ -69,12 +73,12 @@ fn signed774_positive_range_roundtrips_but128_and255_are_not_positive_bytes(){
 }
 #[test]
 fn admitted_public_adapters_preserve_button_values_without_enchantment_business_cap(){
-    for version in versions(){for &(value,encoded) in VALUES{
+    for version in versions(){for context in contexts(){for &(value,encoded) in VALUES{
         if version==JavaVersion::V1_21_11&&value>127{continue;}
         let input=packet(version,&payload(version,&[128,1],value,encoded));
-        let output=actual_public_inbound(version,&input).unwrap();
-        let mut expected=vec![0x11,128,1];expected.extend(encoded);assert_eq!(output,expected,"{} {value}",version.protocol());
-    }}
+        let output=actual_public_inbound(version,&input,context).unwrap();
+        let mut expected=vec![0x11,128,1];expected.extend(encoded);assert_eq!(output,expected,"{} {value} preview={}",version.protocol(),context.items.content.is_preview());
+    }}}
 }
 #[test]
 fn adjacent_edges_use_each_versions_field_width_in_both_directions(){
@@ -99,14 +103,14 @@ fn negative_overflow_truncated_and_trailing_fields_publish_nothing(){
 }
 #[test]
 fn native777_and_public_probe_reject_malformed_generic_fields_before_gameplay(){
-    for version in versions().into_iter().filter(|v|*v!=wire::INTERNAL){
-        let valid=packet(version,&[1,7]);assert!(actual_public_inbound(version,&valid).is_ok());
-        for end in 0..valid.len(){assert!(actual_public_inbound(version,&valid[..end]).is_err());}
-        let mut trailing=valid;trailing.push(0);assert!(actual_public_inbound(version,&trailing).is_err());
+    for version in versions().into_iter().filter(|v|*v!=wire::INTERNAL){for context in contexts(){
+        let valid=packet(version,&[1,7]);assert!(actual_public_inbound(version,&valid,context).is_ok());
+        for end in 0..valid.len(){assert!(actual_public_inbound(version,&valid[..end],context).is_err());}
+        let mut trailing=valid;trailing.push(0);assert!(actual_public_inbound(version,&trailing,context).is_err());
         let mut negative=vec![1];negative.extend([255,255,255,255,15]);
         if version==JavaVersion::V1_21_11{negative=vec![1,255];}
-        assert!(actual_public_inbound(version,&packet(version,&negative)).is_err());
-    }
+        assert!(actual_public_inbound(version,&packet(version,&negative),context).is_err());
+    }}
 }
 #[test]
 fn canonical_actions_gui_accepts_generic_buttons_while_menu_policy_is_not_in_codec(){

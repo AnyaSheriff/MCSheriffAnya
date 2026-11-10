@@ -1,7 +1,7 @@
-name: Private768 chunk source checks only
+name: Private768 and ContainerButton source checks only
 on:
   push:
-    branches: ['review/private768-preflight-20261110']
+    branches: ['review/container-button-codec-20261110']
 permissions:
   contents: read
 jobs:
@@ -24,38 +24,54 @@ jobs:
           python3 -B tools/protocol-bridge/private768_chunk_ci.py prepare --output private768-chunk-evidence
           rustc -vV > private768-chunk-evidence/rustc-version.log
           cargo -vV > private768-chunk-evidence/cargo-version.log
+      - name: Prepare verified public own-example lock and six mandatory WASM components
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/private768_chunk_ci.py examples-lock --output private768-chunk-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 --message-format=json-render-diagnostics 2>&1 | tee private768-chunk-evidence/own-examples-build.log
+          python3 -B tools/protocol-bridge/private768_chunk_ci.py examples-check --output private768-chunk-evidence
       - name: Verify pinned allowed tables and cleanup source guards
         shell: bash
         run: |
           set -o pipefail
           python3 -B tools/protocol-bridge/generate_private768.py --cache "$RUNNER_TEMP/private768-json" --fetch --check 2>&1 | tee private768-chunk-evidence/pinned-tables.log
           python3 -B -m unittest discover -s tools/protocol-bridge -p test_owned_client_cleanup.py -v 2>&1 | tee private768-chunk-evidence/cleanup-guards.log
+          python3 -B tools/protocol-bridge/audit_container_button_fields.py --cache "$RUNNER_TEMP/container-button-json" --fetch 2>&1 | tee private768-chunk-evidence/container-button-fields.log
+          python3 -B -m unittest discover -s tools/protocol-bridge -p test_private768_chunk_ci.py -v 2>&1 | tee private768-chunk-evidence/retention-guards.log
+      - name: ContainerButton actual pinned field bounds in Default and Preview contexts
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked -p mcsa-protocol --message-format=json-render-diagnostics container_button::tests:: -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/button-default.log
+          cargo test --release --locked -p mcsa-protocol --features private-768 --message-format=json-render-diagnostics container_button::tests:: -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/button-private.log
       - name: Focused typed chunk codec and contextual ACK guards
         shell: bash
         run: |
           set -o pipefail
-          cargo test --release --locked -p mcsa-protocol --features private-768 private768::chunk_batch_tests:: -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/focused-protocol.log
+          cargo test --release --locked -p mcsa-protocol --features private-768 --message-format=json-render-diagnostics private768::chunk_batch_tests:: -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/focused-protocol.log
       - name: Actual Outgoing frames and reader ACK consumption in Play
         shell: bash
         run: |
           set -o pipefail
-          cargo test --release --locked --features private-768 --bin mcsheriffanya private_chunk_transport_guards:: -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/focused-runtime.log
-          cargo test --release --locked --features private-768 --bin mcsheriffanya private_stale_prepared_light_never_emits_an_empty_batch -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/focused-stale.log
+          cargo test --release --locked --features private-768 --bin mcsheriffanya --message-format=json-render-diagnostics private_chunk_transport_guards:: -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/focused-runtime.log
+          cargo test --release --locked --features private-768 --bin mcsheriffanya --message-format=json-render-diagnostics private_stale_prepared_light_never_emits_an_empty_batch -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/focused-stale.log
       - name: Full default workspace tests
         shell: bash
         run: |
           set -o pipefail
-          cargo test --release --locked --workspace 2>&1 | tee private768-chunk-evidence/default-tests.log
+          cargo test --release --locked --workspace --message-format=json-render-diagnostics 2>&1 | tee private768-chunk-evidence/default-tests.log
       - name: Full no-default workspace tests
         shell: bash
         run: |
           set -o pipefail
-          cargo test --release --locked --workspace --no-default-features 2>&1 | tee private768-chunk-evidence/no-default-tests.log
+          cargo test --release --locked --workspace --no-default-features --message-format=json-render-diagnostics 2>&1 | tee private768-chunk-evidence/no-default-tests.log
       - name: Full private-feature workspace tests
         shell: bash
         run: |
           set -o pipefail
-          cargo test --release --locked --workspace --features private-768 2>&1 | tee private768-chunk-evidence/private-tests.log
+          cargo test --release --locked --workspace --features private-768 --message-format=json-render-diagnostics 2>&1 | tee private768-chunk-evidence/private-tests.log
       - name: Strict default and private workspace Clippy
         shell: bash
         run: |
@@ -73,6 +89,15 @@ jobs:
         env:
           MCSA_JOB_STATUS: ${{ job.status }}
         run: python3 -B tools/protocol-bridge/private768_chunk_ci.py archive --output private768-chunk-evidence
+      - name: Remove only isolated job test-created tmp
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import shutil
+          temporary=Path('tmp')
+          if temporary.is_dir() and not temporary.is_symlink():shutil.rmtree(temporary)
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
