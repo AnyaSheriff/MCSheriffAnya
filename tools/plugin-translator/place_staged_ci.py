@@ -151,7 +151,7 @@ def restore_runtime():
 
 def strict():
  restore_runtime()
- from place_link_helper import dependency_command,validate_command,choose_artifacts,confined_file,integration_command
+ from place_link_helper import dependency_command,validate_command,choose_artifacts,confined_file,integration_command,serde_rlib
  # rustup locates the actual compiler; same resolved executable links newly built dependency closure and harness.
  rustc=Path(subprocess.check_output(['rustup','which','rustc'],text=True).strip()).resolve()
  assert rustc.is_absolute() and rustc.is_file() and os.access(rustc,os.X_OK)
@@ -159,8 +159,14 @@ def strict():
  env=os.environ.copy();env['RUSTC']=str(rustc)
  command=dependency_command();validate_command(command) # BEFORE spawning Cargo.
  log=run('serde-deps',command,env)
+ raw_graph=[]
+ for line in log.splitlines():
+  try: row=json.loads(line)
+  except ValueError:continue
+  if row.get('reason')=='compiler-artifact':raw_graph.append(row)
+ write(OUT/'serde-link-raw.json',{'artifacts':raw_graph,'rustc':str(rustc),'rustc_sha256':digest(rustc.read_bytes()),'rustc_vV':version,'command':command})
  rlib,artifacts=choose_artifacts(log);deps=ROOT/'target/release/deps'
- rlib=confined_file(rlib,deps);assert rlib.name.startswith('libserde_json-') and rlib.suffix=='.rlib'
+ rlib=serde_rlib(rlib,ROOT/'target/release')
  files={}
  for row in artifacts:
   if row['package_id'].startswith('path+'):raise ValueError('unexpected own workspace dependency artifact')

@@ -13,9 +13,23 @@ def choose_artifacts(log):
         if row.get('reason')!='compiler-artifact': continue
         if row['target']['name']=='mcsheriffanya': raise ValueError('unexpected core compilation')
         artifacts.append(row)
-    matches=[f for row in artifacts if row['target']['name']=='serde_json' for f in row['filenames'] if f.endswith('.rlib')]
-    if len(matches)!=1: raise ValueError('serde_json rlib must be unique')
+    rows=[row for row in artifacts if row['target']['name']=='serde_json']
+    if len(rows)!=1:raise ValueError('serde_json artifact must be unique')
+    row=rows[0]
+    if row['package_id']!='registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.154' or row['target']['kind']!=['lib'] or row['target']['crate_types']!=['lib']:
+        raise ValueError('wrong serde_json package/version/library')
+    matches=[f for f in row['filenames'] if f.endswith('.rlib')]
+    if len(matches)!=1:raise ValueError('serde_json rlib must be unique')
     return matches[0],artifacts
+
+def serde_rlib(path,release):
+    import re
+    from pathlib import Path
+    release=Path(release).resolve();path=confined_file(path,release)
+    if path==release/'libserde_json.rlib':return path
+    if path.parent==release/'deps' and re.fullmatch(r'libserde_json-[0-9a-f]+\.rlib',path.name):return path
+    raise ValueError('wrong serde_json rlib layout')
+
 
 def integration_command(rustc,source,output,rlib,dependency_dir):
     return [rustc,'--edition=2024','--test','--crate-name','world_startup','-C','opt-level=3','-C','debug-assertions=off',str(source),'--extern','serde_json='+str(rlib),'-L','dependency='+str(dependency_dir),'-o',str(output)]
