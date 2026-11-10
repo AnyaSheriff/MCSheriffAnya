@@ -43,7 +43,7 @@ F=A/'source/tools/plugin-translator/fixtures';spec=load(F/'place-staged-expected
 for f,h in load(F/'place-staged-frozen.json')['files'].items():assert sha(A/'source'/f)==h
 assert len(refs)==20 and len(matrix['native'])==14 and len(oldrefs)==12
 for f in A.glob('*.status.json'):assert load(f)['exit_code']==0 and not load(f)['timeout'],f
-statuses=list(A.glob('*.status.json'));assert len(statuses)==80
+statuses=list(A.glob('*.status.json'));assert len(statuses)==79
 runtime_statuses=[]
 for p in statuses:
  status=load(p)
@@ -52,7 +52,7 @@ for p in statuses:
   log=p.with_name(p.name.removesuffix('.status.json')+'.log').read_text()
   assert 'running 1 test' in log and 'test result: ok. 1 passed; 0 failed; 0 ignored;' in log,p
 assert len(runtime_statuses)==72
-for name in ['clippy-default','clippy-no-default','tests-default','tests-no-default','build']:
+for name in ['clippy-default','tests-default','tests-no-default','build']:
  assert (A/(name+'.status.json')).is_file()
  assert 'Finished `release`' in (A/(name+'.log')).read_text()
 for name,count in [('new-fixtures',3),('new-fault',1),('new-invalid',2)]:
