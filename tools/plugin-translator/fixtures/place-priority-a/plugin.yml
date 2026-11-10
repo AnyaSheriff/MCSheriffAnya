@@ -1,0 +1,7 @@
+name: java-place-priority-a
+version: '1.0'
+main: fixtures.PlacePriorityAPlugin
+commands:
+  placeprioritya:
+    description: Собственный сценарий межкомпонентного порядка A
+    usage: /placeprioritya order|cancel|uncancel

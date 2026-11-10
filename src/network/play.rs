@@ -14158,3 +14158,6 @@ mod inbound_budget_tests;
 #[cfg(test)]
 #[path = "play/inbound_runtime_tests.rs"]
 mod inbound_runtime_tests;
+
+#[cfg(all(test, feature = "plugins", not(target_arch = "arm"), not(target_arch = "x86")))]
+mod place_plugin_baseline_tests;

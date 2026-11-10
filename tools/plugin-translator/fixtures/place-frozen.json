@@ -1,0 +1,17 @@
+{
+  "base_candidate": "815e26af014e42f9ca025ccc00b1969901203fad",
+  "frozen_before_first_push_and_capture": true,
+  "files": {
+    ".github/workflows/bukkit-place-baseline-checks.yml": "c9ba7ededbf44aacf9728b09d0f326e96e4c094e662bc175c8166927fc77e0da",
+    "src/network/play/place_plugin_baseline_tests.rs": "18792d509f50cbc25271069ed3d7f9dfa5cdbca6bf68e404d9b2e5bb81175ca2",
+    "tools/plugin-translator/fixtures/PLACE-BASELINE.md": "e09614c59334978e03794e027e467d4a10abec249403491b4e02f5ecdd0fac24",
+    "tools/plugin-translator/fixtures/place-priority-a/PlacePriorityAPlugin.java": "d62628c5285648a617cfef72c9d798f2c46fe9f9bdae257f7d4892fb1ed64ed3",
+    "tools/plugin-translator/fixtures/place-priority-a/plugin.yml": "1d759163d256c02546e6f837a8dbbe293e5c9da602e2af02c7e81740457a74bc",
+    "tools/plugin-translator/fixtures/place-priority-b/PlacePriorityBPlugin.java": "e0579e48a850f085ed274d535f6b57333a2b047d4bbc3289fe7322686aeca4dc",
+    "tools/plugin-translator/fixtures/place-priority-b/plugin.yml": "f002f245d8c75221c05815f54a7f6e69ce71dff40b8c2b1586e12226d5636815",
+    "tools/plugin-translator/fixtures/place-priority-criteria.json": "2734157493fcd4c57d7a7975a30a2659775aca7a8b0efcdd9d44abf9aa342376",
+    "tools/plugin-translator/fixtures/place-priority-expected.json": "321315c9d2ea420a7546421f025ea871da0dc54c3f0b99a5a492a7fadf951e7d",
+    "tools/plugin-translator/fixtures/place-source-pin.json": "97fd93f000c3a8080c919e2fdb1c83171e1dd1df5a7801ebf73bae75d39750b7",
+    "tools/plugin-translator/place_baseline_ci.py": "39da633db1cfe795fe08886626dec097ab621e92c15323f95074f5871a2393af"
+  }
+}

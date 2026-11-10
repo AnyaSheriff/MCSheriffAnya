@@ -1,0 +1,7 @@
+name: java-place-priority-b
+version: '1.0'
+main: fixtures.PlacePriorityBPlugin
+commands:
+  placepriorityb:
+    description: Собственный сценарий межкомпонентного порядка B
+    usage: /placepriorityb order|cancel|uncancel

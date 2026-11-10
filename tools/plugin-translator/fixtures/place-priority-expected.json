@@ -1,0 +1,316 @@
+{
+  "source_pin": "815e26af014e42f9ca025ccc00b1969901203fad",
+  "base_production_equivalent": "3c80f6c6ea1af60571291553aa109e50552a48f8",
+  "frozen_before_capture": true,
+  "same_priority_ties": false,
+  "native_event": "BlockPlaceEvent",
+  "cohorts": [
+    {
+      "name": "a-b-order",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "order",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace A0 c0>0",
+          "trace A2 c0",
+          "trace A5 c0",
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0"
+        ],
+        "verdict": "allow"
+      },
+      "public_contract": {
+        "trace": [
+          "trace A0 c0>0",
+          "trace B1 c0>0",
+          "trace A2 c0",
+          "trace B3 c0",
+          "trace B4 c0",
+          "trace A5 c0"
+        ],
+        "verdict": "allow"
+      }
+    },
+    {
+      "name": "a-b-cancel",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "cancel",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      },
+      "public_contract": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace B1 c1>1",
+          "trace B4 c1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      }
+    },
+    {
+      "name": "a-b-uncancel",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "uncancel",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      },
+      "public_contract": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace B1 c1>0",
+          "trace A2 c0",
+          "trace B3 c0",
+          "trace B4 c0",
+          "trace A5 c0"
+        ],
+        "verdict": "allow"
+      }
+    },
+    {
+      "name": "b-a-order",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "order",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0",
+          "trace A0 c0>0",
+          "trace A2 c0",
+          "trace A5 c0"
+        ],
+        "verdict": "allow"
+      },
+      "public_contract": {
+        "trace": [
+          "trace A0 c0>0",
+          "trace B1 c0>0",
+          "trace A2 c0",
+          "trace B3 c0",
+          "trace B4 c0",
+          "trace A5 c0"
+        ],
+        "verdict": "allow"
+      }
+    },
+    {
+      "name": "b-a-cancel",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "cancel",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0",
+          "trace A0 c0>1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      },
+      "public_contract": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace B1 c1>1",
+          "trace B4 c1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      }
+    },
+    {
+      "name": "b-a-uncancel",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "uncancel",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0",
+          "trace A0 c0>1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      },
+      "public_contract": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace B1 c1>0",
+          "trace A2 c0",
+          "trace B3 c0",
+          "trace B4 c0",
+          "trace A5 c0"
+        ],
+        "verdict": "allow"
+      }
+    },
+    {
+      "name": "a-order",
+      "load_order": [
+        "a"
+      ],
+      "mode": "order",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace A0 c0>0",
+          "trace A2 c0",
+          "trace A5 c0"
+        ],
+        "verdict": "allow"
+      },
+      "public_contract": {
+        "trace": [
+          "trace A0 c0>0",
+          "trace A2 c0",
+          "trace A5 c0"
+        ],
+        "verdict": "allow"
+      }
+    },
+    {
+      "name": "a-cancel",
+      "load_order": [
+        "a"
+      ],
+      "mode": "cancel",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      },
+      "public_contract": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      }
+    },
+    {
+      "name": "a-uncancel",
+      "load_order": [
+        "a"
+      ],
+      "mode": "uncancel",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      },
+      "public_contract": {
+        "trace": [
+          "trace A0 c0>1",
+          "trace A5 c1"
+        ],
+        "verdict": "deny"
+      }
+    },
+    {
+      "name": "b-order",
+      "load_order": [
+        "b"
+      ],
+      "mode": "order",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0"
+        ],
+        "verdict": "allow"
+      },
+      "public_contract": {
+        "trace": [
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0"
+        ],
+        "verdict": "allow"
+      }
+    },
+    {
+      "name": "b-cancel",
+      "load_order": [
+        "b"
+      ],
+      "mode": "cancel",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0"
+        ],
+        "verdict": "allow"
+      },
+      "public_contract": {
+        "trace": [
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0"
+        ],
+        "verdict": "allow"
+      }
+    },
+    {
+      "name": "b-uncancel",
+      "load_order": [
+        "b"
+      ],
+      "mode": "uncancel",
+      "source_predicted_legacy": {
+        "trace": [
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0"
+        ],
+        "verdict": "allow"
+      },
+      "public_contract": {
+        "trace": [
+          "trace B1 c0>0",
+          "trace B3 c0",
+          "trace B4 c0"
+        ],
+        "verdict": "allow"
+      }
+    }
+  ],
+  "readiness": "Rust baseline must call java_info before loading/configuring fixtures",
+  "sources": [
+    "https://jd.papermc.io/paper/1.21.11/org/bukkit/event/EventPriority.html",
+    "https://jd.papermc.io/paper/1.21.11/org/bukkit/event/EventHandler.html",
+    "https://jd.papermc.io/paper/1.21.11/org/bukkit/event/Cancellable.html"
+  ],
+  "prediction_only": true
+}

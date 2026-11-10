@@ -1,0 +1,73 @@
+{
+  "source": "815e26af014e42f9ca025ccc00b1969901203fad",
+  "tree": "1e9f4048b26e3b03392c28bafe6ba6baed82339b",
+  "files": {
+    "src/network/play.rs": {
+      "sha256": "3c7d4a316ad3afa09545c0dd39d48e89120fff0b9ebec2879b3e346877963028",
+      "bytes": 698268
+    },
+    "src/placing.rs": {
+      "sha256": "a22e44c56ce0c5294b73454e6bf5fc83c9a320458cf8e69cc7317d0914f37c05",
+      "bytes": 110608
+    },
+    "src/bedrock/world.rs": {
+      "sha256": "2bfa5e7c94bc6f79c840390ca767fe12fa6611c8d879870b8696e2726b488fc2",
+      "bytes": 330490
+    },
+    "src/plugins/mod.rs": {
+      "sha256": "5018c718837b2c19a761c3be840a076a4f653eac0d255748c381a4fc1a74138c",
+      "bytes": 28466
+    },
+    "src/plugins/host.rs": {
+      "sha256": "d209365416e62dbac092edd5ac0ab13f2566fd4211687345795c25ac4e03fbb2",
+      "bytes": 89395
+    },
+    "src/plugins/tests.rs": {
+      "sha256": "671a377462e4f0ef1290c11ae41cf2eed953c441d3fb858516ea35ad937023f3",
+      "bytes": 82736
+    },
+    "wit/mcsa-api.wit": {
+      "sha256": "bb64138c8e28fe0791ea12fbf4ff7b522385e5310b9218a989971362ab92f18b",
+      "bytes": 28115
+    },
+    "tools/plugin-translator/adapter.c": {
+      "sha256": "58624ee1954b9b25083f65c06175df119592346592786b64437f8c79f0fda5e7",
+      "bytes": 41735
+    },
+    "tools/plugin-translator/mcsa-bukkit/src/main/java/ru/mcsa/bukkit/Entry.java": {
+      "sha256": "8c9a0695fe6b6c618bef968c03eb964a4a9173a746a5e9a219b544ab6c4f6c8d",
+      "bytes": 11510
+    },
+    "tools/plugin-translator/mcsa-bukkit/src/main/java/ru/mcsa/bukkit/RuntimeState.java": {
+      "sha256": "e5e02fabf57915283bec51b3e136cb7f0971d36eb3f54d12f8d2aa7cb3eeaa66",
+      "bytes": 1605
+    },
+    "tools/plugin-translator/mcsa-bukkit/src/main/java/org/bukkit/event/block/BlockPlaceEvent.java": {
+      "sha256": "408a70154b8c864bb039420a6bff0060c6cfd9d3999017611f16e4c8e89c9f4e",
+      "bytes": 1265
+    },
+    "tools/plugin-translator/mcsa-bukkit/src/main/java/org/bukkit/event/block/BlockEvent.java": {
+      "sha256": "9934e200fa951afbacde6d56a8acca31b65f120bf710f303621a7e917e97c2d0",
+      "bytes": 259
+    },
+    "tools/plugin-translator/src/main/java/ru/mcsa/translator/Inspect.java": {
+      "sha256": "0775428b3f7b3b77fd2023be1cf2e76b84775129a238744db7461ddd7d3d55ac",
+      "bytes": 32450
+    },
+    "tools/plugin-translator/fixtures/events/EventsPlugin.java": {
+      "sha256": "f78485fdb455c43308e870bd5d308d84414b1c566802ab1bbf8ea15f9720144a",
+      "bytes": 14321
+    },
+    "tools/plugin-translator/blackbox.cjs": {
+      "sha256": "31d9d55a0b44ccd27dba7fe7bc66c08a5eaaa6438e7eb3ca7223de5f3a49447a",
+      "bytes": 13326
+    },
+    "src/network/play/catalog_action_tests.rs": {
+      "sha256": "d95181dcaf88235f9a0b24a43818bc75349a010b1844ebc356e1e94fb00b4e18",
+      "bytes": 7772
+    }
+  },
+  "source_only_not_new_runtime": true,
+  "official_api_reference": "https://jd.papermc.io/paper/1.21.11/org/bukkit/event/block/BlockPlaceEvent.html",
+  "no_foreign_implementation_read": true
+}
