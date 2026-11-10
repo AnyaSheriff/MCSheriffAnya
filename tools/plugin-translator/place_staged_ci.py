@@ -27,6 +27,7 @@ def run(name,args,env=None,timeout=1800):
  assert code==0 and not timed,row
  return log.read_text()
 def archive(label):
+ if 'GH_TOKEN' not in os.environ:raise RuntimeError('Для получения CI-артефакта нужен GH_TOKEN в окружении шага')
  pin=PINS[label];folder=OUT/'old-inputs'/label;folder.mkdir(parents=True,exist_ok=True);path=folder/'artifact.zip'
  if not path.exists():
   api=json.loads(subprocess.check_output(['gh','api',f'repos/AnyaSheriff/MCSheriffAnya/actions/artifacts/{pin["id"]}']))
@@ -243,4 +244,9 @@ def finish():
  write(OUT/'host-toolchain.json',host_tools)
  files={str(p.relative_to(OUT)):{'sha256':digest(p.read_bytes()),'bytes':p.stat().st_size}for p in sorted(OUT.rglob('*'))if p.is_file()}
  write(OUT/'receipt.json',{'source':git('rev-parse','HEAD').decode().strip(),'run_id':os.environ.get('GITHUB_RUN_ID'),'attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'status':os.environ.get('MCSA_JOB_STATUS'),'files':files})
-if __name__=='__main__':{'lock':lock,'inputs':inputs,'strict':strict,'translations':translations,'tests':tests,'finish':finish}[sys.argv[1]]()
+def main():
+ if os.environ.get('GITHUB_ACTIONS')!='true':raise SystemExit('Этот сценарий разрешён только в GitHub Actions')
+ if os.environ.get('GITHUB_RUN_ATTEMPT')!='1':raise SystemExit('Повторный запуск этого сценария запрещён')
+ handlers={'lock':lock,'inputs':inputs,'strict':strict,'translations':translations,'tests':tests,'finish':finish}
+ handlers[sys.argv[1]]()
+if __name__=='__main__':main()

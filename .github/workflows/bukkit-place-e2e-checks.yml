@@ -17,12 +17,16 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Check offline CI guards before any artifact or build operation
+        run: python3 -B -m unittest discover -s tools/plugin-translator -p test_place_staged_ci.py -v
       - name: Freeze criteria and verified same-generation Cargo lock
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B tools/plugin-translator/place_staged_ci.py lock
       - uses: Swatinem/rust-cache@v2
       - name: Restore verified default ELF, prepare required own Rust fixtures and complete both test profiles
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python3 -B tools/plugin-translator/place_staged_ci.py strict
       - name: Verify OLD source and immutable components; no current SDK equality claim
         env:
