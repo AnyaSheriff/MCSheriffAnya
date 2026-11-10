@@ -2,7 +2,7 @@
 //! а Slots читаются отдельным adjacent codec, не parser-ом769 над байтами768.
 use super::*;
 impl Session {
-    pub(super) fn from_769(&mut self,body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
+    pub(super) fn encode_768(&mut self,body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
         let mut input=Cursor::new(body);let id=input.uint()?;
         let(name,target,_)=packet_info(State::Play,Direction::Clientbound,769,id)?;
         let mut out=Vec::new();uint(&mut out,target);
@@ -118,7 +118,8 @@ fn chunk(input:&mut Cursor<'_>,context:crate::chunk::Context)->Result<Vec<u8>,Er
     if maps.take(1)?!=[10]{return Err(Error::Invalid);}
     let mut seen=BTreeSet::new();
     loop {
-        let tag=maps.take(1)?[0];if tag==0{break;}if tag!=12{return Err(Error::Invalid);}
+        let tag=maps.take(1)?[0];if tag==0{break;}
+        if tag!=12{return Err(Error::Invalid);}
         let size=u16::from_be_bytes(maps.take(2)?.try_into().map_err(|_|Error::Invalid)?) as usize;
         let key=std::str::from_utf8(maps.take(size)?).map_err(|_|Error::Invalid)?;
         if !["WORLD_SURFACE","OCEAN_FLOOR","MOTION_BLOCKING","MOTION_BLOCKING_NO_LEAVES","WORLD_SURFACE_WG","OCEAN_FLOOR_WG"].contains(&key)||!seen.insert(key){return Err(Error::Invalid);}

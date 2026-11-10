@@ -282,7 +282,7 @@ impl Session {
         let mut candidate=tracker.clone();
         let intermediate=crate::client_769::clientbound(&mut candidate,body,context)?;
         let mut next=self.clone();
-        let output=next.from_769(&intermediate,context)?;
+        let output=next.encode_768(&intermediate,context)?;
         *self=next;*tracker=candidate;Ok(output)
     }
 }

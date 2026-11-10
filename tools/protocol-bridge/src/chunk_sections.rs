@@ -51,9 +51,9 @@ pub fn decode_with_content(version: JavaVersion, bytes: &[u8], sections: usize, 
         // 774-client775-v6: клиент принял секции только с одним счётчиком.
         let fluids_present = if (cfg!(feature="private-768") && version.protocol()==768) || matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {0} else {u16::from_be_bytes(input.take(2)?.try_into().map_err(|_| Error::Invalid)?)};
         if blocks_present > 4096 || fluids_present > 4096 { return Err(Error::Invalid); }
-        let blocks = input.palette(4096, 4, 8, direct,(version==JavaVersion::V1_21_4 || (cfg!(feature="private-768") && version.protocol()==768)))?;
+        let blocks = input.palette(4096, 4, 8, direct,version==JavaVersion::V1_21_4 || (cfg!(feature="private-768") && version.protocol()==768))?;
         for &id in &blocks { content.map(RegistryKind::BlockState, space, space, id).map_err(content_error)?; }
-        let biomes = input.palette(64, 1, 3, bits(biome_count),(version==JavaVersion::V1_21_4 || (cfg!(feature="private-768") && version.protocol()==768)))?;
+        let biomes = input.palette(64, 1, 3, bits(biome_count),version==JavaVersion::V1_21_4 || (cfg!(feature="private-768") && version.protocol()==768))?;
         if biomes.iter().any(|id| *id >= biome_count) { return Err(Error::Invalid); }
         out.push(Section { blocks_present, fluids_present, blocks, biomes });
     }
@@ -87,8 +87,8 @@ pub fn encode_with_content(version: JavaVersion, sections: &[Section], biome_cou
         }
         if section.biomes.iter().any(|id| *id >= biome_count) { return Err(Error::Invalid); }
         out.extend(section.blocks_present.to_be_bytes()); if !(cfg!(feature="private-768") && version.protocol()==768) && !matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {out.extend(section.fluids_present.to_be_bytes());}
-        palette(&mut out, &section.blocks, 4, 8, direct,(version==JavaVersion::V1_21_4 || (cfg!(feature="private-768") && version.protocol()==768)));
-        palette(&mut out, &section.biomes, 1, 3, bits(biome_count),(version==JavaVersion::V1_21_4 || (cfg!(feature="private-768") && version.protocol()==768)));
+        palette(&mut out, &section.blocks, 4, 8, direct,version==JavaVersion::V1_21_4 || (cfg!(feature="private-768") && version.protocol()==768));
+        palette(&mut out, &section.biomes, 1, 3, bits(biome_count),version==JavaVersion::V1_21_4 || (cfg!(feature="private-768") && version.protocol()==768));
     }
     Ok(out)
 }
