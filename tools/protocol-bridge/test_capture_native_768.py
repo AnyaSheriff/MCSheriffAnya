@@ -2,7 +2,7 @@
 import io
 import unittest
 from unittest.mock import patch
-from capture_native_768 import uint, empty_inventory, validate_ports, Observer, require_runtime
+from capture_native_768 import uint, empty_inventory, validate_ports, Observer, require_runtime, read_handshake
 
 class Guards(unittest.TestCase):
     def test_execution_refused_without_approved_native_runtime(self):
@@ -14,6 +14,14 @@ class Guards(unittest.TestCase):
             require_runtime(True)
             for value in (False, None, 'true', 1):
                 with self.assertRaisesRegex(RuntimeError, 'BLOCKED_NATIVE_RUNTIME'): require_runtime(value)
+    def test_quickplay_status_is_distinct_from_login(self):
+        from smoke import varint
+        from probe_registry_client import string
+        base=b'\0'+varint(768)+string('127.0.0.1')+(26269).to_bytes(2,'big')
+        self.assertEqual(read_handshake(base+b'\1',26269),1)
+        self.assertEqual(read_handshake(base+b'\2',26269),2)
+        for raw in (base+b'\3',base+b'\2\0',base[:-1]+b'\0\2',base[:-1]):
+            with self.assertRaises((ValueError,EOFError)):read_handshake(raw,26269)
     def test_varint_negative_overflow_truncated(self):
         for raw in (b'\xff\xff\xff\xff\x0f', b'\x80', b'\x80'*5):
             with self.assertRaises((ValueError, EOFError)): uint(io.BytesIO(raw))

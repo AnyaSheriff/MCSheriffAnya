@@ -177,6 +177,39 @@ def require_runtime(allow_normal_native_loading=False):
         raise RuntimeError('native client execution is GitHub ONLY')
 
 
+
+def read_handshake(body, relay_port):
+    data=io.BytesIO(body)
+    if uint(data)!=0 or uint(data)!=768 or read_string(data)!='127.0.0.1' or struct.unpack('>H',exact(data,2))[0]!=relay_port:
+        raise ValueError('opaque client handshake mismatch')
+    state=uint(data);require_end(data,'Handshake')
+    if state not in (1,2):raise ValueError('unsupported initial state')
+    return state
+
+
+def status_exchange(peer, backend, report):
+    """QuickPlay status/ping только прозрачно пересылается, не выдаётся за Login."""
+    def record(direction,body):
+        if len(report.setdefault('prelogin_packets',[]))>=24 or len(body)>65536:
+            raise ValueError('prelogin status budget')
+        report['prelogin_packets'].append({'direction':direction,'body_hex':body.hex(),'sha256':digest(body)})
+    request=frame(FrameDeadline(peer,30))
+    if request!=b'\0':raise ValueError('expected ordinary status request')
+    record('toServer',request);send(backend,request)
+    response=frame(FrameDeadline(backend,30));data=io.BytesIO(response)
+    if uint(data)!=0:raise ValueError('expected original status response')
+    value=json.loads(read_string(data));require_end(data,'Status')
+    if value['version']!={'name':'1.21.3','protocol':768}:raise ValueError('original QuickPlay Status mismatch')
+    record('toClient',response);send(peer,response)
+    try:ping=frame(FrameDeadline(peer,30))
+    except EOFError:return
+    if len(ping)!=9 or ping[:1]!=b'\1':raise ValueError('expected ordinary Ping')
+    record('toServer',ping);send(backend,ping)
+    pong=frame(FrameDeadline(backend,30))
+    if pong!=ping:raise ValueError('original Pong mismatch')
+    record('toClient',pong);send(peer,pong)
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--metadata',type=Path,required=True)
@@ -246,14 +279,18 @@ def main():
                     if uint(raw)!=0: raise ValueError('unexpected Status packet')
                     value=json.loads(read_string(raw));require_end(raw,'Status');report['status_version']=value['version']
                     if value['version']!={'name':'1.21.3','protocol':768}: raise ValueError('reference Status mismatch')
-                listener=socket.socket();listener.bind(('127.0.0.1',a.relay_port));listener.listen(1);listener.settimeout(120)
+                listener=socket.socket();listener.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1);listener.bind(('127.0.0.1',a.relay_port));listener.listen(4);listener.settimeout(120)
                 client=launch(a.client_dir.resolve(),game,a.relay_port,clog,version='1.21.3',gui_scale=2,pause_on_lost_focus=False,java=a.java)
-                peer,_=listener.accept();peers.append(peer)
-                backend=socket.create_connection(('127.0.0.1',a.server_port),timeout=10);peers.append(backend)
-                initial=frame(FrameDeadline(peer,30)); data=io.BytesIO(initial)
-                if uint(data)!=0 or uint(data)!=768 or read_string(data)!='127.0.0.1' or struct.unpack('>H',exact(data,2))[0]!=a.relay_port or uint(data)!=2:
-                    raise ValueError('opaque client handshake mismatch')
-                require_end(data,'Handshake'); report['handshake_protocol']=768; send(backend,initial)
+                for attempt in range(4):
+                    peer,_=listener.accept();peers.append(peer)
+                    backend=socket.create_connection(('127.0.0.1',a.server_port),timeout=10);peers.append(backend)
+                    initial=frame(FrameDeadline(peer,30))
+                    report.setdefault('initial_handshakes',[]).append({'body_hex':initial.hex(),'sha256':digest(initial)})
+                    state=read_handshake(initial,a.relay_port);send(backend,initial)
+                    if state==2:break
+                    status_exchange(peer,backend,report);peer.close();backend.close()
+                else:raise ValueError('Login not reached after bounded QuickPlay status sessions')
+                report['handshake_protocol']=768
                 for source,target,direction in ((peer,backend,'toServer'),(backend,peer,'toClient')):
                     worker=threading.Thread(target=relay,args=(source,target,direction),daemon=True)
                     workers.append(worker);worker.start()
