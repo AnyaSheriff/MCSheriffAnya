@@ -3,7 +3,7 @@
   "frozen_before_first_push_and_capture": true,
   "files": {
     ".github/workflows/bukkit-place-baseline-checks.yml": "c9ba7ededbf44aacf9728b09d0f326e96e4c094e662bc175c8166927fc77e0da",
-    "src/network/play/place_plugin_baseline_tests.rs": "18792d509f50cbc25271069ed3d7f9dfa5cdbca6bf68e404d9b2e5bb81175ca2",
+    "src/network/play/place_plugin_baseline_tests.rs": "b56f7fbd55f4095df03ff3901b9330283e8a14b6bdb5bd064193d8da1e88f531",
     "tools/plugin-translator/fixtures/PLACE-BASELINE.md": "e09614c59334978e03794e027e467d4a10abec249403491b4e02f5ecdd0fac24",
     "tools/plugin-translator/fixtures/place-priority-a/PlacePriorityAPlugin.java": "d62628c5285648a617cfef72c9d798f2c46fe9f9bdae257f7d4892fb1ed64ed3",
     "tools/plugin-translator/fixtures/place-priority-a/plugin.yml": "1d759163d256c02546e6f837a8dbbe293e5c9da602e2af02c7e81740457a74bc",
