@@ -14,7 +14,7 @@ fn failure(error: Error) -> wire::Error { wire::Error::Entity(error) }
 
 /// Учёт принадлежит одному соединению. Изменяется только после успешного
 /// перевода целого пакета; неизвестный entityId не считается свиньёй/игроком.
-#[derive(Default)]
+#[derive(Clone,Default)]
 pub struct Tracker {
     entities: BTreeMap<u32, u32>,
     block_views: BTreeMap<[u8;8],u32>,

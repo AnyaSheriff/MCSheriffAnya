@@ -31,7 +31,7 @@ pub enum Error { UnsupportedVersion, Truncated, Invalid, MissingPose, Unexpected
 
 impl Confirmation {
     pub fn decode(version: JavaVersion, payload: &[u8]) -> Result<Self, Error> {
-        if !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion); }
+        if !(cfg!(feature="private-768") && version.protocol()==768) && !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion); }
         let mut rest = payload;
         let mut value = 0u32;
         let mut complete = false;

@@ -9,6 +9,8 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 pub type Connection = CryptoStream<tokio::net::TcpStream>;
 pub type LegacySession = std::sync::Arc<std::sync::Mutex<mcsa_protocol::legacy_play::Session>>;
+#[cfg(feature="private-768")]
+pub(crate) type Private768Session = std::sync::Arc<std::sync::Mutex<mcsa_protocol::private768::Session>>;
 type Encryptor = cfb8::Encryptor<aes::Aes128>;
 type Decryptor = cfb8::Decryptor<aes::Aes128>;
 
@@ -22,6 +24,8 @@ pub struct CryptoStream<S> {
     pub(crate) chunk_biomes: Option<std::sync::Arc<super::configuration::ChunkBiomes>>,
     pub login_session_id: Option<[u8; 16]>,
     pub legacy: Option<LegacySession>,
+    #[cfg(feature="private-768")]
+    pub(crate) private_768: Option<Private768Session>,
     #[cfg(test)]
     pub(crate) probe_776: bool,
     #[cfg(test)]
@@ -30,7 +34,7 @@ pub struct CryptoStream<S> {
 
 impl<S> CryptoStream<S> {
     pub fn new(inner: S) -> Self {
-        Self { inner, chunk_biomes: None, content: Default::default(), encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None, #[cfg(test)] probe_776: false, #[cfg(test)] read_pending_probe: None }
+        Self { inner, chunk_biomes: None, content: Default::default(), encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None, #[cfg(feature="private-768")] private_768: None, #[cfg(test)] probe_776: false, #[cfg(test)] read_pending_probe: None }
     }
 
     #[cfg(test)]
@@ -39,6 +43,8 @@ impl<S> CryptoStream<S> {
     }
 
     pub(crate) fn probe_776_enabled(&self) -> bool {
+        #[cfg(feature="private-768")]
+        if self.private_768.is_some() && self.client_version()==mcsa_protocol::private768::VERSION { return true; }
         #[cfg(test)]
         { self.probe_776 && matches!(self.client_version(),mcsa_protocol::JavaVersion::V1_21_4 | mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2) }
         #[cfg(not(test))]
@@ -82,6 +88,8 @@ impl Connection {
         reader.chunk_biomes = self.chunk_biomes.clone();
         reader.login_session_id = self.login_session_id;
         reader.legacy = self.legacy.clone();
+        #[cfg(feature="private-768")]
+        { reader.private_768 = self.private_768.clone(); }
         #[cfg(test)]
         { reader.probe_776 = self.probe_776; reader.read_pending_probe = self.read_pending_probe.take(); }
         self.read_taken = true;

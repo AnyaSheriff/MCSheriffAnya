@@ -2,9 +2,11 @@
 //! Pinned protocol.json «packet_position» / «Slot». Не alias payload769.
 //! Незавершённые формы возвращают отказ; public admission не изменяется.
 use std::collections::{BTreeMap,BTreeSet};
-use crate::{State,Direction,JavaVersion,ids::{RegistryKind,IdTranslationError},wire::{Cursor,uint,Error}};
+use crate::{State,Direction,JavaVersion,ids::{RegistryKind,IdTranslationError},wire::{self,Cursor,uint,Error}};
 #[path="generated_private768.rs"]
 mod tables;
+#[path="private768_play.rs"]
+mod play;
 
 pub const VERSION:JavaVersion=JavaVersion::V1_21_3;
 const MAX_BYTES:usize=8*1024*1024;
@@ -15,6 +17,10 @@ pub fn private_admission(protocol:i32,flag:bool,loopback:bool,primary:JavaVersio
 }
 
 /// Точная статическая цель по именам/полным block-state properties, не числам.
+pub fn validate_id(kind:RegistryKind,source:u16,id:u32)->Result<(),Error>{
+    let (count,_)=tables::ranges(kind,source).ok_or(Error::Invalid)?;
+    if id>=count{return Err(Error::Id(IdTranslationError::UnknownId(id)));}Ok(())
+}
 pub fn map_id(kind:RegistryKind,source:u16,id:u32)->Result<u32,Error>{
     let (count,ranges)=tables::ranges(kind,source).ok_or(Error::Invalid)?;
     if id>=count{return Err(Error::Id(IdTranslationError::UnknownId(id)));}
@@ -60,7 +66,10 @@ impl RegistryContext {
         let mut maps=BTreeMap::new();let mut targets=BTreeMap::new();
         for registry in target {if targets.insert(registry.name.as_str(),registry).is_some(){return Err(Error::Invalid);}}
         for registry in source {
-            let target=targets.get(registry.name.as_str()).ok_or_else(||Error::RegistryUnavailable(registry.name.clone()))?;
+            let Some(target)=targets.get(registry.name.as_str()) else {
+                if maps.insert(registry.name.clone(),vec![None;registry.entries.len()]).is_some(){return Err(Error::Invalid);}
+                continue;
+            };
             let names:BTreeMap<_,_>=target.entries.iter().enumerate().map(|(i,e)|(e.name.as_str(),i as u32)).collect();
             if names.len()!=target.entries.len(){return Err(Error::Invalid);}
             let mapping=registry.entries.iter().map(|e|names.get(e.name.as_str()).copied()).collect();
@@ -87,9 +96,21 @@ pub fn play_edge(direction:Direction,source:u16,body:&[u8])->Result<Vec<u8>,Erro
         (Direction::Clientbound,"set_slot")=>crate::items::adjacent_slots::set_slot(from,to,input.rest)?,
         (Direction::Clientbound,"position")=>crate::player_position::Position768::decode(input.rest)?.encode()?,
         (Direction::Clientbound,"player_info")=>if source==768{crate::player_info::from_768(input.rest)?}else{crate::player_info::from_769(input.rest)?},
+        (Direction::Serverbound,"settings")=>{let raw=input.rest.to_vec();settings(&mut input)?;raw},
+        (Direction::Serverbound,"player_input")=>{let flags=input.take(1)?[0];if flags&128!=0{return Err(Error::Invalid);}finish(&input)?;vec![flags]},
+        (Direction::Serverbound,"held_item_slot")=>{let bytes=input.take(2)?;let slot=i16::from_be_bytes(bytes.try_into().map_err(|_|Error::Invalid)?);if !(0..=8).contains(&slot){return Err(Error::Invalid);}finish(&input)?;bytes.to_vec()},
+        (Direction::Clientbound,"held_item_slot")=>{let slot=if source==769{input.count(8)?}else{usize::from(input.take(1)?[0])};if slot>8{return Err(Error::Invalid);}finish(&input)?;vec![slot as u8]},
+        (Direction::Clientbound,"set_cursor_item"|"set_player_inventory")=>{
+            let mut out=Vec::new();if name=="set_player_inventory"{uint(&mut out,input.count(45)? as u32);}
+            let stack=if source==768 {
+                if input.boolean()?{let (stack,n)=crate::items::adjacent_slots::decode(from,input.rest).map_err(Error::Item)?;input.take(n)?;Some(stack.ok_or(Error::Invalid)?)}else{None}
+            }else{let(stack,n)=crate::items::adjacent_slots::decode(from,input.rest).map_err(Error::Item)?;input.take(n)?;stack};finish(&input)?;
+            if source==769{out.push(u8::from(stack.is_some()));if let Some(stack)=stack{out.extend(crate::items::adjacent_slots::encode(to,Some(&stack)).map_err(Error::Item)?);}}
+            else{out.extend(crate::items::adjacent_slots::encode(to,stack.as_ref()).map_err(Error::Item)?);}out
+        },
         (_,"keep_alive")=>{let b=input.take(8)?.to_vec();finish(&input)?;b},
         (Direction::Serverbound,"pong")|(Direction::Clientbound,"ping")=>{let b=input.take(4)?.to_vec();finish(&input)?;b},
-        (Direction::Clientbound,"chunk_batch_start")=>{finish(&input)?;Vec::new()},
+        (Direction::Serverbound,"tick_end")|(Direction::Clientbound,"chunk_batch_start")=>{finish(&input)?;Vec::new()},
         (Direction::Clientbound,"chunk_batch_finished")=>{let n=input.count(1024)?;finish(&input)?;let mut b=Vec::new();uint(&mut b,n as u32);b},
         (Direction::Serverbound,"teleport_confirm")=>{let n=input.uint()?;finish(&input)?;let mut b=Vec::new();uint(&mut b,n);b},
         (Direction::Serverbound,"chunk_batch_received")=>{
@@ -137,4 +158,154 @@ mod tests {
         let bytes=value.encode(VERSION).unwrap();assert_eq!(crate::login::Success::decode(VERSION,&bytes).unwrap(),value);
         let mut invalid=value;invalid.session_id=Some([8;16]);assert!(invalid.encode(VERSION).is_err());
     }
+    fn packet(state:State,direction:Direction,source:u16,name:&str,payload:&[u8])->Vec<u8>{
+        let id=tables::packets(state,direction,source).unwrap().iter().position(|r|r.0==name).unwrap();
+        let mut body=Vec::new();uint(&mut body,id as u32);body.extend(payload);body
+    }
+    #[test]
+    fn option_slot_and_held_slot_are_not_769_byte_aliases(){
+        let body=packet(State::Play,Direction::Clientbound,769,"set_cursor_item",&[5,1,0,0]);
+        let converted=play_edge(Direction::Clientbound,769,&body).unwrap();
+        let mut reader=Cursor::new(&converted);reader.uint().unwrap();assert_eq!(reader.rest,[1,5,1,0,0]);
+        assert_eq!(play_edge(Direction::Clientbound,768,&converted).unwrap(),body);
+        let bad=packet(State::Play,Direction::Clientbound,768,"set_cursor_item",&[1,0]);
+        assert!(play_edge(Direction::Clientbound,768,&bad).is_err());
+        let held=packet(State::Play,Direction::Clientbound,769,"held_item_slot",&[9]);assert!(play_edge(Direction::Clientbound,769,&held).is_err());
+    }
+    #[test]
+    fn phase_ack_and_reference_dimensions_are_explicit(){
+        let regs=reference_registries().unwrap();let mut session=Session::new(&regs).unwrap();
+        assert!(session.login_ack(&[]).is_err());session.login_success().unwrap();assert!(session.login_ack(&[0]).is_err());session.login_ack(&[]).unwrap();
+        let ack=packet(State::Configuration,Direction::Serverbound,768,"finish_configuration",&[]);
+        assert!(session.configuration_serverbound(&ack).is_err());
+        let dimensions=play::dimension_context(&regs).unwrap();
+        let dimension=regs.iter().find(|r|r.name=="minecraft:dimension_type").unwrap();
+        let index=dimension.entries.iter().position(|e|e.name=="minecraft:overworld").unwrap();
+        assert_eq!(dimensions[index],(-64,24));
+        let malformed=packet(State::Configuration,Direction::Serverbound,768,"settings",&[0]);
+        assert!(session.configuration_serverbound(&malformed).is_err());
+        assert!(session.skin_parts.is_none());
+    }
+
+}
+
+#[derive(Clone,Copy,PartialEq)]
+enum Phase { Login,Configuration,Play }
+
+/// Контекст одного соединения. После split обе половины транспорта разделяют
+/// это состояние; неподдержанный CB не фиксирует частичный tracker/inventory.
+#[derive(Clone)]
+pub struct Session {
+    phase:Phase,
+    login_success:bool,
+    offered:bool,
+    replied:bool,
+    finished:bool,
+    registry_sent:BTreeSet<String>,
+    registries:std::sync::Arc<Vec<crate::registry::Registry>>,
+    mapping:std::sync::Arc<RegistryContext>,
+    self_entity:Option<u32>,
+    dimension:Option<u32>,
+    dimensions:std::sync::Arc<Vec<(i32,usize)>>,
+    skin_parts:Option<u8>,
+}
+impl Session {
+    pub fn new(source:&[crate::registry::Registry])->Result<Self,Error>{
+        let registries=reference_registries()?;
+        let mapping=RegistryContext::new(source,&registries)?;
+        let dimensions=play::dimension_context(&registries)?;
+        Ok(Self{phase:Phase::Login,login_success:false,offered:false,replied:false,finished:false,
+            registry_sent:Default::default(),registries:std::sync::Arc::new(registries),mapping:std::sync::Arc::new(mapping),self_entity:None,dimension:None,dimensions:std::sync::Arc::new(dimensions),skin_parts:None})
+    }
+    pub fn login_success(&mut self)->Result<(),Error>{
+        if self.phase!=Phase::Login||self.login_success{return Err(Error::Invalid);}self.login_success=true;Ok(())
+    }
+    pub fn login_ack(&mut self,payload:&[u8])->Result<(),Error>{
+        if self.phase!=Phase::Login||!self.login_success||!payload.is_empty(){return Err(Error::Invalid);}
+        self.phase=Phase::Configuration;Ok(())
+    }
+    pub fn registry_sent(&mut self,registry:&crate::registry::Registry)->Result<(),Error>{
+        if self.phase!=Phase::Configuration||!self.replied||registry.version!=VERSION||!self.registries.iter().any(|r|r==registry)
+            ||!self.registry_sent.insert(registry.name.clone()){return Err(Error::Invalid);}Ok(())
+    }
+    pub fn configuration_serverbound(&mut self,body:&[u8])->Result<(),Error>{
+        if self.phase!=Phase::Configuration{return Err(Error::Invalid);}
+        let mut input=Cursor::new(body);let id=input.uint()?;
+        let (name,_,_)=packet_info(State::Configuration,Direction::Serverbound,768,id)?;
+        match name {
+            "settings"=>{self.skin_parts=Some(settings(&mut input)?);},
+            "custom_payload"=>{brand(&mut input)?;},
+            "select_known_packs"=>{
+                if !self.offered||self.replied{return Err(Error::Invalid);}
+                let packs=packs(&mut input)?;
+                if !packs.is_empty()&&packs!=[("minecraft".into(),"core".into(),"1.21.3".into())]{return Err(Error::Invalid);}
+                self.replied=true;
+            },
+            "finish_configuration"=>{
+                finish(&input)?;if !self.finished{return Err(Error::Invalid);}self.phase=Phase::Play;
+            },
+            "keep_alive"=>{input.take(8)?;finish(&input)?;},
+            "pong"=>{input.take(4)?;finish(&input)?;},
+            _=>return Err(Error::PayloadUnavailable(name)),
+        }Ok(())
+    }
+    pub fn configuration_clientbound(&mut self,canonical:&[u8])->Result<Vec<u8>,Error>{
+        if self.phase!=Phase::Configuration{return Err(Error::Invalid);}
+        let intermediate=crate::client_769::configuration(canonical)?;
+        let mut input=Cursor::new(&intermediate);let id=input.uint()?;
+        let (name,target,_)=packet_info(State::Configuration,Direction::Clientbound,769,id)?;
+        let mut out=Vec::new();uint(&mut out,target);
+        match name {
+            "custom_payload"=>{brand_copy(&mut input,&mut out)?;},
+            "feature_flags"=>{let n=input.count(1024)?;uint(&mut out,n as u32);for _ in 0..n{copy_string(&mut input,&mut out)?;}finish(&input)?;},
+            "select_known_packs"=>{
+                if self.offered{return Err(Error::Invalid);}
+                if packs(&mut input)?!=[("minecraft".into(),"core".into(),"1.21.4".into())]{return Err(Error::Invalid);}
+                uint(&mut out,1);for s in ["minecraft","core","1.21.3"]{put_string(&mut out,s);}self.offered=true;
+            },
+            "tags"=>{
+                let n=input.count(1024)?;uint(&mut out,n as u32);
+                for _ in 0..n {
+                    let registry=input.string()?;put_string(&mut out,registry);let n=input.count(65536)?;uint(&mut out,n as u32);
+                    for _ in 0..n{copy_string(&mut input,&mut out)?;let n=input.count(65536)?;uint(&mut out,n as u32);
+                        for _ in 0..n{uint(&mut out,self.mapping.map(registry,input.uint()?)?);}}
+                }finish(&input)?;
+            },
+            "finish_configuration"=>{
+                finish(&input)?;if self.registry_sent.len()!=12||!self.replied||self.finished{return Err(Error::Invalid);}self.finished=true;
+            },
+            _=>return Err(Error::PayloadUnavailable(name)),
+        }Ok(out)
+    }
+    pub fn clientbound(&mut self,tracker:&mut crate::entities::Tracker,body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
+        if self.phase!=Phase::Play{return Err(Error::Invalid);}
+        let mut candidate=tracker.clone();
+        let intermediate=crate::client_769::clientbound(&mut candidate,body,context)?;
+        let mut next=self.clone();
+        let output=next.from_769(&intermediate,context)?;
+        *self=next;*tracker=candidate;Ok(output)
+    }
+}
+
+pub fn serverbound(body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
+    let intermediate=play_edge(Direction::Serverbound,768,body)?;
+    Ok(crate::client_769::serverbound(&intermediate,context)?.into_owned())
+}
+fn put_string(out:&mut Vec<u8>,value:&str){uint(out,value.len() as u32);out.extend(value.as_bytes());}
+fn copy_string(input:&mut Cursor<'_>,out:&mut Vec<u8>)->Result<(),Error>{put_string(out,input.string()?);Ok(())}
+fn packs(input:&mut Cursor<'_>)->Result<Vec<(String,String,String)>,Error>{
+    let n=input.count(16)?;let mut values=Vec::new();
+    for _ in 0..n{values.push((input.string()?.into(),input.string()?.into(),input.string()?.into()));}finish(input)?;Ok(values)
+}
+fn brand(input:&mut Cursor<'_>)->Result<(),Error>{
+    if input.string()?!="minecraft:brand"{return Err(Error::PayloadUnavailable("private768 custom channel"));}input.string()?;finish(input)
+}
+fn brand_copy(input:&mut Cursor<'_>,out:&mut Vec<u8>)->Result<(),Error>{
+    if input.string()?!="minecraft:brand"{return Err(Error::PayloadUnavailable("private768 custom channel"));}
+    put_string(out,"minecraft:brand");copy_string(input,out)?;finish(input)
+}
+fn settings(input:&mut Cursor<'_>)->Result<u8,Error>{
+    input.string()?;let distance=input.take(1)?[0];if !(2..=32).contains(&distance){return Err(Error::Invalid);}
+    input.count(2)?;input.boolean()?;let skin=input.take(1)?[0];if skin&!127!=0{return Err(Error::Invalid);}
+    input.count(1)?;input.boolean()?;input.boolean()?;input.count(2)?;finish(input)?;Ok(skin)
 }

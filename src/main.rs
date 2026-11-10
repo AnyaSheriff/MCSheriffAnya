@@ -661,6 +661,12 @@ async fn handle_connection_inner(
                 mcsa_protocol::Negotiated::native_only(handshake.protocol_version, mcsa_protocol::JavaVersion::V26_3)
                     .map(|mut route| { route.native = network::NATIVE_VERSION; route })
             } else { mcsa_protocol::Negotiated::native_only(handshake.protocol_version, network::NATIVE_VERSION) };
+            #[cfg(feature="private-768")]
+            let negotiated = if mcsa_protocol::private768::private_admission(
+                handshake.protocol_version,std::env::args_os().any(|v|v=="--private-768"),addr.ip().is_loopback(),
+                shared.settings.java_version.unwrap_or(network::NATIVE_VERSION)) {
+                Ok(mcsa_protocol::Negotiated{client:mcsa_protocol::private768::VERSION,native:network::NATIVE_VERSION})
+            } else {negotiated};
             // Только отдельный тестовый бинарник может исследовать ещё закрытый маршрут.
             #[cfg(test)]
             let negotiated = if (shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V26_3)
@@ -694,6 +700,12 @@ async fn handle_connection_inner(
             }
 
             socket.protocol = negotiated.ok();
+            #[cfg(feature="private-768")]
+            if socket.client_version()==mcsa_protocol::private768::VERSION {
+                let source=network::configuration::registry_bundle_for(mcsa_protocol::JavaVersion::V1_21_4,socket.world_is_preview())?;
+                let session=mcsa_protocol::private768::Session::new(&source).map_err(|e|io::Error::new(io::ErrorKind::InvalidData,format!("Private768: {e:?}")))?;
+                socket.private_768=Some(Arc::new(std::sync::Mutex::new(session)));
+            }
             log_debug!("Login: согласован протокол {} ({}), каталог {:?}, адрес {}", socket.client_version().protocol(), socket.client_version().name(), shared.catalog().profile(), addr);
             #[cfg(test)]
             { socket.probe_776 = matches!(socket.client_version(),mcsa_protocol::JavaVersion::V1_21_4 | mcsa_protocol::JavaVersion::V1_21_5 | mcsa_protocol::JavaVersion::V1_21_6 | mcsa_protocol::JavaVersion::V1_21_8 | mcsa_protocol::JavaVersion::V1_21_9|mcsa_protocol::JavaVersion::V1_21_11|mcsa_protocol::JavaVersion::V26_2); }

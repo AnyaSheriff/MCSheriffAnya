@@ -201,6 +201,12 @@ pub async fn send_login_success<W: AsyncWrite + Unpin>(
 
     super::packet::write_bytes(stream, &packet).await?;
     stream.login_session_id = session_id;
+    #[cfg(feature="private-768")]
+    if let Some(session)=&stream.private_768 {
+        session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?.login_success()
+            .map_err(|e|io::Error::new(io::ErrorKind::InvalidData,format!("Private768 LoginSuccess: {e:?}")))?;
+    }
+
 
     Ok(())
 }

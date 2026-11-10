@@ -55,7 +55,7 @@ jobs:
           sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
           selected=[Path('Cargo.toml'),Path('tools/protocol-bridge/Cargo.toml'),Path('.github/workflows/via-private-768.yml')]
           selected+=list(Path('tools/protocol-bridge/src').glob('*.rs'))
-          selected+=[Path('tools/protocol-bridge/generate_private768.py'),Path('tools/protocol-bridge/client-chain-sources.json')]
+          selected+=[Path('tools/protocol-bridge/generate_private768.py'),Path('tools/protocol-bridge/client-chain-sources.json'),Path('tools/protocol-bridge/private768-extra-sources.json')]
           selected+=list(Path('tools/protocol-bridge/testdata/private768-reference').iterdir())
           with tarfile.open(out/'selected-source.tar.gz','w:gz') as tar:
               for p in selected:tar.add(p,arcname=str(p))
@@ -63,7 +63,7 @@ jobs:
               'status':os.environ['MCSA_JOB_STATUS'],'run_id':os.environ['MCSA_RUN_ID'],
               'sources':{str(p):sha(p) for p in selected},
               'files':{str(p.relative_to(out)):sha(p) for p in out.iterdir() if p.is_file()},
-              'scope':'development protocol compile only; runtime route NOT yet connected; no native/client/gameplay/public support claim'}
+              'scope':'connected private route development compile only; actual native E2E and7client regression NOT yet run; no public/gameplay claim'}
           (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
           PY
       - uses: actions/upload-artifact@v4

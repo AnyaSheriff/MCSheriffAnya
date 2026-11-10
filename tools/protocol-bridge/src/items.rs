@@ -113,10 +113,16 @@ pub(crate) fn encode_packet_slot(version: JavaVersion, stack: Option<&Stack>, un
     encode_stack(version,stack,untrusted,context,false,context.content.output_space(version))
 }
 pub(crate) fn decode_packet_template(version: JavaVersion, bytes: &[u8], context: Context) -> Result<(Stack, usize), Error> {
+    #[cfg(feature="private-768")]
+    if version==crate::private768::VERSION {
+        let (stack,n)=adjacent_slots::decode(adjacent_slots::Layout::V768,bytes)?;return Ok((stack.ok_or(Error::Invalid)?,n));
+    }
     let (stack,size)=decode_stack(version,bytes,false,context,true,context.content.packet_space(version))?;
     Ok((stack.ok_or(Error::Invalid)?,size))
 }
 pub(crate) fn encode_packet_template(version: JavaVersion, stack: &Stack, context: Context) -> Result<Vec<u8>, Error> {
+    #[cfg(feature="private-768")]
+    if version==crate::private768::VERSION{return adjacent_slots::encode(adjacent_slots::Layout::V768,Some(stack));}
     encode_stack(version,Some(stack),false,context,true,context.content.output_space(version))
 }
 

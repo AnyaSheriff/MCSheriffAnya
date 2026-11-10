@@ -16,6 +16,19 @@ pub enum IdTranslationError {
 pub fn translate(
     registry: RegistryKind, from: JavaVersion, to: JavaVersion, id: u32,
 ) -> Result<u32, IdTranslationError> {
+    #[cfg(feature="private-768")]
+    if from==crate::private768::VERSION||to==crate::private768::VERSION {
+        let failure=|error|match error{crate::wire::Error::Id(e)=>e,_=>IdTranslationError::UnsupportedVersion(crate::private768::VERSION)};
+        if from==to {
+            crate::private768::validate_id(registry,768,id).map_err(failure)?;return Ok(id);
+        }
+        if from==crate::private768::VERSION {
+            let next=crate::private768::map_id(registry,768,id).map_err(failure)?;
+            return if to==JavaVersion::V1_21_4{Ok(next)}else{translate(registry,JavaVersion::V1_21_4,to,next)};
+        }
+        let next=if from==JavaVersion::V1_21_4{id}else{translate(registry,from,JavaVersion::V1_21_4,id)?};
+        return crate::private768::map_id(registry,769,next).map_err(failure);
+    }
     if registry==RegistryKind::Attribute && (from==JavaVersion::V1_21_4 || to==JavaVersion::V1_21_4) {
         let upper=JavaVersion::V1_21_11;
         // Wiki Attribute: у769 нет camera_distance и waypoint; JSON неполон.

@@ -14,6 +14,17 @@ def generate(cache,fetch):
     for version in (768,769):
         docs[version]={k:locked(cache/str(version),k+'.json',r,fetch)
             for k,r in manifest['versions'][str(version)]['files'].items()}
+    extra=json.loads((HERE/'private768-extra-sources.json').read_text())
+    attributes=locked(cache,'attributes.json',extra['attributes'],fetch)
+    paths=locked(cache,'paths.json',manifest['metadata']['paths'],fetch)
+    assert paths['pc']['1.21.3']['attributes']==paths['pc']['1.21.4']['attributes']=='pc/1.21.3'
+    assert len(attributes)==32
+    def types(doc):return doc['types']|doc['play']['toClient']['types']
+    for name in ('SlotDisplay','RecipeDisplay','SpawnInfo','entityMetadataEntry','packet_declare_commands'):
+        assert types(docs[768]['protocol'])[name]==types(docs[769]['protocol'])[name],name
+    left=next(e for e in docs[768]['entities'] if e['name']=='player')['metadataKeys']
+    right=next(e for e in docs[769]['entities'] if e['name']=='player')['metadataKeys']
+    assert left==right and len(left)==21
     text='// Сгенерировано generate_private768.py из pinned client-chain-sources.json.\n'
     text+='// Отдельное ребро768/769; неизвестная цель не воздух. Не public admission.\n'
     text+='use crate::{State,Direction,ids::RegistryKind};\ntype Ranges=(u32, &\'static [(u32,u32,i32)]);\n'

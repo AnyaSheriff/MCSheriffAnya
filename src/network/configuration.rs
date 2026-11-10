@@ -393,6 +393,12 @@ fn packet_name(packet_id: i32) -> &'static str {
 pub async fn read_login_acknowledged(stream: &mut Connection) -> io::Result<()> {
     let packet = read_packet(stream).await?;
 
+    #[cfg(feature="private-768")]
+    if let Some(session)=&stream.private_768 {
+        if packet.id!=3{return Err(io::Error::new(io::ErrorKind::InvalidData,"Private768 expected LoginACK"));}
+        session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?.login_ack(packet.payload())
+            .map_err(|e|io::Error::new(io::ErrorKind::InvalidData,format!("Private768 LoginACK: {e:?}")))?;
+    }
     if packet.id != 0x03 || (stream.probe_776_enabled() && !packet.payload().is_empty()) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
@@ -463,6 +469,8 @@ pub async fn read_known_packs(
 
     loop {
         let packet = read_packet(stream).await?;
+        #[cfg(feature="private-768")]
+        validate_private_configuration(stream,&packet)?;
         #[cfg(test)]
         if stream.probe_776_enabled() { validate_probe_config_packet(&packet, false)?; }
 
@@ -577,6 +585,10 @@ fn registry_bundle(version: mcsa_protocol::JavaVersion) -> io::Result<Vec<mcsa_p
 /// остаётся прежним, байт в байт, для клиента любой версии.
 pub(crate) fn registry_bundle_for(version: mcsa_protocol::JavaVersion, preview: bool) -> io::Result<Vec<mcsa_protocol::registry::Registry>> {
     use mcsa_protocol::{JavaVersion, registry::{Entry, Registry}};
+    #[cfg(feature="private-768")]
+    if version==mcsa_protocol::private768::VERSION {
+        return mcsa_protocol::private768::reference_registries().map_err(|e|io::Error::new(io::ErrorKind::InvalidData,format!("Private768 registry: {e:?}")));
+    }
     if !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Версия реестров не поддерживается"));
     }
@@ -742,6 +754,8 @@ pub async fn read_and_log_configuration_packets(
     loop {
         match read_packet(stream).await {
             Ok(packet) => {
+                #[cfg(feature="private-768")]
+                validate_private_configuration(stream,&packet)?;
                 #[cfg(test)]
                 if stream.probe_776_enabled() { validate_probe_config_packet(&packet, true)?; }
                 log_debug!(
@@ -1270,3 +1284,11 @@ mod tests {
 #[cfg(test)]
 #[path = "configuration_776_tests.rs"]
 mod probe_776_tests;
+
+#[cfg(feature="private-768")]
+fn validate_private_configuration(stream:&Connection,packet:&super::packet::PacketInfo)->io::Result<()> {
+    if let Some(session)=&stream.private_768 {
+        session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?.configuration_serverbound(&packet.body)
+            .map_err(|e|io::Error::new(io::ErrorKind::InvalidData,format!("Private768 config: {e:?}")))?;
+    }Ok(())
+}

@@ -29,7 +29,7 @@ fn mask_layout(version: JavaVersion) -> Result<MaskLayout, Error> {
         JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(MaskLayout::Longs),
         JavaVersion::V26_3 => Ok(MaskLayout::Bytes),
         #[cfg(feature="private-768")]
-        JavaVersion::V1_21_3 => Err(Error::UnsupportedVersion),
+        JavaVersion::V1_21_3 => Ok(MaskLayout::Longs),
         JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion),
     }
 }

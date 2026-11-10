@@ -1,0 +1,8 @@
+{
+  "scope": "approved immutable JSON attributes; both1.21.3/1.21.4 dataPaths resolvepc/1.21.3",
+  "attributes": {
+    "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.3/attributes.json",
+    "sha256": "d229bb3a3bc22e339cc65822b0653023af64899df4a6e233ee17b13ddc8077e6",
+    "bytes": 4421
+  }
+}

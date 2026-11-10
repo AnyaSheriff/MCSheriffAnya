@@ -181,7 +181,12 @@ fn translate_error(error: wire::Error) -> io::Error {
 /// Единая граница Configuration, в том числе для диалогов AuthMe.
 /// Содержимое переводится до сжатия, поток шифрует уже готовые кадры.
 pub async fn write_configuration<S: AsyncWrite + Unpin>(stream: &mut CryptoStream<S>, body: &[u8]) -> io::Result<()> {
-    let body = configuration_body(stream.probe_776_enabled(), stream.client_version(), body).map_err(translate_error)?;
+    #[cfg(feature="private-768")]
+    let private_body=stream.private_768.as_ref().map(|s|s.lock().map_err(|_|io::Error::other("Private768 poisoned"))?
+        .configuration_clientbound(body).map_err(translate_error)).transpose()?;
+    #[cfg(not(feature="private-768"))]
+    let private_body:Option<Vec<u8>>=None;
+    let body = match private_body {Some(body)=>std::borrow::Cow::Owned(body),None=>configuration_body(stream.probe_776_enabled(), stream.client_version(), body).map_err(translate_error)?};
     let mut packet = Vec::with_capacity(body.len() + 8);
 
     frame(&mut packet, &body, compression_threshold());
@@ -209,6 +214,10 @@ fn configuration_body(probe_776: bool, version: JavaVersion, body: &[u8]) -> Res
 pub async fn write_registry<S: AsyncWrite + Unpin>(stream: &mut CryptoStream<S>, registry: &mcsa_protocol::registry::Registry) -> io::Result<()> {
     if registry.version != stream.client_version() {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Реестр подготовлен для другой версии клиента"));
+    }
+    #[cfg(feature="private-768")]
+    if let Some(session)=&stream.private_768 {
+        session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?.registry_sent(registry).map_err(translate_error)?;
     }
     let body = registry.encode().map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("RegistryData: {error:?}")))?;
     let mut packet = Vec::with_capacity(body.len() + 8);
@@ -242,6 +251,19 @@ pub(super) fn probe_legacy_lock_wait(sender: std::sync::mpsc::Sender<()>) {
 }
 
 pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>, probe_776: bool, content: mcsa_protocol::content::ContentCodec) -> io::Result<PacketInfo> {
+    #[cfg(feature="private-768")]
+    if version==mcsa_protocol::private768::VERSION {
+        let packet=read_packet(stream).await?;
+        if packet.id==0 {
+            let confirmation=mcsa_protocol::teleport::Confirmation::decode(version,packet.payload())
+                .map_err(|e|io::Error::new(io::ErrorKind::InvalidData,format!("Private768 teleport: {e:?}")))?;
+            let mut body=vec![0];push_varint(&mut body,confirmation.id);
+            return Ok(PacketInfo{id:0,length:body.len() as i32,body,teleport:Some(confirmation),punch:false,foreign_inventory:false,legacy_inventory:None});
+        }
+        let body=mcsa_protocol::private768::serverbound(&packet.body,wire::Context{items:item_context(content),..Default::default()}).map_err(translate_error)?;
+        let (id,_)=decode_varint(&body)?;
+        return Ok(PacketInfo{id,length:body.len() as i32,body,teleport:None,punch:false,foreign_inventory:false,legacy_inventory:None});
+    }
     if content.is_preview() && !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !(probe_776 && matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2)) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
     }
@@ -395,6 +417,8 @@ pub struct Outgoing<'a> {
     failed: bool,
     version: JavaVersion,
     probe_776: bool,
+    #[cfg(feature="private-768")]
+    private_768: Option<super::connection::Private768Session>,
     entities: mcsa_protocol::entities::Tracker,
     legacy: Option<super::connection::LegacySession>,
 }
@@ -451,12 +475,14 @@ impl<'a> Outgoing<'a> {
         let legacy = stream.legacy.clone();
         let probe_776 = stream.probe_776_enabled();
         let content = stream.content;
-        Self { chunk_biomes: stream.chunk_biomes.clone(), content, stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), queued_at: None, control: None, deadline: None, keep_alive: None, failed: false, version, probe_776, entities: Default::default(), legacy }
+        #[cfg(feature="private-768")]
+        let private_768=stream.private_768.clone();
+        Self { chunk_biomes: stream.chunk_biomes.clone(), content, stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), queued_at: None, control: None, deadline: None, keep_alive: None, failed: false, version, probe_776, #[cfg(feature="private-768")] private_768, entities: Default::default(), legacy }
     }
 
     /// Проверки пакетов без сетевых сокетов и запущенного сервера.
     #[cfg(test)]
-    pub fn capture() -> Self { Self { chunk_biomes: None, content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), queued_at: None, control: None, deadline: None, keep_alive: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
+    pub fn capture() -> Self { Self { chunk_biomes: None, content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), queued_at: None, control: None, deadline: None, keep_alive: None, failed: false, version: wire::INTERNAL, probe_776: false, #[cfg(feature="private-768")] private_768: None, entities: Default::default(), legacy: None } }
 
     #[cfg(test)]
     pub(crate) fn capture_content(version: JavaVersion, content: mcsa_protocol::content::ContentCodec) -> Self {
@@ -465,7 +491,7 @@ impl<'a> Outgoing<'a> {
 
     #[cfg(test)]
     pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
-        Self { chunk_biomes: None, content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), queued_at: None, control: None, deadline: None, keep_alive: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
+        Self { chunk_biomes: None, content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), queued_at: None, control: None, deadline: None, keep_alive: None, failed: false, version: wire::INTERNAL, probe_776: false, #[cfg(feature="private-768")] private_768: None, entities: Default::default(), legacy: None }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
@@ -557,16 +583,23 @@ impl<'a> Outgoing<'a> {
             } else { body }
         } else { body };
         context.items = item_context(if self.version == JavaVersion::V26_1_2 { self.content.native_view() } else { self.content });
-        if self.content.is_preview() && !matches!(self.version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !self.probe_776 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
-        }
         // Оба Configuration-профиля используют REQUIRED_REGISTRIES в том же
         // порядке; имя/число записей ограничивает динамические metadata ID.
         static COUNTS: std::sync::LazyLock<Vec<(&'static str,u32)>> = std::sync::LazyLock::new(||
             super::configuration::REQUIRED_REGISTRIES.iter().map(|(name,entries)| (*name,entries.len() as u32))
                 .chain(std::iter::once(("minecraft:damage_type", super::configuration::DAMAGE_TYPES.len() as u32))).collect());
         context.metadata_registry_counts = &COUNTS;
-        if self.probe_776 {
+        #[cfg(feature="private-768")]
+        let private_body=self.private_768.as_ref().map(|session|session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?
+            .clientbound(&mut self.entities,body,context).map_err(translate_error)).transpose()?;
+        #[cfg(not(feature="private-768"))]
+        let private_body:Option<Vec<u8>>=None;
+        if self.content.is_preview() && !matches!(self.version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !self.probe_776 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
+        }
+        if let Some(body)=private_body {
+            frame(&mut self.buffer,&body,compression_threshold());
+        } else if self.probe_776 {
             let adapter=if self.version==JavaVersion::V1_21_4 {mcsa_protocol::client_769::clientbound} else if self.version==JavaVersion::V1_21_5 {mcsa_protocol::client_770::clientbound} else if self.version==JavaVersion::V1_21_6 {mcsa_protocol::client_771::clientbound} else if self.version==JavaVersion::V1_21_8 {mcsa_protocol::client_772::clientbound} else if self.version==JavaVersion::V1_21_9 {mcsa_protocol::client_773::clientbound} else if self.version==JavaVersion::V1_21_11 {mcsa_protocol::client_774::clientbound} else {mcsa_protocol::client_776::clientbound};
             let body = adapter(&mut self.entities, body, context).map_err(translate_error)?;
             frame(&mut self.buffer, &body, compression_threshold());
