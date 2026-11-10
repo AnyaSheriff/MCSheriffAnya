@@ -356,6 +356,27 @@ def audit(raw, protocol, items, block_states):
                 note='N1; absent event has no measured centre; no named immunity/tag policy claim')
 
 
+def conditional_broadcast_receipts(clients, command_at, token):
+    """RCON /say отвечает через profileless_chat, а не текстом RCON reply."""
+    receipts = []
+    for client in clients:
+        matches = []
+        for event in list(client.events):
+            if event['name'] != 'profileless_chat' or event['at'] < command_at:
+                continue
+            value = decode(client.decoder, 'profileless_chat', bytes.fromhex(event['hex']))
+            if value['message'] != token:
+                continue
+            assert value['name'] == 'Rcon' and value['type'] == {'chatType': 4} and value['target'] is None, 'wrong conditional broadcast speaker/type'
+            matches.append(dict(event=event, decoded=value))
+        assert len(matches) <= 1, 'duplicate conditional broadcast token'
+        if not matches:
+            return None
+        receipts.append(matches[0])
+    assert len(receipts) == 2, 'two observers required'
+    return receipts
+
+
 class Experiment:
     def __init__(self, control, clients, output, stone_id):
         self.control, self.clients, self.output = control, clients, output
@@ -397,6 +418,17 @@ class Experiment:
             time.sleep(.005)
         assert len(client.acks) == before + 1 and client.acks[-1]['pose'][:3] == position, 'fresh TP ACK'
         return row
+
+    def verify_block(self, position, material, token):
+        x,y,z = position
+        receipt = self.command(f'execute if block {x} {y} {z} minecraft:{material} run say {token}')
+        # Единственная команда и фиксированное ограниченное окно доставки;
+        # до fall/Attack. Не ждём удобную позу и не повторяем проверку на игре.
+        self.frames(4)
+        receipts = conditional_broadcast_receipts(self.clients, receipt['at'], token)
+        assert receipts is not None, 'missing fresh typed conditional broadcast on both clients'
+        receipt['typed_profileless_receipts'] = receipts
+        return receipt
 
     def prepare(self):
         self.command('gamerule spawn_mobs false')
@@ -445,8 +477,7 @@ class Experiment:
         checks = {(100,y,100) for y in range(64,72)} | {(100,y,z) for y in range(64,67) for z in (101,102)}
         for x,y,z in sorted(checks):
             token = f'wind_geometry_{x}_{y}_{z}'
-            receipt = self.command(f'execute if block {x} {y} {z} minecraft:air run say {token}')
-            assert token in receipt['response'], 'uncleared fall/body cell'
+            self.verify_block([x,y,z], 'air', token)
 
     def trial(self, index, material):
         actor, victim = self.clients
@@ -480,8 +511,7 @@ class Experiment:
         actor.send('held_item_slot', struct.pack('>h', 0))
         self.frames(4)
         token = 'wind_cell_' + str(index)
-        check = self.command('execute if block 100 63 100 minecraft:' + material + ' run say ' + token)
-        assert token in check['response'], 'varied named block not confirmed'
+        self.verify_block(CELL, material, token)
         for c in self.clients:
             changes = [r for r in c.records if r['name'] == 'block_change' and r.get('position') == CELL]
             assert changes, 'actual varied block receipt missing'

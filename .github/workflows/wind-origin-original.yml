@@ -27,4 +27,5 @@ jobs:
           name: wind-origin-original-${{ github.run_id }}-${{ github.run_attempt }}
           path: wind-origin-original-evidence/
           retention-days: 14
+          include-hidden-files: true
           if-no-files-found: error

@@ -147,6 +147,24 @@ class EvidenceGuards(unittest.TestCase):
         self.assertEqual(stone[1],64)
         self.assertTrue(sg)
 
+    def test_conditional_profileless_receipts_typed_fresh_both_observers(self):
+        from types import SimpleNamespace
+        value=dict(message='unique',name='Rcon',type={'chatType':4},target=None)
+        clients=[SimpleNamespace(events=[event('profileless_chat',11,value)],decoder=FakeDecoder({})) for _ in range(2)]
+        self.assertEqual(len(pilot.conditional_broadcast_receipts(clients,10,'unique')),2)
+        for mutate in [lambda c:c[0].events.clear(),
+                       lambda c:c[1].events.clear(),
+                       lambda c:c[0].events[0].update(at=9),
+                       lambda c:c[0].events[0].update(hex=json.dumps(dict(value,message='other')).encode().hex())]:
+            broken=copy.deepcopy(clients);mutate(broken)
+            self.assertIsNone(pilot.conditional_broadcast_receipts(broken,10,'unique'))
+        for value_update in [dict(name='SomePlayer'),dict(type={'chatType':0}),dict(target='victim')]:
+            broken=copy.deepcopy(clients)
+            broken[0].events=[event('profileless_chat',11,dict(value,**value_update))]
+            with self.assertRaises(AssertionError):pilot.conditional_broadcast_receipts(broken,10,'unique')
+        broken=copy.deepcopy(clients);broken[0].events*=2
+        with self.assertRaisesRegex(AssertionError,'duplicate'):pilot.conditional_broadcast_receipts(broken,10,'unique')
+
     def test_startup_does_not_trust_rcon_listening(self):
         from unittest.mock import Mock
         process=Mock();process.poll.return_value=None
