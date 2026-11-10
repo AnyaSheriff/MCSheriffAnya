@@ -1,0 +1,46 @@
+name: One original mainhand natural Multishot and Unbreaking
+on:
+  push:
+    branches: ['test/crossbow-mainhand-natural-original-20261110']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Frozen criteria and offline guards, without capture or compilation
+        env:
+          MCSA_EXTENDED_PROBE_REPO: ${{ github.workspace }}
+        run: |
+          mkdir -p natural-check-logs
+          python3 -B -m unittest discover -s tools/blackbox/crossbow_ub_extended -p 'test_*probe.py' -v 2>&1 | tee natural-check-logs/extended-unit.log
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_record777.py' -v 2>&1 | tee natural-check-logs/recorder-unit.log
+      - name: Exact prebuilt identity only, no execution or build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api repos/AnyaSheriff/MCSheriffAnya/actions/artifacts/13710052720/zip > "$RUNNER_TEMP/verified-identity93.zip"
+      - name: One original mainhand-natural128 plus four controls, no core or offhand-natural
+        run: |
+          python3 -B tools/blackbox/crossbow_ub_extended/mainhand_natural_original.py --output mainhand-natural-original-evidence --runtime-zip "$RUNNER_TEMP/verified-identity93.zip" 2>&1 | tee natural-check-logs/original-entry.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mainhand-natural-first-original-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            natural-check-logs/
+            mainhand-natural-original-evidence/
+          retention-days: 7
+          if-no-files-found: warn
