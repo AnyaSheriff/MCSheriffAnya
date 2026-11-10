@@ -17,7 +17,7 @@ fn name(kind: RegistryKind, version: JavaVersion, id: usize) -> Option<&'static 
         JavaVersion::V26_2 => generated_packet_776::names(kind)?.get(id).copied(),
         JavaVersion::V26_3 => generated_ids::packet_info(kind, true, id).map(|(name, _)| name),
         #[cfg(feature="private-768")]
-        JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V1_21_3 => None,
+        JavaVersion::V1_21_3 => None,
         JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V1_12_2 => None,
     }
 }
