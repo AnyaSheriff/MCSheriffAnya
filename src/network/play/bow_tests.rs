@@ -389,7 +389,6 @@ fn crossbow_break_budget_preserves_creative_unbreakable_and_existing_fallbacks()
                 (Profile::Preview26_3, GAME_MODE_CREATIVE, false, 0, 3),
                 (Profile::Preview26_3, GAME_MODE_SURVIVAL, true, 0, 3),
                 (Profile::Preview26_3, GAME_MODE_CREATIVE, true, 0, 3),
-                (Profile::Preview26_3, GAME_MODE_SURVIVAL, false, 3, 3),
                 (Profile::Java26_1_2, GAME_MODE_SURVIVAL, false, 0, 3),
             ] {
                 let catalog = Catalog::new(profile);
@@ -417,6 +416,120 @@ fn crossbow_break_budget_preserves_creative_unbreakable_and_existing_fallbacks()
                     assert!(stackdata::loaded_projectiles(&after.extras()).is_empty());
                 }
             }
+        }
+    }
+}
+
+
+fn crossbow_wear_roll_scene(profile: crate::gameplay_catalog::Profile, mode: i32, hand: i32, specification: &str) -> (Shared, PlayerState, i32) {
+    let catalog = crate::gameplay_catalog::Catalog::new(profile);
+    let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+        Default::default(), Default::default(), Default::default(),
+        crate::ops::Ops::open(std::path::Path::new("tmp/crossbow-wear-roll/unused.json")), Default::default());
+    let mut player = PlayerState::new_for_catalog([43;16], "WearRoll".into(), None, None, 0x7f, 43, (0.5,64.0,0.5), catalog);
+    player.entity_id = 43;
+    player.game_mode = mode;
+    let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+    player.inventory.set(slot, crate::commands::stack_from_spec(specification, 1).unwrap());
+    (shared, player, slot)
+}
+
+fn crossbow_emitted_kinds(shared: &Shared) -> Vec<&'static str> {
+    let mut emitted = Vec::new();
+    for arrow in &shared.arrows.lock().unwrap().list {
+        emitted.push((arrow.entity_id, blocks::item_name(arrow.pickup_stack().item).unwrap()));
+    }
+    for rocket in &shared.thrown.lock().unwrap().rockets {
+        emitted.push((rocket.entity_id, "firework_rocket"));
+    }
+    emitted.sort_by_key(|(entity, _)| *entity);
+    emitted.into_iter().map(|(_, kind)| kind).collect()
+}
+
+fn assert_crossbow_injected_wear(hand: i32, specification: &str, rolls: &[f32], expected: &[&str], final_damage: Option<i32>) {
+    let (shared, mut player, slot) = crossbow_wear_roll_scene(crate::gameplay_catalog::Profile::Preview26_3, GAME_MODE_SURVIVAL, hand, specification);
+    let mut calls = 0;
+    assert!(bow::crossbow_fire_with_wear_roll(&shared, &mut player, hand, || {
+        let roll = *rolls.get(calls).expect("лишний бросок износа, в том числе после окончания залпа");
+        calls += 1;
+        roll
+    }));
+    assert_eq!(calls, rolls.len());
+    assert_eq!(crossbow_emitted_kinds(&shared), expected);
+    match final_damage {
+        Some(damage) => {
+            let stack = player.inventory.slot(slot).unwrap();
+            assert_eq!(stack.count, 1);
+            assert_eq!(stack.extras().damage, damage);
+            assert_eq!(stack.extras().charged, 0);
+            assert!(stackdata::loaded_projectiles(&stack.extras()).is_empty());
+        }
+        None => assert!(player.inventory.slot(slot).is_none()),
+    }
+    assert!(!bow::crossbow_fire_with_wear_roll(&shared, &mut player, hand, || panic!("незаряженный арбалет не бросает RNG")));
+}
+
+#[test]
+fn crossbow_unbreaking_uses_one_wear_result_for_each_actual_arrow() {
+    let charges = r#"charged_projectiles=[{id:"minecraft:arrow",count:1},{id:"minecraft:arrow",count:1},{id:"minecraft:arrow",count:1}]"#;
+    for hand in [0, 1] {
+        let near = format!("crossbow[damage=464,enchantments={{unbreaking:3}},{charges}]");
+        assert_crossbow_injected_wear(hand, &near, &[0.0], &["arrow"], None);
+        assert_crossbow_injected_wear(hand, &near, &[0.9, 0.0], &["arrow", "arrow"], None);
+        assert_crossbow_injected_wear(hand, &near, &[0.9, 0.9, 0.0], &["arrow", "arrow", "arrow"], None);
+        assert_crossbow_injected_wear(hand, &near, &[0.9, 0.9, 0.9], &["arrow", "arrow", "arrow"], Some(464));
+        let fresh = format!("crossbow[damage=0,enchantments={{unbreaking:3}},{charges}]");
+        assert_crossbow_injected_wear(hand, &fresh, &[0.0, 0.0, 0.0], &["arrow", "arrow", "arrow"], Some(3));
+        let plain = format!("crossbow[damage=464,{charges}]");
+        assert_crossbow_injected_wear(hand, &plain, &[], &["arrow"], None);
+    }
+}
+
+#[test]
+fn crossbow_wear_rolls_only_charge_points_and_never_repeats_them_at_finish() {
+    // Это контракт стоимости 1/3 и единственного вызова wear на заряд,
+    // а не новая paired-proof Unbreaking для ракет или смешанных списков.
+    let mixed = r#"charged_projectiles=[{id:"minecraft:arrow",count:1},{id:"minecraft:firework_rocket",count:1},{id:"minecraft:spectral_arrow",count:1}]"#;
+    let rockets = r#"charged_projectiles=[{id:"minecraft:firework_rocket",count:1},{id:"minecraft:firework_rocket",count:1},{id:"minecraft:firework_rocket",count:1}]"#;
+    for hand in [0, 1] {
+        assert_crossbow_injected_wear(hand, &format!("crossbow[damage=464,enchantments={{unbreaking:3}},{mixed}]"),
+            &[0.9, 0.9, 0.0, 0.9], &["arrow", "firework_rocket"], None);
+        assert_crossbow_injected_wear(hand, &format!("crossbow[damage=0,enchantments={{unbreaking:3}},{mixed}]"),
+            &[0.0, 0.9, 0.9, 0.0, 0.0], &["arrow", "firework_rocket", "spectral_arrow"], Some(3));
+        assert_crossbow_injected_wear(hand, &format!("crossbow[damage=464,enchantments={{unbreaking:3}},{rockets}]"),
+            &[0.9, 0.9, 0.9, 0.0, 0.9, 0.9], &["firework_rocket", "firework_rocket"], None);
+        assert_crossbow_injected_wear(hand, &format!("crossbow[damage=0,enchantments={{unbreaking:3}},{rockets}]"),
+            &[0.9; 9], &["firework_rocket", "firework_rocket", "firework_rocket"], Some(0));
+    }
+}
+
+#[test]
+fn crossbow_wear_guard_preserves_creative_unbreakable_plugins_and_legacy() {
+    use crate::gameplay_catalog::Profile;
+    let specification = r#"crossbow[damage=464,enchantments={unbreaking:3},charged_projectiles=[{id:"minecraft:arrow",count:1},{id:"minecraft:arrow",count:1},{id:"minecraft:arrow",count:1}]]"#;
+    let stack = crate::commands::stack_from_spec(specification, 1).unwrap().unwrap();
+    assert_eq!(bow::crossbow_wear_budget(&stack, Profile::Preview26_3, false, false), Some(1));
+    assert_eq!(bow::crossbow_wear_budget(&stack, Profile::Preview26_3, true, false), None);
+    assert_eq!(bow::crossbow_wear_budget(&stack, Profile::Preview26_3, false, true), None);
+    assert_eq!(bow::crossbow_wear_budget(&stack, Profile::Java26_1_2, false, false), None);
+    let mut data = stack.extras();
+    data.unbreakable = true;
+    assert_eq!(bow::crossbow_wear_budget(&stack.with_extras(data), Profile::Preview26_3, false, false), None);
+    for hand in [0, 1] {
+        for (profile, mode, unbreakable, expected_calls, expected_damage) in [
+            (Profile::Preview26_3, GAME_MODE_CREATIVE, false, 0, Some(464)),
+            (Profile::Preview26_3, GAME_MODE_SURVIVAL, true, 3, Some(464)),
+            (Profile::Java26_1_2, GAME_MODE_SURVIVAL, false, 3, None),
+        ] {
+            let (shared, mut player, slot) = crossbow_wear_roll_scene(profile, mode, hand, specification);
+            let mut data = player.inventory.slot(slot).unwrap().extras();
+            data.unbreakable = unbreakable;
+            player.inventory.set(slot, Some(stack.with_extras(data)));
+            let mut calls = 0;
+            assert!(bow::crossbow_fire_with_wear_roll(&shared, &mut player, hand, || { calls += 1; 0.0 }));
+            assert_eq!(calls, expected_calls);
+            assert_eq!(crossbow_emitted_kinds(&shared), ["arrow", "arrow", "arrow"]);
+            assert_eq!(player.inventory.slot(slot).map(|s| s.extras().damage), expected_damage);
         }
     }
 }

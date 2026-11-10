@@ -1,0 +1,843 @@
+{
+  "scope": "Pinned trusted Slot/SetSlot subset only; synthetic examples are not gameplay evidence",
+  "simple_names": [
+    "max_stack_size",
+    "max_damage",
+    "damage",
+    "repair_cost",
+    "custom_name",
+    "item_name",
+    "lore",
+    "rarity"
+  ],
+  "versions": {
+    "767": {
+      "sources": {
+        "protocol": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.1/protocol.json",
+          "sha256": "b762bab24c015e1f9d9b320c44f63591ef933b58f0cafaaf34999d80a882818a",
+          "bytes": 245395
+        },
+        "blocks": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.1/blocks.json",
+          "sha256": "7d1d95c4e0255f9f269293e8077c7923c9ec0ff902a9a475ed131da8b26bc654",
+          "bytes": 765435
+        },
+        "items": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.1/items.json",
+          "sha256": "f0960c81bbd2b10f9ab6187c567dec4f88fee7893d7b119423045abb635631f6",
+          "bytes": 164889
+        },
+        "entities": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.20.5/entities.json",
+          "sha256": "abc419e378564603f249cfeb1d5ee7cd2a0ec3bf7c7fb1ba7d704bb0e7454038",
+          "bytes": 72403
+        },
+        "version": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.1/version.json",
+          "sha256": "da9541e79f0a996c5a041003d41f194056bd363bb216b75b978e87a6d994873d",
+          "bytes": 106
+        }
+      },
+      "slot": [
+        "container",
+        [
+          {
+            "name": "itemCount",
+            "type": "varint"
+          },
+          {
+            "anon": true,
+            "type": [
+              "switch",
+              {
+                "compareTo": "itemCount",
+                "fields": {
+                  "0": "void"
+                },
+                "default": [
+                  "container",
+                  [
+                    {
+                      "name": "itemId",
+                      "type": "varint"
+                    },
+                    {
+                      "name": "addedComponentCount",
+                      "type": "varint"
+                    },
+                    {
+                      "name": "removedComponentCount",
+                      "type": "varint"
+                    },
+                    {
+                      "name": "components",
+                      "type": [
+                        "array",
+                        {
+                          "count": "addedComponentCount",
+                          "type": "SlotComponent"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "removeComponents",
+                      "type": [
+                        "array",
+                        {
+                          "count": "removedComponentCount",
+                          "type": [
+                            "container",
+                            [
+                              {
+                                "name": "type",
+                                "type": "SlotComponentType"
+                              }
+                            ]
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        ]
+      ],
+      "set_slot": [
+        "container",
+        [
+          {
+            "name": "windowId",
+            "type": "ContainerID"
+          },
+          {
+            "name": "stateId",
+            "type": "varint"
+          },
+          {
+            "name": "slot",
+            "type": "i16"
+          },
+          {
+            "name": "item",
+            "type": "Slot"
+          }
+        ]
+      ],
+      "container_id": "u8",
+      "components": {
+        "max_stack_size": "varint",
+        "max_damage": "varint",
+        "damage": "varint",
+        "repair_cost": "varint",
+        "custom_name": "anonymousNbt",
+        "item_name": "anonymousNbt",
+        "lore": [
+          "array",
+          {
+            "countType": "varint",
+            "type": "anonOptionalNbt"
+          }
+        ],
+        "rarity": [
+          "mapper",
+          {
+            "type": "varint",
+            "mappings": {
+              "0": "common",
+              "1": "uncommon",
+              "2": "rare",
+              "3": "epic"
+            }
+          }
+        ],
+        "food": [
+          "container",
+          [
+            {
+              "name": "nutrition",
+              "type": "varint"
+            },
+            {
+              "name": "saturationModifier",
+              "type": "f32"
+            },
+            {
+              "name": "canAlwaysEat",
+              "type": "bool"
+            },
+            {
+              "name": "secondsToEat",
+              "type": "f32"
+            },
+            {
+              "name": "usingConvertsTo",
+              "type": "Slot"
+            },
+            {
+              "name": "effects",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": [
+                    "container",
+                    [
+                      {
+                        "name": "effect",
+                        "type": "varint"
+                      },
+                      {
+                        "name": "probability",
+                        "type": "f32"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        ],
+        "custom_model_data": "varint",
+        "fire_resistant": "void",
+        "damage_resistant": null,
+        "banner_patterns": [
+          "container",
+          [
+            {
+              "name": "layers",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "BannerPatternLayer"
+                }
+              ]
+            }
+          ]
+        ]
+      },
+      "banner_pattern_layer": [
+        "container",
+        [
+          {
+            "name": "pattern",
+            "type": [
+              "registryEntryHolder",
+              {
+                "baseName": "patternId",
+                "otherwise": {
+                  "name": "data",
+                  "type": "BannerPattern"
+                }
+              }
+            ]
+          },
+          {
+            "name": "colorId",
+            "type": "varint"
+          }
+        ]
+      ],
+      "unsupported_ids": [
+        20,
+        13,
+        21,
+        49
+      ],
+      "window_items": [
+        "container",
+        [
+          {
+            "name": "windowId",
+            "type": "ContainerID"
+          },
+          {
+            "name": "stateId",
+            "type": "varint"
+          },
+          {
+            "name": "items",
+            "type": [
+              "array",
+              {
+                "countType": "varint",
+                "type": "Slot"
+              }
+            ]
+          },
+          {
+            "name": "carriedItem",
+            "type": "Slot"
+          }
+        ]
+      ]
+    },
+    "768": {
+      "sources": {
+        "protocol": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.3/protocol.json",
+          "sha256": "abcd44462eebc703fea2423572719d79b16e92ad398d94ab3235c5a193656865",
+          "bytes": 258419
+        },
+        "blocks": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.3/blocks.json",
+          "sha256": "6212fc2f45feffb9e1f1a1d9459c1ba55bcff1e992c64d64505f85d0ca2ae021",
+          "bytes": 783739
+        },
+        "items": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.3/items.json",
+          "sha256": "bf9c9e954aaa52f9dd96557929f886a339934583429f80f70990f166c8e4fce4",
+          "bytes": 169898
+        },
+        "entities": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.3/entities.json",
+          "sha256": "994acfe9d19164ae5757fcbff49c67c0cba44a110bd67c8597c250c782bfb97d",
+          "bytes": 82890
+        },
+        "version": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.3/version.json",
+          "sha256": "77a756aa514e50b3e4c3821c40609d845b5eab5e6e1178f721707bd540556206",
+          "bytes": 114
+        }
+      },
+      "slot": [
+        "container",
+        [
+          {
+            "name": "itemCount",
+            "type": "varint"
+          },
+          {
+            "anon": true,
+            "type": [
+              "switch",
+              {
+                "compareTo": "itemCount",
+                "fields": {
+                  "0": "void"
+                },
+                "default": [
+                  "container",
+                  [
+                    {
+                      "name": "itemId",
+                      "type": "varint"
+                    },
+                    {
+                      "name": "addedComponentCount",
+                      "type": "varint"
+                    },
+                    {
+                      "name": "removedComponentCount",
+                      "type": "varint"
+                    },
+                    {
+                      "name": "components",
+                      "type": [
+                        "array",
+                        {
+                          "count": "addedComponentCount",
+                          "type": "SlotComponent"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "removeComponents",
+                      "type": [
+                        "array",
+                        {
+                          "count": "removedComponentCount",
+                          "type": [
+                            "container",
+                            [
+                              {
+                                "name": "type",
+                                "type": "SlotComponentType"
+                              }
+                            ]
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        ]
+      ],
+      "set_slot": [
+        "container",
+        [
+          {
+            "name": "windowId",
+            "type": "ContainerID"
+          },
+          {
+            "name": "stateId",
+            "type": "varint"
+          },
+          {
+            "name": "slot",
+            "type": "i16"
+          },
+          {
+            "name": "item",
+            "type": "Slot"
+          }
+        ]
+      ],
+      "container_id": "varint",
+      "components": {
+        "max_stack_size": "varint",
+        "max_damage": "varint",
+        "damage": "varint",
+        "repair_cost": "varint",
+        "custom_name": "anonymousNbt",
+        "item_name": "anonymousNbt",
+        "lore": [
+          "array",
+          {
+            "countType": "varint",
+            "type": "anonOptionalNbt"
+          }
+        ],
+        "rarity": [
+          "mapper",
+          {
+            "type": "varint",
+            "mappings": {
+              "0": "common",
+              "1": "uncommon",
+              "2": "rare",
+              "3": "epic"
+            }
+          }
+        ],
+        "food": [
+          "container",
+          [
+            {
+              "name": "nutrition",
+              "type": "varint"
+            },
+            {
+              "name": "saturationModifier",
+              "type": "f32"
+            },
+            {
+              "name": "canAlwaysEat",
+              "type": "bool"
+            }
+          ]
+        ],
+        "custom_model_data": [
+          "container",
+          [
+            {
+              "name": "floats",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "f32"
+                }
+              ]
+            },
+            {
+              "name": "flags",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "bool"
+                }
+              ]
+            },
+            {
+              "name": "strings",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "colors",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "i32"
+                }
+              ]
+            }
+          ]
+        ],
+        "fire_resistant": null,
+        "damage_resistant": "string",
+        "banner_patterns": [
+          "container",
+          [
+            {
+              "name": "layers",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "BannerPatternLayer"
+                }
+              ]
+            }
+          ]
+        ]
+      },
+      "banner_pattern_layer": [
+        "container",
+        [
+          {
+            "name": "pattern",
+            "type": "ItemSoundHolder"
+          },
+          {
+            "name": "colorId",
+            "type": "varint"
+          }
+        ]
+      ],
+      "unsupported_ids": [
+        21,
+        14,
+        25,
+        59
+      ],
+      "window_items": [
+        "container",
+        [
+          {
+            "name": "windowId",
+            "type": "ContainerID"
+          },
+          {
+            "name": "stateId",
+            "type": "varint"
+          },
+          {
+            "name": "items",
+            "type": [
+              "array",
+              {
+                "countType": "varint",
+                "type": "Slot"
+              }
+            ]
+          },
+          {
+            "name": "carriedItem",
+            "type": "Slot"
+          }
+        ]
+      ]
+    },
+    "769": {
+      "sources": {
+        "protocol": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/protocol.json",
+          "sha256": "e324c6be98f732a10ddc23539d95b35ad7918b0e2dcc2debf2331c8937564443",
+          "bytes": 260129
+        },
+        "blocks": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/blocks.json",
+          "sha256": "16a26f1dba3e8ae7a5a05a7e25f724ba924b0bacbd17481992d027fbaf70e3e8",
+          "bytes": 789602
+        },
+        "items": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/items.json",
+          "sha256": "f88fb4279715c23e86ff103a09e20a4b15d6b8aa52559bb4d7364258a9d8225d",
+          "bytes": 171037
+        },
+        "entities": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/entities.json",
+          "sha256": "fbf1a0c683a8f0624d75d094f95cd6a2a24f19560466e62cfc2ba7e95a6e9b67",
+          "bytes": 82320
+        },
+        "version": {
+          "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/version.json",
+          "sha256": "9d5d0d825c048eca7a255bc61851619af237765ae74610f142f9efd957d72483",
+          "bytes": 106
+        }
+      },
+      "slot": [
+        "container",
+        [
+          {
+            "name": "itemCount",
+            "type": "varint"
+          },
+          {
+            "anon": true,
+            "type": [
+              "switch",
+              {
+                "compareTo": "itemCount",
+                "fields": {
+                  "0": "void"
+                },
+                "default": [
+                  "container",
+                  [
+                    {
+                      "name": "itemId",
+                      "type": "varint"
+                    },
+                    {
+                      "name": "addedComponentCount",
+                      "type": "varint"
+                    },
+                    {
+                      "name": "removedComponentCount",
+                      "type": "varint"
+                    },
+                    {
+                      "name": "components",
+                      "type": [
+                        "array",
+                        {
+                          "count": "addedComponentCount",
+                          "type": "SlotComponent"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "removeComponents",
+                      "type": [
+                        "array",
+                        {
+                          "count": "removedComponentCount",
+                          "type": [
+                            "container",
+                            [
+                              {
+                                "name": "type",
+                                "type": "SlotComponentType"
+                              }
+                            ]
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                ]
+              }
+            ]
+          }
+        ]
+      ],
+      "set_slot": [
+        "container",
+        [
+          {
+            "name": "windowId",
+            "type": "ContainerID"
+          },
+          {
+            "name": "stateId",
+            "type": "varint"
+          },
+          {
+            "name": "slot",
+            "type": "i16"
+          },
+          {
+            "name": "item",
+            "type": "Slot"
+          }
+        ]
+      ],
+      "container_id": "varint",
+      "components": {
+        "max_stack_size": "varint",
+        "max_damage": "varint",
+        "damage": "varint",
+        "repair_cost": "varint",
+        "custom_name": "anonymousNbt",
+        "item_name": "anonymousNbt",
+        "lore": [
+          "array",
+          {
+            "countType": "varint",
+            "type": "anonOptionalNbt"
+          }
+        ],
+        "rarity": [
+          "mapper",
+          {
+            "type": "varint",
+            "mappings": {
+              "0": "common",
+              "1": "uncommon",
+              "2": "rare",
+              "3": "epic"
+            }
+          }
+        ],
+        "food": [
+          "container",
+          [
+            {
+              "name": "nutrition",
+              "type": "varint"
+            },
+            {
+              "name": "saturationModifier",
+              "type": "f32"
+            },
+            {
+              "name": "canAlwaysEat",
+              "type": "bool"
+            }
+          ]
+        ],
+        "custom_model_data": [
+          "container",
+          [
+            {
+              "name": "floats",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "f32"
+                }
+              ]
+            },
+            {
+              "name": "flags",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "bool"
+                }
+              ]
+            },
+            {
+              "name": "strings",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "colors",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "i32"
+                }
+              ]
+            }
+          ]
+        ],
+        "fire_resistant": null,
+        "damage_resistant": "string",
+        "banner_patterns": [
+          "container",
+          [
+            {
+              "name": "layers",
+              "type": [
+                "array",
+                {
+                  "countType": "varint",
+                  "type": "BannerPatternLayer"
+                }
+              ]
+            }
+          ]
+        ]
+      },
+      "banner_pattern_layer": [
+        "container",
+        [
+          {
+            "name": "pattern",
+            "type": [
+              "registryEntryHolder",
+              {
+                "baseName": "patternId",
+                "otherwise": {
+                  "name": "data",
+                  "type": "BannerPattern"
+                }
+              }
+            ]
+          },
+          {
+            "name": "colorId",
+            "type": "varint"
+          }
+        ]
+      ],
+      "unsupported_ids": [
+        21,
+        14,
+        25,
+        59
+      ],
+      "window_items": [
+        "container",
+        [
+          {
+            "name": "windowId",
+            "type": "ContainerID"
+          },
+          {
+            "name": "stateId",
+            "type": "varint"
+          },
+          {
+            "name": "items",
+            "type": [
+              "array",
+              {
+                "countType": "varint",
+                "type": "Slot"
+              }
+            ]
+          },
+          {
+            "name": "carriedItem",
+            "type": "Slot"
+          }
+        ]
+      ]
+    }
+  },
+  "diamond_ids": {
+    "767": 805,
+    "768": 827,
+    "769": 836
+  },
+  "synthetic_slot_hex": {
+    "767": "01a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d091080210",
+    "768": "01bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d091090211",
+    "769": "01c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d091090211"
+  },
+  "pale_oak_log_769": 140,
+  "unsupported_hover_slot_769_hex": "01c4060100050a080004746578740001580a000b686f7665725f6576656e74080006616374696f6e000973686f775f6974656d0800026964000f6d696e6563726166743a73746f6e650000",
+  "synthetic_window_items_hex": {
+    "767": "00ac022e01a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d0910802100000000001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d0910802100000000001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d0910802100000000001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d0910802100000000001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d0910802100000000001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d0910802100000000001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d0910802100000000001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d0910802100000000001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d0910802100000000001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d09108021001a50607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d070208000141080002d091080210",
+    "768": "00ac022e01bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d09109021101bb0607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d091090211",
+    "769": "00ac022e01c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d0910902110000000001c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d09109021101c40607010140026403070508000ad09ad0b8d180d0bad0b006080006437573746f6d080208000141080002d091090211"
+  }
+}

@@ -1,0 +1,136 @@
+name: Crossbow UB integration after current main merge
+on:
+  push:
+    branches: ['integration/crossbow-ub-20261110']
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  CARGO_BUILD_JOBS: '4'
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: via-workspace-integration
+      - name: Prepare workspace logs and plugin example target
+        run: |
+          mkdir -p via-workspace-evidence
+          rustup target add wasm32-wasip2
+      - name: Build own plugin examples required by workspace tests
+        working-directory: plugins-examples
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release --target wasm32-wasip2 2>&1 | tee ../via-workspace-evidence/plugin-examples.log
+      - name: Existing crossbow unit contracts after merge
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release network::play::bow_tests -- --nocapture 2>&1 | tee via-workspace-evidence/crossbow-unit.log
+      - name: Frozen UB criteria and recorder unit contracts
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_crossbow_unbreaking_ci.py' -v 2>&1 | tee via-workspace-evidence/ub-unit.log
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_record777.py' -v 2>&1 | tee via-workspace-evidence/recorder-unit.log
+      - name: Strict Clippy for the complete workspace
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --all-targets --workspace -- -D warnings 2>&1 | tee via-workspace-evidence/clippy.log
+      - name: Test the complete workspace
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --workspace 2>&1 | tee via-workspace-evidence/tests.log
+      - name: Test without default features
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --no-default-features 2>&1 | tee via-workspace-evidence/no-default-tests.log
+      - name: Build actual release runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release 2>&1 | tee via-workspace-evidence/build.log
+      - name: Fresh existing client routes through the actual runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B - <<'PY' 2>&1 | tee via-workspace-evidence/public-driver.log
+          import json,os,subprocess,sys
+          from pathlib import Path
+          tools=Path('tools/protocol-bridge').resolve();sys.path.insert(0,str(tools))
+          from generate_client_chain import load
+          from generate_registry_26_2 import CANDIDATE,DEFAULT_OUTPUT,Sources
+          temporary=Path(os.environ['RUNNER_TEMP'])
+          cache=temporary/'via-client-chain'
+          load(cache,cache/'774',True)
+          registry=temporary/'via-registry-776'
+          sources=Sources(registry,True,json.loads(DEFAULT_OUTPUT.read_text())['sources'])
+          for kind in ['protocol','entities','items']:
+              sources.read(CANDIDATE,'data/pc/26.2/'+kind+'.json')
+          protocol776=registry/CANDIDATE[1]/'data/pc/26.2/protocol.json'
+          command=['python3','-B',str(tools/'probe_public_776.py'),
+              '--binary',str(Path('target/release/mcsheriffanya').resolve()),
+              '--protocol',str(protocol776),'--cache',str(registry),'--primary','777',
+              '--port','26184','--output',str(Path('via-workspace-evidence/public777').resolve())]
+          for version in range(769,775):
+              command += [f'--protocol{version}',str(cache/str(version)/'protocol.json'),
+                  f'--cache{version}',str(cache/str(version)),f'--admit{version}']
+          # Только отдельная сеть GitHub runner; PC/live25565 не используются.
+          subprocess.run(['sudo','unshare','--net','--','bash','-c',
+              'ip link set lo up; exec "$@"','via-isolated-net',*command],check=True)
+          result=json.loads(Path('via-workspace-evidence/public777/result.json').read_text())
+          assert result['status']=='pass' and len(result['checks'])==21
+          assert len(result['sessions'])==7
+          assert {row['client'] for row in result['sessions']}==set(range(769,775))|{776}
+          assert all(row['admitted'] and row['primary']=='26.3' and len(row['inventory'])==46 for row in result['sessions'])
+          assert all(row['exit']==0 and row['port_free'] and row['process_group_gone'] for row in result['shutdown'])
+          print(json.dumps({'status':'pass','clients':7,'checks':21,'primary':777}))
+          PY
+      - name: Preserve compact integration evidence
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,subprocess,tarfile,shutil
+          from pathlib import Path
+          out=Path('via-workspace-evidence');out.mkdir(exist_ok=True)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          selected=['.github/workflows/crossbow-ub-integration-checks.yml','tools/protocol-bridge/probe_public_776.py',
+              'tools/protocol-bridge/test_public_admission_smoke.py','src/network/play/bow.rs','src/network/play/bow_tests.rs',
+              'tools/blackbox/record777.py','tools/blackbox/ci/crossbow-ub128-criteria.json','tools/blackbox/ci/crossbow-ub128-primary.json']
+          with tarfile.open(out/'selected-source.tar.gz','w:gz') as archive:
+              for path in selected:archive.add(path,arcname=path)
+          binary=Path('target/release/mcsheriffanya')
+          locks={}
+          for name,target in [('Cargo.lock','Cargo.lock'),('plugins-examples/Cargo.lock','plugins-examples-Cargo.lock')]:
+              path=Path(name)
+              if path.exists():shutil.copy2(path,out/target);locks[name]=sha(path)
+          files={str(p.relative_to(out)):{'sha256':sha(p),'bytes':p.stat().st_size} for p in out.rglob('*') if p.is_file()}
+          rust={str(p):sha(p) for folder in ['src','tools/protocol-bridge/src'] for p in Path(folder).rglob('*.rs')}
+          receipt={'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+              'status':os.environ['MCSA_JOB_STATUS'],'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),
+              'files':files,'rust_sources':rust,'lock_sha256':locks,
+              'verified_UB_paired_source':'93bbae85da4d2b90df9979b5ba3a5f7c965ee21f',
+              'verified_UB_paired_runtime_sha256':'4a456bd552edd3a46bd3755b40055c731a97e199a5116cb7d9bdae1d5aa65110',
+              'integrated_fresh_UB_paired':False,
+              'runtime':{'sha256':sha(binary),'bytes':binary.stat().st_size} if binary.is_file() else None,
+              'scope':'Integration only: whole workspace/crossbow units plus fresh existing routes769-774/776. Previous bounded UB/prior raw remains source93bbae85 and old ELF4a456b, not a fresh integrated paired proof; no new admission'}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crossbow-ub-integration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: via-workspace-evidence/
+          retention-days: 7
+          if-no-files-found: warn

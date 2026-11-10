@@ -371,6 +371,12 @@ pub(super) fn crossbow_load(player: &mut PlayerState, hand: i32) {
 /// Стрела 3,15 блока за такт, критическая; «залп» — три стрелы по ±10°,
 /// боковые не подбираются; износ 1 за стрелу (вики, Crossbow, Multishot).
 pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32) -> bool {
+    let dimension = player.dimension;
+    crossbow_fire_with_wear_roll(shared, player, hand, || vitals::world_random(shared, dimension))
+}
+
+/// Источник бросков износа отделён для проверок; случайность траектории прежняя.
+pub(super) fn crossbow_fire_with_wear_roll(shared: &Shared, player: &mut PlayerState, hand: i32, mut wear_roll: impl FnMut() -> f32) -> bool {
     let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
     let Some(crossbow) = player.inventory.slot(slot) else {
         return false;
@@ -392,23 +398,17 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
     let speed = if has_rocket { crate::firework::CROSSBOW_SPEED } else { combat::CROSSBOW_SPEED };
     let dimension = player.dimension;
     let mut wear = 0;
-    // Opaque777 crossbow-nearbreak: поломавшийся после стрелы/ракеты
-    // арбалет не выпускает оставшиеся заряды. Без Unbreaking каждый
-    // расход известен заранее; RNG и отмены плагинов здесь не предсказываем.
-    let salvo_budget = if !creative && shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
-        && data.level("unbreaking") <= 0 && !crate::plugins::active()
-    {
-        combat::durability_left(&crossbow).filter(|left| *left > 0)
-    } else {
-        None
-    };
+    let mut rolled_wear = 0;
+    // Opaque777 UB128: после каждого выпущенного заряда износ считается один
+    // раз. Этот же результат останавливает залп и применяется к вещи в конце.
+    let salvo_budget = crossbow_wear_budget(&crossbow, shared.catalog().profile(), creative, crate::plugins::active());
     player.progress.used(crossbow.item);
     player.progress.trigger("adventure/ol_betsy");
 
     // Оригиналы775/777: без «залпа» все заряды идут прямо. Ракета в
     // смешанном списке задаёт скорость1,6 также стрелам этого выстрела.
     for (index, projectile) in projectiles.iter().enumerate() {
-        if salvo_budget.is_some_and(|left| wear >= left) { break; }
+        if salvo_budget.is_some_and(|left| rolled_wear >= left) { break; }
         let offset = crossbow_offset(index, projectiles.len(), data.level("multishot") > 0);
         let pitch = if index == 0 { 1.0 } else { 1.0 / (vitals::world_random(shared, dimension) * 0.5 + 1.8) + if index % 2 == 1 { 0.63 } else { 0.43 } };
         let notified = crate::plugins::active();
@@ -419,9 +419,9 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
         // count внутри шаблона не умножает число выпущенных снарядов:
         // команда с одной записью count:2 даёт одну стрелу и один износ.
         let ammo = Stack { data: projectile.content.data, ..Stack::new(projectile.content.item, 1) };
-        if combat::item_name(ammo.item) == Some("firework_rocket") {
+        let charge_wear = if combat::item_name(ammo.item) == Some("firework_rocket") {
             fire_rocket(shared, player, ammo, offset);
-            wear += 3;
+            3
         } else {
             let shot = Shot {
                 ammo: Some(ammo),
@@ -438,7 +438,11 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
                 loyalty: 0,
             };
             if !shoot(shared, player, &shot, offset) { continue; }
-            wear += 1;
+            1
+        };
+        wear += charge_wear;
+        if salvo_budget.is_some() {
+            rolled_wear += combat::wear(&crossbow, charge_wear, false, &mut wear_roll);
         }
         if notified {
             shared.world_in(dimension).lock().expect("мир захвачен другим потоком")
@@ -461,8 +465,11 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
     if creative {
         player.inventory.set(slot, Some(unloaded));
     } else {
-        let mut roll = || vitals::world_random(shared, dimension);
-        let worn = combat::wear(&unloaded, wear, false, &mut roll);
+        let worn = if salvo_budget.is_some() {
+            rolled_wear
+        } else {
+            combat::wear(&unloaded, wear, false, &mut wear_roll)
+        };
 
         match combat::add_damage(unloaded, worn) {
             Some(next) => player.inventory.set(slot, Some(next)),
@@ -471,6 +478,14 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
     }
 
     true
+}
+
+/// Нерасходуемая вещь и прежние plugin/legacy пути не ограничивают залп.
+pub(super) fn crossbow_wear_budget(stack: &Stack, profile: crate::gameplay_catalog::Profile, creative: bool, plugins_active: bool) -> Option<i32> {
+    if creative || plugins_active || profile != crate::gameplay_catalog::Profile::Preview26_3 {
+        return None;
+    }
+    combat::durability_left(stack).filter(|left| *left > 0)
 }
 
 // Углы подтверждены записями: два заряда −10,+10, четыре

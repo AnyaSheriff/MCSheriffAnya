@@ -1,5 +1,8 @@
 //! Предметы775↔777 и ограниченные Slot/ItemStackTemplate776: только разобранные компоненты.
 //! Источник: закреплённые Slot/UntrustedSlotComponent в protocol.json.
+#[path="slot_adjacent.rs"]
+pub mod adjacent_slots;
+
 use std::collections::BTreeSet;
 use crate::{JavaVersion, ids::{self, RegistryKind}, registry, content::{ContentCodec, IdSpace}};
 
@@ -293,7 +296,7 @@ pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:Java
     let start=input.0;component_data(kind,input,context)?;Ok(start[..start.len()-input.0.len()].to_vec())
 }
 
-fn component_data(kind: u32, input: &mut Reader<'_>, context: Context) -> Result<(), Error> {
+pub(crate) fn component_data(kind: u32, input: &mut Reader<'_>, context: Context) -> Result<(), Error> {
     match kind {
         0 => { // Пользовательский custom_data не интерпретируется как игровые ID.
             let data = input.nbt()?; if data.first() != Some(&10) { return Err(Error::Invalid); }

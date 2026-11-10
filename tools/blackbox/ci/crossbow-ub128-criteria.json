@@ -1,0 +1,60 @@
+{
+  "status": "predeclared-next-discovery-not-executed",
+  "scope": "26.3/777 survival/mainhand/defaultcount1/defaultdurability/damage464/UnbreakingIII/3command-loadedplainarrows/nootherenchants/pluginsinactive",
+  "sample_trials_per_side": 128,
+  "fixed_sample": true,
+  "hypothesis": "Each real arrow costs1, each cost bypassed with0.75 chance, stop at first real wear break. Original evidence still required; if original rejects bounds retainfailure, never widen/retry-for-green.",
+  "familywise_alpha": 0.001,
+  "family_tests": "4binomialmarginalcategories ×2independentlyrecordedsides;2tails each;Bonferroni",
+  "per_tail_alpha": 6.25e-05,
+  "categories": {
+    "one_arrow_then_break": {
+      "probability_hypothesis": 0.25,
+      "inclusive_count_bounds": [
+        15,
+        52
+      ],
+      "lower_rejection_probability": 5.700416997524018e-05,
+      "upper_rejection_probability": 3.484149630440349e-05
+    },
+    "two_arrows_then_break": {
+      "probability_hypothesis": 0.1875,
+      "inclusive_count_bounds": [
+        9,
+        42
+      ],
+      "lower_rejection_probability": 4.535495491567521e-05,
+      "upper_rejection_probability": 4.755543823340928e-05
+    },
+    "three_arrows_then_break": {
+      "probability_hypothesis": 0.140625,
+      "inclusive_count_bounds": [
+        5,
+        35
+      ],
+      "lower_rejection_probability": 3.53013587965586e-05,
+      "upper_rejection_probability": 2.6063313656717296e-05
+    },
+    "three_arrows_survived": {
+      "probability_hypothesis": 0.421875,
+      "inclusive_count_bounds": [
+        33,
+        76
+      ],
+      "lower_rejection_probability": 3.803638779751039e-05,
+      "upper_rejection_probability": 3.2155445516169786e-05
+    }
+  },
+  "positive_controls": "Beforeeverytrial exactservercount1crossbow/damage464/UBIII/3arrowcharges;actualuseyaw0pitch-20;fullserverinventoryafter;actualemission1..3arrows withsameID/typebothobservers;47breakbothifmissingweapon;survivorcount1/damage464/UBIII/emptycharges. 1/2arrowcase MUST break,3arrowcase canbreakorsurvive. No inferencefrommissingpackets. HPactualpositive/stable/norelateddeath;notclaimed20ifnotobserved.",
+  "fresh_controls": "4before/afterplainfreshcrossbowcontrols:3arrow/wear3/no break; not a full naturalUnbreakingfreshwear distribution claim.",
+  "randomness": "Samplesindependent;countsnotrequiredidenticalacrosssides. Nosimplerowncaseequalization/RNGmasks. No cherry-picking,exact128trials/side.",
+  "runtime": "sameauditedbaselineornewverifiedcandidatewithrootallocatedslot;noCargo duringblackbox. Rootmustallocateports/config/timeout/lifecyclebeforelaunch.",
+  "open": [
+    "offhandUB",
+    "genuinechargingUB",
+    "rocketUBcost3",
+    "customcomponents",
+    "correlationoffullgameRNG",
+    "armor/toolallUnbreakingdistributions"
+  ]
+}

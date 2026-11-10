@@ -1,0 +1,2369 @@
+{
+  "status": "primary-first-complete-official-sample-NEVERreplace",
+  "positive_original132": true,
+  "fresh_controls4": true,
+  "fixed_probability_criteria_sha256": "2fa312fb5a41fb04e0b2e761566603f38b8cc71d5d076e8bb9b6db12070f4a02",
+  "original_raw_sha256": "6730a4f77a258b57c9452f02ca7ef6f347576c5e914d9b9e01f41f800e4abc28",
+  "rows": [
+    {
+      "trial": 0,
+      "control": true,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 3
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "plain_fresh_control"
+    },
+    {
+      "trial": 1,
+      "control": true,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 3
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "plain_fresh_control"
+    },
+    {
+      "trial": 2,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 3,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 4,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 5,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 6,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 7,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 8,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 9,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 10,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 11,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 12,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 13,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 14,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 15,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 16,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 17,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 18,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 19,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 20,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 21,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 22,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 23,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 24,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 25,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 26,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 27,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 28,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 29,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 30,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 31,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 32,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 33,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 34,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 35,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 36,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 37,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 38,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 39,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 40,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 41,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 42,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 43,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 44,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 45,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 46,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 47,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 48,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 49,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 50,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 51,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 52,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 53,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 54,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 55,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 56,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 57,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 58,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 59,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 60,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 61,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 62,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 63,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 64,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 65,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 66,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 67,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 68,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 69,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 70,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 71,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 72,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 73,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 74,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 75,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 76,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 77,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 78,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 79,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 80,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 81,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 82,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 83,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 84,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 85,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 86,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 87,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 88,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 89,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 90,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 91,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 92,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 93,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 94,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 95,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 96,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 97,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 98,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 99,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 100,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 101,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 102,
+      "control": false,
+      "emitted": 3,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "three_arrows_then_break"
+    },
+    {
+      "trial": 103,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 104,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 105,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 106,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 107,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 108,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 109,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 110,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 111,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 112,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 113,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 114,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 115,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 116,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 117,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 118,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 119,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 120,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 121,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 122,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 123,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 124,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 125,
+      "control": false,
+      "emitted": 2,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "two_arrows_then_break"
+    },
+    {
+      "trial": 126,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 127,
+      "control": false,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 464,
+        "enchantments": [
+          [
+            40,
+            3
+          ]
+        ]
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "three_arrows_survived"
+    },
+    {
+      "trial": 128,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 129,
+      "control": false,
+      "emitted": 1,
+      "after": null,
+      "statuses_by_observer": [
+        [
+          47
+        ],
+        [
+          47
+        ]
+      ],
+      "category": "one_arrow_then_break"
+    },
+    {
+      "trial": 130,
+      "control": true,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 3
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "plain_fresh_control"
+    },
+    {
+      "trial": 131,
+      "control": true,
+      "emitted": 3,
+      "after": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 3
+      },
+      "statuses_by_observer": [
+        [],
+        []
+      ],
+      "category": "plain_fresh_control"
+    }
+  ],
+  "statistics": {
+    "fixed_n": 128,
+    "counts": {
+      "one_arrow_then_break": 29,
+      "two_arrows_then_break": 19,
+      "three_arrows_then_break": 19,
+      "three_arrows_survived": 61
+    },
+    "failures": [],
+    "passed": true,
+    "fixed_criteria_sha256": "2fa312fb5a41fb04e0b2e761566603f38b8cc71d5d076e8bb9b6db12070f4a02"
+  },
+  "first_core_attempt": "INVALID-readiness;5actualuse/10open_window fromwire_sent/events;failedformatno sent, no completeN128core",
+  "decision_before_retry": "This first original is PRIMARY formal sample. Corrected schedule may collect an ADDITIONAL original; cannot replace primary or retune bounds. New core sample compared with fixed bounds. Any primary hypothesisfailure retained."
+}
