@@ -219,7 +219,7 @@ fn translated_bukkit_staged_partial_and_wrong_type_are_not_legacy() {
     for kind in ["missing","type"] {
         let root=server_root(&format!("priority-invalid-{kind}"));let name=format!("java-priority-invalid-{kind}");let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/java-priority-staged/plugins").join(&name);let folder=root.join("plugins").join(&name);std::fs::create_dir_all(&folder).unwrap();for file in ["plugin.wasm","plugin.toml"]{std::fs::copy(source.join(file),folder.join(file)).unwrap();}
         let shared=shared();java_info(&shared);let mut host=Host::new(shared,root).unwrap();let error=host.load(&name).unwrap_err();
-        assert!(host.is_empty());assert!(error.contains("optional block-break")||error.contains("type mismatch")||error.contains("typecheck"),"unexpected rejection {kind}: {error}");
+        assert!(host.is_empty());assert!(error.contains("optional block-break"),"unexpected rejection {kind}: {error}");
         println!("PRIORITY_INVALID_EXPORT_REJECTED kind={kind} reason={error}");
     }
 }
