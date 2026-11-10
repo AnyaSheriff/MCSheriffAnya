@@ -1,0 +1,94 @@
+name: Opaque native original 768 reference
+on:
+  push:
+    branches: ['feature/via-native768-reference-20261110']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Own guards and frozen criteria before execution
+        run: |
+          mkdir -p native768-evidence
+          python3 -B -m unittest discover -s tools/protocol-bridge -p 'test_capture*768.py' -v > native768-evidence/guards.log 2>&1
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb xauth imagemagick libgl1 libglx-mesa0 libgl1-mesa-dri libasound2t64
+      - name: Prepare pinned opaque inputs without opening JARs
+        run: |
+          python3 -B tools/protocol-bridge/prepare_headless_768.py --output "$RUNNER_TEMP/native768-inputs"
+          python3 -B tools/protocol-bridge/prepare_registry_client.py --version 1.21.3 \
+            --metadata "$RUNNER_TEMP/native768-inputs/version.json" \
+            --metadata-sha1 5fa4228474e3d59b829637553262b6c06c0a38cf \
+            --output "$RUNNER_TEMP/native768-client" > native768-evidence/prepare.log
+          python3 -B - <<'PY'
+          import hashlib,json,os,shutil
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']);out=Path('native768-evidence')
+          inputs=root/'native768-inputs';client=root/'native768-client'
+          receipt=json.loads((client/'download-verification.json').read_text());receipt.pop('files')
+          receipt['opaque_binaries']={name:{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+              for name,p in [('client',client/'client.jar'),('server',inputs/'server.jar')]}
+          receipt['scope']='opaque download verification only; no game assets/runtime files preserved'
+          (out/'inputs.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          shutil.copyfile(inputs/'version.json',out/'version.json')
+          PY
+      - name: Original native client and server in isolated runner network
+        shell: bash
+        run: |
+          set -o pipefail
+          sudo --preserve-env=GITHUB_ACTIONS,LIBGL_ALWAYS_SOFTWARE unshare --net -- \
+            bash -c 'ip link set lo up; exec "$@"' native768-net \
+            python3 -B tools/protocol-bridge/capture_native_768.py \
+            --metadata "$RUNNER_TEMP/native768-inputs/version.json" \
+            --protocol "$RUNNER_TEMP/native768-inputs/protocol.json" \
+            --server-jar "$RUNNER_TEMP/native768-inputs/server.jar" \
+            --client-dir "$RUNNER_TEMP/native768-client" \
+            --java "$JAVA_HOME/bin/java" --server-port 26268 --relay-port 26269 \
+            --output "$GITHUB_WORKSPACE/native768-evidence/capture" \
+            --execute --allow-normal-native-loading 2>&1 | tee native768-evidence/driver.log
+      - name: Own source and bounded recording receipt only
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+          MCSA_RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 -B - <<'PY'
+          import hashlib,json,os,subprocess,tarfile
+          from pathlib import Path
+          out=Path('native768-evidence');out.mkdir(exist_ok=True)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          paths=sorted(Path('tools/protocol-bridge').glob('*.py'))
+          paths += [Path('.github/workflows/via-native-768.yml'),Path('tools/protocol-bridge/capture-768-criteria.json'),
+              Path('tools/protocol-bridge/capture-768-pins.json'),Path('tools/protocol-bridge/client-chain-sources.json'),
+              Path('tools/protocol-bridge/CAPTURE-768.md')]
+          with tarfile.open(out/'own-source.tar.gz','w:gz') as tar:
+              for p in paths:tar.add(p,arcname=str(p))
+          files={str(p.relative_to(out)):{'sha256':sha(p),'bytes':p.stat().st_size} for p in out.rglob('*') if p.is_file()}
+          receipt={'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+              'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),
+              'status':os.environ['MCSA_JOB_STATUS'],'run_id':os.environ['MCSA_RUN_ID'],
+              'files':files,'sources':{str(p):sha(p) for p in paths},
+              'scope':'original1.21.3 opaque native reference only; no core adapter/public admission',
+              'native_permission':'owner narrow normal runtime loading only, no manual JAR reading/unpack',
+              'runtime_or_game_assets_uploaded':False}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native768-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native768-evidence/
+          retention-days: 7
+          if-no-files-found: error

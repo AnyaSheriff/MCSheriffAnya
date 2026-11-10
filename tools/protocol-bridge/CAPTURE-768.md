@@ -1,25 +1,24 @@
-# Закрытый native reference768
+# Actual native768 reference — owner narrow exception Nov10
 
-Это подготовка собственного harness, не выполненная запись и не адаптер.
-Public768/767 остаются закрыты. Exact официальные1.21.3 metadata/client/server
-и разрешённый protocolJSON закреплены до записи в capture-768-pins.json и runner.
-Критерии заранее в capture-768-criteria.json. player_loaded в768 отсутствует.
+Аня явно разрешила: «делай, это же вроде не чтение кода, а просто для теста».
+Разрешено только штатное извлечение/загрузка служебных.so самим opaqueMinecraft
+при обычном тестовом запуске наGitHub. ManualJARinspection/unpack/Java/Mojangcode/
+mappings/datapacks/worldgenexports по-прежнему запрещены. Runtime/assets не
+изучаются и не включаются вartifact; только собственные networkraw/logs/receipts/SHA.
 
-Запуск намеренно отказывается ДО server/client: BLOCKED_NATIVE_RUNTIME.
-Штатный live_client направляет LWJGL/JNA automatic extraction в private каталог;
-это не подходит текущему запрету JAR unpack. Проверены known own client1.21.4
-cache и via42684071176 artifacts: готовых modern native.so нет. Все8Linux LWJGL
-native pins3.3.3 совпадают с1.21.4; совпадение opaque JAR SHA не создаёт готовый.so.
-JNA5.14.0 отличается. Старый legacy LWJGL2 не подходит и не использован.
+Поумолчанию --execute всё ещё отказывается. Требуется отдельно
+--allow-normal-native-loading И GITHUB_ACTIONS=true. LocalGUI/Cargo/server forbidden.
+Exact1.21.3 metadata/client/server/protocol pins неизменны. Nativeclientgate не
+является публичным768admission: public767/768 остаютсяCLOSED.
 
-Для продолжения нужен approved готовый extraction-free native runtime с явными
-provenance/SHA, launcher без nativeJAR вclasspath и без extractionfallback,
-immutable доступность runtime вGitHub. Затем отдельно проверить source/metadata/
-SHA/negativeguards, выполнить native reference вGitHub/Xvfb и независимо разобрать
-actualraw/lifecycle. До этого нельзя снимать gate или считать synthetic guards
-доказательством записи. No local server/GUI/Cargo.
+Критерии доcapture вcapture-768-criteria.json: actualLoginACK+ConfigACK,
+matchingTPACK/movement/chunkbatchACK/46emptyslots/PlayerInfo, ordinaryregistry/chunk
+raw bounded2048packets/32MiB, strict lifecycle. player_loaded в768 отсутствует.
+Relay не меняет/не вставляет пакеты, одинlock включает observe иforward ACK.
+Originalserver/client first; отдельные loopbackports/config/world/Xvfb GitHubonly.
+KnownPacksnativeclient может выбрать corepack, поэтому полныеNBTvalues из earlier
+headlessreference отдельные, nativepacketpresence не равно allNBTcontent proof.
 
-Relay не вставляет пакеты; lock охватывает наблюдение И forwarding ACK.
-Registry/chunk содержимое не выгружается: только длины/SHA. Выбранные Login/
-ConfigurationACK/Play/inventory/teleport raw ограничены budget. Полные registryNBT,
-непустые46slots и дальнейший gameplay остаются отдельными открытыми задачами.
+РанееBLOCKED_NATIVE_RUNTIME сохранён вhandoffhistoricalfinal иruntimeplan; разрешение
+меняет только новыйexplicitoptin. Headlessactual42758565880/source0a97 остаётся
+отдельнымдоказательством. Полныйcore768adapter/gameplay/wholeinventory не доказан.

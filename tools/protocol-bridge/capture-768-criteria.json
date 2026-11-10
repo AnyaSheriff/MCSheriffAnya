@@ -1,10 +1,45 @@
 {
   "scope": "Native exact1.21.3 reference only; not core adapter or public admission",
   "protocol": 768,
-  "required": ["pinned metadata/client/server/protocol SHA", "native status1.21.3/protocol768", "actual LoginACK after success", "actual ConfigACK after finish", "matching teleport ACK", "movement", "chunk_batch_received", "window0 exact46 empty slots and empty carried", "PlayerInfo", "all worker/process groups gone and ports free"],
+  "required": [
+    "pinned metadata/client/server/protocol SHA",
+    "native status1.21.3/protocol768",
+    "actual LoginACK after success",
+    "actual ConfigACK after finish",
+    "matching teleport ACK",
+    "movement",
+    "chunk_batch_received",
+    "window0 exact46 empty slots and empty carried",
+    "PlayerInfo",
+    "all worker/process groups gone and ports free"
+  ],
   "absent_packet": "player_loaded does not exist in768",
-  "raw_allowlist": ["login_start", "success", "login_acknowledged", "finish_configuration", "position clientbound", "teleport_confirm", "player_info", "window_items", "set_slot", "set_cursor_item", "set_player_inventory", "chunk_batch_received"],
-  "registry_chunks": "hashes and lengths only; no dump",
-  "blocked_runtime": "Stock live_client automatically extracts native JAR resources; extraction-free approved runtime missing. No server/client execution permitted by this harness until resolved.",
-  "unsupported": ["full inventory components", "core768 route", "gameplay", "auth/account trace", "full support"]
+  "raw_allowlist": [
+    "login_start",
+    "success",
+    "login_acknowledged",
+    "finish_configuration",
+    "position clientbound",
+    "teleport_confirm",
+    "player_info",
+    "window_items",
+    "set_slot",
+    "set_cursor_item",
+    "set_player_inventory",
+    "chunk_batch_received"
+  ],
+  "registry_chunks": "bounded ordinary network raw allowed; no special dump commands/reports/resource extraction",
+  "unsupported": [
+    "full inventory components",
+    "core768 route",
+    "gameplay",
+    "auth/account trace",
+    "full support"
+  ],
+  "native_exception": "Owner Nov10 explicit narrow permission: normal opaque LWJGL/JNA/Netty runtime loading only; GitHub ONLY, opt-in required; no manual JAR reading/unpack",
+  "limits": {
+    "packets": 2048,
+    "ordinary_bytes": 33554432,
+    "entry_seconds": 120
+  }
 }

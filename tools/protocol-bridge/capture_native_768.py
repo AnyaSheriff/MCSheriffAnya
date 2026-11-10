@@ -21,6 +21,9 @@ import threading
 import time
 import uuid
 
+MAX_ORDINARY_PACKETS = 2048
+MAX_ORDINARY_BYTES = 32 * 1024 * 1024
+
 from live_client import launch
 from observe import frame
 from probe_core_776_client import FrameDeadline, free_port, group_pids, stop_client_bounded
@@ -166,9 +169,12 @@ def opaque_sha(path, expected):
         if hashlib.file_digest(stream,'sha1').hexdigest()!=expected: raise ValueError('opaque input SHA1 mismatch')
 
 
-def require_runtime():
-    """До готового проверенного runtime запуск запрещён, включая self-extraction."""
-    raise RuntimeError('BLOCKED_NATIVE_RUNTIME: stock live_client uses automatic LWJGL/JNA native JAR extraction; exact1.21.3 approved extraction-free runtime not supplied; execution refused before server/client start')
+def require_runtime(allow_normal_native_loading=False):
+    """Узкое owner-разрешение: только штатный runtime opaque клиента на GitHub."""
+    if allow_normal_native_loading is not True:
+        raise RuntimeError('BLOCKED_NATIVE_RUNTIME: explicit --allow-normal-native-loading required')
+    if os.environ.get('GITHUB_ACTIONS') != 'true':
+        raise RuntimeError('native client execution is GitHub ONLY')
 
 
 def main():
@@ -182,6 +188,7 @@ def main():
     p.add_argument('--server-port',type=int,default=26268)
     p.add_argument('--relay-port',type=int,default=26269)
     p.add_argument('--execute',action='store_true')
+    p.add_argument('--allow-normal-native-loading',action='store_true',help='Owner narrow Nov10 exception: normal opaque runtime loading only, GitHub ONLY')
     a=p.parse_args(); validate_ports(a.server_port,a.relay_port); meta=metadata(a.metadata)
     protocol_raw=a.protocol.read_bytes()
     if digest(protocol_raw)!=PROTOCOL_SHA: raise ValueError('pinned approved protocol768 JSON required')
@@ -189,7 +196,7 @@ def main():
         print(json.dumps({'status':'plan_only','version':meta['id'],'protocol':768,
             'server_jar_present':a.server_jar.is_file(),'client_cache_present':(a.client_dir/'client.jar').is_file(),
             'executed':False,'scope':'native reference only; no core adapter/admission evidence'})); return
-    require_runtime()
+    require_runtime(a.allow_normal_native_loading)
     opaque_sha(a.server_jar,SERVER_SHA1); opaque_sha(a.client_dir/'client.jar',CLIENT_SHA1)
     metadata(a.client_dir/'version.json')
     for port in (a.server_port,a.relay_port):
@@ -197,8 +204,10 @@ def main():
     a.output.mkdir(parents=True,exist_ok=False)
     report={'status':'failed','scope':'native1.21.3 reference only; core768 NOT exercised',
             'metadata_sha1':METADATA_SHA1,'protocol_sha256':PROTOCOL_SHA,'client_sha1':CLIENT_SHA1,
-            'server_sha1':SERVER_SHA1,'runner_sha256':digest(Path(__file__).read_bytes()),'jar_unpacked':False,
-            'packet_injection':False,'registry_chunk_payload_export':False,'errors':[]}
+            'server_sha1':SERVER_SHA1,'runner_sha256':digest(Path(__file__).read_bytes()),'manual_jar_unpack':False,
+            'normal_native_loading_authorized':True,
+            'packet_injection':False,'special_registry_request':False,'ordinary_network_raw':True,
+            'limits':{'packets':MAX_ORDINARY_PACKETS,'bytes':MAX_ORDINARY_BYTES},'errors':[]}
     observer=Observer(json.loads(protocol_raw)); ending=threading.Event(); lock=threading.Lock()
     peers=[]; workers=[]; client=server=listener=None
     def relay(source,target,direction):
@@ -206,7 +215,13 @@ def main():
             while not ending.is_set():
                 body=frame(FrameDeadline(source,45))
                 with lock:
+                    total=report.get('ordinary_bytes',0)+len(body)
+                    if len(observer.rows)>=MAX_ORDINARY_PACKETS or total>MAX_ORDINARY_BYTES:
+                        raise ValueError('ordinary network capture budget exceeded')
                     observer.observe(direction,body)
+                    observer.rows[-1]['body_hex']=body.hex()
+                    observer.rows[-1]['body_sha256']=digest(body)
+                    report['ordinary_bytes']=total
                     send(target,body)
         except Exception as error:
             if not ending.is_set(): report['errors'].append(direction+': '+repr(error))
@@ -220,7 +235,7 @@ def main():
         with (a.output/'server.log').open('w') as slog,(a.output/'client.log').open('w') as clog:
             try:
                 server=subprocess.Popen([str(a.java),'-Xmx1G','-jar',str(a.server_jar.resolve()),'nogui'],cwd=core,
-                    stdin=subprocess.DEVNULL,stdout=slog,stderr=subprocess.STDOUT,start_new_session=True)
+                    stdin=subprocess.PIPE,stdout=slog,stderr=subprocess.STDOUT,text=True,start_new_session=True)
                 deadline=time.monotonic()+120
                 while 'Done (' not in (a.output/'server.log').read_text():
                     if server.poll() is not None or time.monotonic()>deadline: raise RuntimeError('reference startup failed/deadline')
@@ -232,7 +247,7 @@ def main():
                     value=json.loads(read_string(raw));require_end(raw,'Status');report['status_version']=value['version']
                     if value['version']!={'name':'1.21.3','protocol':768}: raise ValueError('reference Status mismatch')
                 listener=socket.socket();listener.bind(('127.0.0.1',a.relay_port));listener.listen(1);listener.settimeout(120)
-                client=launch(a.client_dir.resolve(),game,a.relay_port,clog,version='1.21.3',gui_scale=2,pause_on_lost_focus=False)
+                client=launch(a.client_dir.resolve(),game,a.relay_port,clog,version='1.21.3',gui_scale=2,pause_on_lost_focus=False,java=a.java)
                 peer,_=listener.accept();peers.append(peer)
                 backend=socket.create_connection(('127.0.0.1',a.server_port),timeout=10);peers.append(backend)
                 initial=frame(FrameDeadline(peer,30)); data=io.BytesIO(initial)
@@ -269,15 +284,15 @@ def main():
                     try: stop_client_bounded(client)
                     except Exception as error: report['errors'].append('client cleanup: '+repr(error))
                 if server and server.poll() is None:
-                    os.killpg(server.pid,signal.SIGTERM)
-                    try: server.wait(timeout=45)
+                    try:
+                        server.stdin.write('stop\n');server.stdin.flush();server.wait(timeout=45)
                     except subprocess.TimeoutExpired:
                         os.killpg(server.pid,signal.SIGKILL);server.wait(timeout=5);report['errors'].append('server required SIGKILL')
                 report['process_groups_gone']=all(not group_pids(p.pid) for p in (client,server) if p)
                 report['ports_free']=all(free_port(p) for p in (a.server_port,a.relay_port))
                 report['server_exit']=server.returncode if server else None
                 report['packets']=observer.rows
-                report['status']='pass' if report.get('capture_complete') and not report['errors'] and all(report[k] for k in ('workers_stopped','process_groups_gone','ports_free')) else 'failed'
+                report['status']='pass' if report.get('capture_complete') and report['server_exit']==0 and not report['errors'] and all(report[k] for k in ('workers_stopped','process_groups_gone','ports_free')) else 'failed'
                 (a.output/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     if report['status']!='pass': raise RuntimeError('native768 capture FAILED; inspect report.json')
     print(json.dumps({k:v for k,v in report.items() if k!='packets'}))

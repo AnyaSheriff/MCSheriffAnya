@@ -1,3 +1,6 @@
+UPDATE Nov10: Аня явно разрешила normal opaque runtime loading; см.CAPTURE-768.md.
+Ниже исторический план доразрешения; запрет manualJARreading/unpack сохранён.
+
 # План узкого исключения: native runtime exact1.21.3
 
 Статус: НЕ РАЗРЕШЕНО. До явного решения Ани ничего не извлекать, не запускать

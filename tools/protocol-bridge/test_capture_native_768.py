@@ -1,11 +1,19 @@
 """Own guard tests; synthetic inputs never count as reference capture."""
 import io
 import unittest
+from unittest.mock import patch
 from capture_native_768 import uint, empty_inventory, validate_ports, Observer, require_runtime
 
 class Guards(unittest.TestCase):
     def test_execution_refused_without_approved_native_runtime(self):
         with self.assertRaisesRegex(RuntimeError, "BLOCKED_NATIVE_RUNTIME"): require_runtime()
+    def test_native_exception_is_explicit_and_github_only(self):
+        with patch.dict('os.environ', {}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, 'GitHub ONLY'): require_runtime(True)
+        with patch.dict('os.environ', {'GITHUB_ACTIONS':'true'}, clear=True):
+            require_runtime(True)
+            for value in (False, None, 'true', 1):
+                with self.assertRaisesRegex(RuntimeError, 'BLOCKED_NATIVE_RUNTIME'): require_runtime(value)
     def test_varint_negative_overflow_truncated(self):
         for raw in (b'\xff\xff\xff\xff\x0f', b'\x80', b'\x80'*5):
             with self.assertRaises((ValueError, EOFError)): uint(io.BytesIO(raw))
