@@ -1,0 +1,252 @@
+[
+  {
+    "version": 768,
+    "pin": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.3/protocol.json",
+      "sha256": "abcd44462eebc703fea2423572719d79b16e92ad398d94ab3235c5a193656865",
+      "bytes": 258419
+    },
+    "packet_id": "0x0f",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "varint"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  },
+  {
+    "version": 769,
+    "pin": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.4/protocol.json",
+      "sha256": "e324c6be98f732a10ddc23539d95b35ad7918b0e2dcc2debf2331c8937564443",
+      "bytes": 260129
+    },
+    "packet_id": "0x0f",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "varint"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  },
+  {
+    "version": 770,
+    "pin": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.5/protocol.json",
+      "sha256": "8695c1cd011af37d214cc2139fc9bf6e7b445ce45305fbfa28c93f47563cb988",
+      "bytes": 274362
+    },
+    "packet_id": "0x0f",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "varint"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  },
+  {
+    "version": 771,
+    "pin": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.6/protocol.json",
+      "sha256": "11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be",
+      "bytes": 288200
+    },
+    "packet_id": "0x10",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "varint"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  },
+  {
+    "version": 772,
+    "pin": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.8/protocol.json",
+      "sha256": "11fb521446a1e1780bfa140b074436551738e1bfb867e4855784988612e2a0be",
+      "bytes": 288200
+    },
+    "packet_id": "0x10",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "varint"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  },
+  {
+    "version": 773,
+    "pin": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.9/protocol.json",
+      "sha256": "0f34fce39ca160cf9856013befd52bdc67cf30687306f47dacd007693d5a2d70",
+      "bytes": 322081
+    },
+    "packet_id": "0x10",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "varint"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  },
+  {
+    "version": 774,
+    "pin": {
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/1.21.11/protocol.json",
+      "sha256": "4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab",
+      "bytes": 330552
+    },
+    "packet_id": "0x10",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "i8"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  },
+  {
+    "version": 775,
+    "pin": {
+      "bytes": 337869,
+      "sha256": "0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/23303d2350177f2084f94cd38e5d7c8e54dfc8d3/data/pc/26.1/protocol.json"
+    },
+    "packet_id": "0x11",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "varint"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  },
+  {
+    "version": 776,
+    "pin": {
+      "bytes": 339684,
+      "sha256": "a6c9bd7240f74b94eb0d9b1497294e4cfaa4bb02c0023817c952429149e2d50c",
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.2/protocol.json"
+    },
+    "packet_id": "0x11",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "varint"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  },
+  {
+    "version": 777,
+    "pin": {
+      "bytes": 347504,
+      "sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/protocol.json"
+    },
+    "packet_id": "0x11",
+    "schema": [
+      "container",
+      [
+        {
+          "name": "windowId",
+          "type": "ContainerID"
+        },
+        {
+          "name": "enchantment",
+          "type": "varint"
+        }
+      ]
+    ],
+    "referenced_root_types": {
+      "ContainerID": "varint"
+    }
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "base": "8b9a87182b7f540ff56d1afa45775078882739b4",
+  "runtime_test_files": {
+    "src/network/play.rs": "dae560ed832cfb3da3b358fdcea3536f0ebed6f868ade85743a0ce3bc942f30f",
+    "src/network/play/container_button_menu_tests.rs": "445d42497f02ef932f0a31193f87d8da84ac97dc707f15f5defc462ec29d6709"
+  },
+  "registration": "#[cfg(test)]\nmod container_button_menu_tests;\n",
+  "scope": "only test module registration and new cfg-test runtime fixture; production src unchanged"
+}
