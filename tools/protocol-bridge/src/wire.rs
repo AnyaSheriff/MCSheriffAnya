@@ -190,7 +190,9 @@ pub(crate) fn translate_inner(
         (State::Play, Direction::Clientbound, "update_time") if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => crate::client_774::time(&mut cursor,&mut out,context.clock_774)?,
         (State::Play, Direction::Serverbound, "arm_animation" | "client_command") if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => uint(&mut out,cursor.count(1)? as u32),
         (State::Play, Direction::Serverbound, "entity_action") if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {uint(&mut out,cursor.uint()?);uint(&mut out,cursor.count(6)? as u32);uint(&mut out,cursor.count(100)? as u32);}
-        (State::Play, Direction::Serverbound, "enchant_item") if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) => {uint(&mut out,cursor.uint()?);let n=if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6|JavaVersion::V1_21_8|JavaVersion::V1_21_9) {cursor.count(2)? as u8}else{cursor.take(1)?[0]};if n>2{return Err(Error::Invalid);}uint(&mut out,u32::from(n));}
+        (State::Play, Direction::Serverbound, "enchant_item") => {
+            crate::container_button::translate(&mut cursor,&mut out,from,to)?;
+        }
 
         (State::Play, Direction::Serverbound, "block_place" | "use_item") if probe_776 && (equal || matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11)) => {
             let hand = cursor.uint()?;
@@ -250,7 +252,7 @@ pub(crate) fn translate_inner(
             uint(&mut out, cursor.uint()?);
             out.push(u8::from(cursor.boolean()?));
         }
-        (State::Play, Direction::Serverbound, "set_beacon_effect" | "name_item" | "enchant_item" |
+        (State::Play, Direction::Serverbound, "set_beacon_effect" | "name_item" |
             "select_trade" | "set_slot_state" | "update_sign" | "select_bundle_item" |
             "edit_book" | "pick_item_from_block" | "pick_item_from_entity") if probe_776 && equal => {
             crate::actions::gui(name, &mut cursor, &mut out)?;

@@ -160,7 +160,7 @@ fn profile_776_complete_partial_properties_and_skin_patch_are_bounded() {
 fn ten_776_gui_branches_validate_full_payload_without_trusting_client_content() {
     let cases: &[(&str, &[u8])] = &[
         ("set_beacon_effect", &[1,1,0]), ("name_item", &[1,b'A']),
-        ("enchant_item", &[1,2]), ("select_trade", &[1]),
+        ("enchant_item", &[1,2]), ("enchant_item", &[1,3]), ("enchant_item", &[1,128,1]), ("enchant_item", &[1,255,1]), ("select_trade", &[1]),
         ("set_slot_state", &[2,1,1]), ("update_sign", &[0,0,0,0,0,0,0,0,1,1,b'A',0,0,0]),
         ("select_bundle_item", &[1,255,255,255,255,15]), ("edit_book", &[0,1,1,b'P',1,1,b'T']),
         ("pick_item_from_block", &[0,0,0,0,0,0,0,0,1]), ("pick_item_from_entity", &[7,1]),
@@ -173,7 +173,7 @@ fn ten_776_gui_branches_validate_full_payload_without_trusting_client_content() 
         for end in 0..body.len() { assert!(crate::probe_776::serverbound(&body[..end],Context::default()).is_err(),"{name} {end}"); }
         let mut extra=body;extra.push(0);assert!(crate::probe_776::serverbound(&extra,Context::default()).is_err(),"{name}");
     }
-    for (name,payload) in [("set_beacon_effect",vec![2]),("enchant_item",vec![1,3]),("set_slot_state",vec![0,0,2]),
+    for (name,payload) in [("set_beacon_effect",vec![2]),("enchant_item",vec![1,255,255,255,255,15]),("set_slot_state",vec![0,0,2]),
         ("edit_book",vec![0,101]),("pick_item_from_entity",vec![1,2]),("select_bundle_item",vec![0,254,255,255,255,15])] {
         assert!(crate::actions::gui(name,&mut wire::Cursor::new(&payload),&mut Vec::new()).is_err(),"{name}");
     }

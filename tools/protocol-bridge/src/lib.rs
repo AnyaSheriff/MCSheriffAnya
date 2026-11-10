@@ -40,6 +40,7 @@ mod component_776;
 mod particles;
 mod recipes;
 mod actions;
+mod container_button;
 mod profile;
 pub mod entity_sync;
 pub mod legacy_items;
