@@ -18,7 +18,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - name: Check offline CI guards before any artifact or build operation
-        run: python3 -B -m unittest discover -s tools/plugin-translator -p test_place_staged_ci.py -v
+        run: python3 -B -m unittest discover -s tools/plugin-translator -p "test_place*.py" -v
       - name: Freeze criteria and verified same-generation Cargo lock
         env:
           GH_TOKEN: ${{ github.token }}

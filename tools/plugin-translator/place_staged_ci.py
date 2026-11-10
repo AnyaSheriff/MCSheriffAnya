@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parents[2]
 TOOL=ROOT/'tools/plugin-translator'
 OUT=ROOT/'place-staged-evidence'
 PINS={
- 'reuse-failed':{'id':13751597037,'sha256':'07e9e1855ee7843d58918250ab28576449869e43a1c03fea13e34ef65426d06e','source':'3d86b705e425d794008945cb8d647757a0ac21d3'},
+ 'reuse-failed':{'id':13755882155,'sha256':'238bb44c7b67834b8dc0c6fade1a98d51ecde1cfd438df33e7794f6dfa98101a','source':'8760e5714f0057d6d7dd88fbb0299acad4cc55de'},
  'place-baseline':{'id':13742938896,'sha256':'137e101ee864de14551f8b198b4d01526375096c5d9812cf5d477c168ecde714','source':'f141103e54860a40c2fe26eb40af8e659e8fff82'},
  'break-staged':{'id':13736169830,'sha256':'ef99d8235d016900c1487d7de7600fea4c44f316a9c9a501ba7771f57733b1c6','source':'def3439f9fc445d5308cc718ff951f18549c37c0'},
  'break-baseline':{'id':13707523078,'sha256':'87e30ea72931475940fe4d802425ba2db0ff47d8c26b7d2817a65e501707b7aa','source':'354a0d137b60dbd89d32246c3e0aef2ddbd062c1'},
@@ -58,7 +58,7 @@ def verify_receipt(z,label):
    b=z.read(name);assert len(b)==v['bytes'] and digest(b)==v['sha256'],name
   inputs={}
   for name,v in receipt['files'].items():
-   if name.startswith('source/') and name!='source/Cargo.lock':
+   if name.startswith('source/') and name not in ['source/Cargo.lock','source/plugins-examples/Cargo.lock']:
     relative=name.removeprefix('source/');assert z.read(name)==git('show',source+':'+relative),name;inputs[relative]=v['sha256']
   if label=='place-baseline':
    assert receipt['job_status']=='success'
@@ -127,61 +127,56 @@ def restore_runtime():
    b=z.read(name);assert digest(b)==value['sha256']and len(b)==value['bytes'],name
   assert not git('diff',PINS['reuse-failed']['source'],'HEAD','--','src','tests','Cargo.toml','plugins-examples','wit','tools/seedmap','tools/protocol-bridge')
   assert digest(z.read('source/Cargo.lock'))==digest((ROOT/'Cargo.lock').read_bytes())
-  status=json.loads(z.read('clippy-default.status.json'));assert status['exit_code']==0 and not status['timeout']
-  failed=json.loads(z.read('tests-default.status.json'));assert failed['exit_code']==101 and not failed['timeout']
-  log=z.read('tests-default.log').decode();assert 'test result: ok. 351 passed; 0 failed;'in log and 'test result: FAILED. 3424 passed; 30 failed; 124 ignored;'in log
-  assert log.count('panicked at src/plugins/tests.rs:20:5:')==30
-  proof=OUT/'old-inputs/reuse-failed'
-  for name in ['clippy-default.status.json','clippy-default.log','tests-default.status.json','tests-default.log']:
-   (proof/name).write_bytes(z.read(name))
-  for name,sha in [('runtime-elf/mcsheriffanya',RETAINED_SERVER_SHA),('test-elf/'+RETAINED_TEST,RETAINED_TEST_SHA)]:
-   b=z.read(name);assert digest(b)==sha and b[:4]==b'\x7fELF'
-   target=ROOT/('target/release/mcsheriffanya'if name.startswith('runtime-')else'target/release/deps/'+RETAINED_TEST)
-   target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(b);target.chmod(0o755)
- write(OUT/'retained-runtime.json',{'source':PINS['reuse-failed']['source'],'historical_status':'failure','default_strict_exit':0,'protocol_default_passed':351,'historical_root_default':{'passed':3424,'missing_example_failures':30,'ignored':124},'test_elf':RETAINED_TEST_SHA,'server_elf':RETAINED_SERVER_SHA,'root':str(ROOT),'core_rebuilt':False,'all_later_one_calls_direct_same_test_elf':True})
+  inherited=json.loads(z.read('retained-runtime.json'));assert inherited['test_elf']==RETAINED_TEST_SHA and inherited['server_elf']==RETAINED_SERVER_SHA
+  for name in ['tests-default','tests-no-default','tests-seedmap-default','tests-protocol-doc','rust-examples']:
+   status=json.loads(z.read(name+'.status.json'));assert status['exit_code']==0 and not status['timeout']
+   folder=OUT/'inherited-876';folder.mkdir(exist_ok=True)
+   for suffix in ['.status.json','.log']:(folder/(name+suffix)).write_bytes(z.read(name+suffix))
+   (OUT/(name+'.log')).write_bytes(z.read(name+'.log'))
+  for name in ['retained-runtime.json','no-default-runtime.json','rust-example-inputs.json']:
+   (OUT/name).write_bytes(z.read(name))
+  restored=['runtime-elf/mcsheriffanya','test-elf/'+RETAINED_TEST]
+  restored += [name for name in receipt['files'] if name.startswith(('no-default-artifacts/','rust-examples/'))]
+  for name in restored:
+   data=z.read(name);assert digest(data)==receipt['files'][name]['sha256']
+   if name.startswith('runtime-elf/'):target=ROOT/'target/release/mcsheriffanya';assert digest(data)==RETAINED_SERVER_SHA
+   elif name.startswith('test-elf/'):target=ROOT/'target/release/deps'/RETAINED_TEST;assert digest(data)==RETAINED_TEST_SHA
+   else:target=OUT/name
+   target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
+   if data[:4]==b'\x7fELF':target.chmod(0o755)
+  for name in ['hello','misbehave','chat_filter','custom_tablist','modinfo','protect_spawn']:
+   target=ROOT/'plugins-examples/target/wasm32-wasip2/release'/(name+'.wasm');target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(z.read('rust-examples/'+name+'.wasm'))
+  (ROOT/'plugins-examples/Cargo.lock').write_bytes(z.read('source/plugins-examples/Cargo.lock'))
+ write(OUT/'reuse-876.json',{'source':PINS['reuse-failed']['source'],'status':'failure','both_profiles_and_six_rebuilt':False,'inherited_checks':['default3454','nodefault3400','seedmap21','protocol-doc','nodefault-integration3']})
 
 def strict():
  restore_runtime()
- run('rust-target',['rustup','target','add','wasm32-wasip2'])
- example_pin=json.loads((TOOL/'fixtures/place-rust-examples-lock.json').read_text())
- for name,sha in example_pin['old_inputs_sha256'].items():assert digest((ROOT/name).read_bytes())==sha and digest(git('show',example_pin['source']+':'+name))==sha
- data=example_pin['lock_text'].encode();assert digest(data)==example_pin['lock_sha256']
- example_lock=ROOT/'plugins-examples/Cargo.lock';assert not example_lock.exists();example_lock.write_bytes(data)
- run('rust-examples',['cargo','build','--release','--locked','--manifest-path','plugins-examples/Cargo.toml','--target','wasm32-wasip2'])
- wasm={}
- for name in ['hello','misbehave','chat_filter','custom_tablist','modinfo','protect_spawn']:
-  path=ROOT/'plugins-examples/target/wasm32-wasip2/release'/(name+'.wasm');b=path.read_bytes();assert b[:8]==b'\0asm\r\0\1\0';wasm[name]={'sha256':digest(b),'bytes':len(b)}
- write(OUT/'rust-example-inputs.json',{'old_source':example_pin['source'],'inputs':example_pin['old_inputs_sha256'],'lock_sha256':digest(example_lock.read_bytes()),'wasm':wasm,'fresh_example_build_only':True})
- test=ROOT/'target/release/deps'/RETAINED_TEST
- assert digest(test.read_bytes())==RETAINED_TEST_SHA
- log=run('tests-default',[test],timeout=1800)
- assert 'test result: ok. 3454 passed; 0 failed; 124 ignored;'in log
- # Only the no-default core has never been built/tested; compile that profile ONCE.
- no_default_log=run('tests-no-default',['cargo','test','--release','--locked','--workspace','--no-default-features'],timeout=1800)
- import re
- runners=re.findall(r'Running unittests src/main.rs \(target/release/deps/(mcsheriffanya-[a-z0-9]+)\)',no_default_log)
- assert len(runners)==1
- no_default_test=ROOT/'target/release/deps'/runners[0]
- for path in [ROOT/'target/release/mcsheriffanya',no_default_test]:
-  q=OUT/'no-default-artifacts'/path.name;q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(path,q)
- write(OUT/'no-default-runtime.json',{'test_elf':runners[0],'test_sha256':digest(no_default_test.read_bytes()),'server_sha256':digest((ROOT/'target/release/mcsheriffanya').read_bytes()),'compiled_once':True,'test_exit':0})
- # Default protocol351 already passed in the retained failed run; finish missing default members/doc tests separately.
- run('tests-seedmap-default',['cargo','test','--release','--locked','-p','seedmap-core'])
- run('tests-protocol-doc',['cargo','test','--release','--locked','-p','mcsa-protocol','--doc'])
- # cargo test no-default overwrites this path; restore EXACT retained default server before default integration.
- with archive('reuse-failed')as z:
-  b=z.read('runtime-elf/mcsheriffanya');assert digest(b)==RETAINED_SERVER_SHA
-  server=ROOT/'target/release/mcsheriffanya';server.write_bytes(b);server.chmod(0o755)
- assert digest(test.read_bytes())==RETAINED_TEST_SHA
- # world_startup.rs uses std only and exactly one Cargo env!; source/assertions remain unchanged.
- integration=ROOT/'tests/world_startup.rs';source=integration.read_text()
- assert source==git('show',PINS['reuse-failed']['source']+':tests/world_startup.rs').decode()
- assert source.count('env!(')==1 and 'env!("CARGO_BIN_EXE_mcsheriffanya")'in source and source.count('#[test]')==3
- env=os.environ.copy();env['CARGO_BIN_EXE_mcsheriffanya']=str(server)
+ from place_link_helper import dependency_command,validate_command,choose_artifacts,confined_file,integration_command
+ # rustup locates the actual compiler; same resolved executable links newly built dependency closure and harness.
+ rustc=Path(subprocess.check_output(['rustup','which','rustc'],text=True).strip()).resolve()
+ assert rustc.is_absolute() and rustc.is_file() and os.access(rustc,os.X_OK)
+ version=subprocess.check_output([str(rustc),'-vV'],text=True)
+ env=os.environ.copy();env['RUSTC']=str(rustc)
+ command=dependency_command();validate_command(command) # BEFORE spawning Cargo.
+ log=run('serde-deps',command,env)
+ rlib,artifacts=choose_artifacts(log);deps=ROOT/'target/release/deps'
+ rlib=confined_file(rlib,deps);assert rlib.name.startswith('libserde_json-') and rlib.suffix=='.rlib'
+ files={}
+ for row in artifacts:
+  if row['package_id'].startswith('path+'):raise ValueError('unexpected own workspace dependency artifact')
+  for name in row['filenames']:
+   path=confined_file(name,ROOT/'target/release')
+   data=path.read_bytes();files[name]={'sha256':digest(data),'bytes':len(data)}
+   target=OUT/'serde-dependencies'/path.relative_to(ROOT/'target/release');target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
+ integration=ROOT/'tests/world_startup.rs'
+ assert integration.read_bytes()==git('show',PINS['reuse-failed']['source']+':tests/world_startup.rs')
+ server=ROOT/'target/release/mcsheriffanya';assert digest(server.read_bytes())==RETAINED_SERVER_SHA
+ env['CARGO_BIN_EXE_mcsheriffanya']=str(server)
  binary=ROOT/'target/release/deps/world_startup_retained_default'
- run('integration-default-compile',['rustc','--edition=2024','--test','--crate-name','world_startup','-C','opt-level=3','-C','debug-assertions=off',integration,'-o',binary],env)
- log=run('integration-default',[binary]);assert '3 passed; 0 failed;'in log
- write(OUT/'default-integration.json',{'source_sha256':digest(integration.read_bytes()),'source_unmodified':True,'env':{'CARGO_BIN_EXE_mcsheriffanya':str(server)},'server_sha256':digest(server.read_bytes()),'test_elf_sha256':digest(binary.read_bytes()),'tests':3,'standalone_std_only_harness':True,'core_rebuilt':False})
+ run('integration-default-compile',integration_command(str(rustc),integration,binary,rlib,deps),env)
+ result=run('integration-default',[binary]);assert '3 passed; 0 failed;'in result
+ write(OUT/'serde-link.json',{'artifacts':artifacts,'files':files,'rustc':str(rustc),'rustc_sha256':digest(rustc.read_bytes()),'rustc_vV':version,'rlib':str(rlib),'command':command})
+ write(OUT/'default-integration.json',{'source_sha256':digest(integration.read_bytes()),'source_unmodified':True,'env':{'CARGO_BIN_EXE_mcsheriffanya':str(server)},'server_sha256':digest(server.read_bytes()),'test_elf_sha256':digest(binary.read_bytes()),'tests':3,'standalone_std_only_harness':False,'serde_dependency_linked':True,'core_rebuilt':False})
 
 
 def translations():

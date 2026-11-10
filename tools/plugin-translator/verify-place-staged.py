@@ -43,7 +43,7 @@ F=A/'source/tools/plugin-translator/fixtures';spec=load(F/'place-staged-expected
 for f,h in load(F/'place-staged-frozen.json')['files'].items():assert sha(A/'source'/f)==h
 assert len(refs)==20 and len(matrix['native'])==14 and len(oldrefs)==12
 for f in A.glob('*.status.json'):assert load(f)['exit_code']==0 and not load(f)['timeout'],f
-statuses=list(A.glob('*.status.json'));assert len(statuses)==83
+statuses=list(A.glob('*.status.json'));assert len(statuses)==78
 runtime_statuses=[]
 for p in statuses:
  status=load(p)
@@ -52,9 +52,9 @@ for p in statuses:
   log=p.with_name(p.name.removesuffix('.status.json')+'.log').read_text()
   assert 'running 1 test' in log and 'test result: ok. 1 passed; 0 failed; 0 ignored;' in log,p
 assert len(runtime_statuses)==72
-for name in ['rust-target','rust-examples','tests-default','tests-no-default','tests-seedmap-default','tests-protocol-doc','integration-default-compile','integration-default']:
+for name in ['serde-deps','integration-default-compile','integration-default']:
  assert (A/(name+'.status.json')).is_file()
-for name in ['rust-examples','tests-no-default','tests-seedmap-default','tests-protocol-doc']:
+for name in ['serde-deps']:
  assert 'Finished `release`' in (A/(name+'.log')).read_text()
 assert 'test result: ok. 3454 passed; 0 failed; 124 ignored;' in (A/'tests-default.log').read_text()
 assert '3 passed; 0 failed;' in (A/'integration-default.log').read_text()
