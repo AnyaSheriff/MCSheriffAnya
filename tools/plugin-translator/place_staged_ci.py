@@ -168,6 +168,7 @@ def strict():
    path=confined_file(name,ROOT/'target/release')
    data=path.read_bytes();files[name]={'sha256':digest(data),'bytes':len(data)}
    target=OUT/'serde-dependencies'/path.relative_to(ROOT/'target/release');target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
+ write(OUT/'serde-link.json',{'artifacts':artifacts,'files':files,'rustc':str(rustc),'rustc_sha256':digest(rustc.read_bytes()),'rustc_vV':version,'rlib':str(rlib),'command':command})
  integration=ROOT/'tests/world_startup.rs'
  assert integration.read_bytes()==git('show',PINS['reuse-failed']['source']+':tests/world_startup.rs')
  server=ROOT/'target/release/mcsheriffanya';assert digest(server.read_bytes())==RETAINED_SERVER_SHA
@@ -175,7 +176,6 @@ def strict():
  binary=ROOT/'target/release/deps/world_startup_retained_default'
  run('integration-default-compile',integration_command(str(rustc),integration,binary,rlib,deps),env)
  result=run('integration-default',[binary]);assert '3 passed; 0 failed;'in result
- write(OUT/'serde-link.json',{'artifacts':artifacts,'files':files,'rustc':str(rustc),'rustc_sha256':digest(rustc.read_bytes()),'rustc_vV':version,'rlib':str(rlib),'command':command})
  write(OUT/'default-integration.json',{'source_sha256':digest(integration.read_bytes()),'source_unmodified':True,'env':{'CARGO_BIN_EXE_mcsheriffanya':str(server)},'server_sha256':digest(server.read_bytes()),'test_elf_sha256':digest(binary.read_bytes()),'tests':3,'standalone_std_only_harness':False,'serde_dependency_linked':True,'core_rebuilt':False})
 
 

@@ -25,5 +25,5 @@ class PathGuards(unittest.TestCase):
   with TemporaryDirectory() as directory:
    root=Path(directory);deps=root/'deps';deps.mkdir();outside=root/'outside.rlib';outside.write_bytes(b'x')
    link=deps/'libserde_json-fake.rlib';link.symlink_to(outside)
-   for path in [link,outside,Path('relative.rlib')]:
+   for path in [link,outside,Path('relative.rlib'),deps/'sub'/'..'/'file.rlib']:
     with self.assertRaises(ValueError):confined_file(path,deps)

@@ -23,6 +23,7 @@ def integration_command(rustc,source,output,rlib,dependency_dir):
 def confined_file(path,root):
     from pathlib import Path
     path=Path(path);root=Path(root).resolve()
+    if '..' in path.parts or path!=path.resolve():raise ValueError('noncanonical artifact path')
     if not path.is_absolute() or not path.is_file() or path.is_symlink():raise ValueError('invalid artifact file')
     resolved=path.resolve()
     if not resolved.is_relative_to(root):raise ValueError('artifact outside dependency directory')
