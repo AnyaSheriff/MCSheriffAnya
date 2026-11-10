@@ -30,7 +30,7 @@ for kind in ['missing','type']:
             evidence=root.parents[1]/'place-staged-evidence/sdk-inputs';evidence.mkdir(parents=True,exist_ok=True)
             shutil.copyfile(root/'target/mcsa-bukkit.jar',evidence/('sdk-invalid-'+kind+'.jar'))
             translate.translate(root/'target/place-staged-a.jar',folder/'output',adapter=path,staged_block_place=True)
-            name='java-place-staged-invalid-'+kind;out=root.parents[1]/'tmp/place-staged/plugins'/name;assert not out.exists()
+            name='java-place-bad-'+kind;out=root.parents[1]/'tmp/place-staged/plugins'/name;assert not out.exists()
             shutil.copytree(folder/'output/java-place-staged-a',out)
             p=out/'plugin.toml';p.write_text(p.read_text().replace('java-place-staged-a',name))
             evidence=root.parents[1]/'place-staged-evidence';evidence.mkdir(exist_ok=True)

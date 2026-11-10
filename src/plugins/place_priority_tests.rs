@@ -140,7 +140,7 @@ fn translated_bukkit_place_faults_retain_both_flags_and_finish_survivors() {
 #[ignore = "actual new malformed Place components; namespace present"]
 fn translated_bukkit_place_partial_and_wrong_type_are_rejected() {
     for kind in ["missing","type"] {
-        let name=format!("java-place-staged-invalid-{kind}");let root=server_root(&format!("place-invalid-{kind}"));place_copy(&root,"place-staged",&name);
+        let name=format!("java-place-bad-{kind}");let root=server_root(&format!("place-invalid-{kind}"));place_copy(&root,"place-staged",&name);
         let shared=shared();java_info(&shared);let mut host=Host::new(shared,root).unwrap();let error=host.load(&name).unwrap_err();
         assert!(host.is_empty());assert!(error.contains("optional block-place"),"unexpected rejection: {error}");
         assert!(host.command_level("placestageda").is_none());
