@@ -1,0 +1,40 @@
+name: One original custom data collection calibration
+on:
+  push:
+    branches: ['probe/custom-data-collections-20261110']
+permissions:
+  contents: read
+jobs:
+  original-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: tools/blackbox:tools/protocol-bridge
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Offline transport and collection guards
+        run: |
+          python3 -B -m unittest discover -s tools/blackbox/player_data_layout -p 'test_calibration.py' -v
+          python3 -B -m unittest discover -s tools/blackbox/player_data_layout -p 'test_slots.py' -v
+          python3 -B -m unittest discover -s tools/blackbox/player_data_layout -p 'test_transport.py' -v
+          python3 -B -m unittest discover -s tools/blackbox/player_data_layout -p 'test_collections.py' -v
+      - name: One original only finite collection capture
+        run: python3 -B tools/blackbox/player_data_layout/collections_probe.py --output collection-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: custom-data-collections-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            collection-evidence/*.json
+            collection-evidence/*.txt
+            collection-evidence/own-source.tar.gz
+            collection-evidence/FIRST-CUSTOM-DATA/
+            collection-evidence/data/
+            collection-evidence/original/server.log
+          retention-days: 7

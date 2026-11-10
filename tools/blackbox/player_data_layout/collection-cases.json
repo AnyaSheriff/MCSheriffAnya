@@ -1,0 +1,92 @@
+{
+  "schema": "original-26.3-custom-data-collections-v1",
+  "protocol": 777,
+  "cases": [
+    {
+      "id": "empty-list",
+      "payload": "[]"
+    },
+    {
+      "id": "int-list",
+      "payload": "[1,-2,2147483647]"
+    },
+    {
+      "id": "long-list",
+      "payload": "[9007199254740993L,-9223372036854775808L]"
+    },
+    {
+      "id": "string-list",
+      "payload": "[\"A\",\"B\"]"
+    },
+    {
+      "id": "compound-list",
+      "payload": "[{x:1},{x:2}]"
+    },
+    {
+      "id": "nested-list",
+      "payload": "[[1,2],[3]]"
+    },
+    {
+      "id": "byte-array",
+      "payload": "[B;1b,-2b,127b,-128b]"
+    },
+    {
+      "id": "int-array",
+      "payload": "[I;1,-2,2147483647,-2147483648]"
+    },
+    {
+      "id": "long-array",
+      "payload": "[L;9007199254740993L,-9223372036854775808L]"
+    },
+    {
+      "id": "empty-byte-array",
+      "payload": "[B;]"
+    },
+    {
+      "id": "empty-int-array",
+      "payload": "[I;]"
+    },
+    {
+      "id": "empty-long-array",
+      "payload": "[L;]"
+    },
+    {
+      "id": "mixed-integer-list",
+      "payload": "[1,2L]"
+    },
+    {
+      "id": "byte-array-int-elements",
+      "payload": "[B;1,2]"
+    },
+    {
+      "id": "long-array-int-elements",
+      "payload": "[L;1,2]"
+    },
+    {
+      "id": "byte-array-overflow",
+      "payload": "[B;128b]"
+    },
+    {
+      "id": "int-array-long-element",
+      "payload": "[I;1L]"
+    },
+    {
+      "id": "float-list",
+      "payload": "[1.5f,-0.0f]"
+    },
+    {
+      "id": "double-list",
+      "payload": "[1.5d,-0.0d]"
+    },
+    {
+      "id": "list-of-arrays",
+      "payload": "[[I;1,2],[I;3]]"
+    }
+  ],
+  "queries": [
+    "data get entity blackbox SelectedItem",
+    "data get entity blackbox Inventory",
+    "data get entity blackbox SelectedItem.components"
+  ],
+  "classification": "discovery; qualify exactsuccess+freshactualNEWmarker or explicitnonemptyfailure+byteexactCONTROL; otherwiseINVALID"
+}

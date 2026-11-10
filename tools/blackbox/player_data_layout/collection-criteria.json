@@ -1,0 +1,20 @@
+{
+  "schema": "original-26.3-custom-data-collections-v1",
+  "count": 20,
+  "queries_each": 3,
+  "original_only": true,
+  "protocol": 777,
+  "max_seconds": 300,
+  "ports": [
+    26230,
+    26231
+  ],
+  "no_retry": true,
+  "no_core": true,
+  "no_Cargo": true,
+  "first_complete_freeze": true,
+  "cases_sha256": "002db74336ea384f6c0ba092a9abfad82c301c707ef2722fde1aab59eb9a91eb",
+  "classification": "discovery; qualify exactsuccess+freshactualNEWmarker or explicitnonemptyfailure+byteexactCONTROL; otherwiseINVALID",
+  "readiness": "actual Login+Abilities13,full46 replay,CONTROL exactmarker beforeeach,NEW exactmarker foraccepted;targetobservermatchinghand,ordinarybothclientmarkerreceipts;allrawNBT/RCON/config/commands/cleanup retained",
+  "result": "observation ONLY; no inferred vanilla implementation/parity"
+}
