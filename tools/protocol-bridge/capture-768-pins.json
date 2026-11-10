@@ -1,0 +1,33 @@
+{
+  "version": "1.21.3",
+  "protocol": 768,
+  "manifest_url": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+  "entry": {
+    "id": "1.21.3",
+    "type": "release",
+    "url": "https://piston-meta.mojang.com/v1/packages/5fa4228474e3d59b829637553262b6c06c0a38cf/1.21.3.json",
+    "time": "2026-11-03T06:43:08+00:00",
+    "releaseTime": "2024-10-23T12:28:15+00:00",
+    "sha1": "5fa4228474e3d59b829637553262b6c06c0a38cf",
+    "complianceLevel": 1
+  },
+  "metadata_sha256": "3d6af0fcf3a5a2c406c911896cc6a640f824721ac9ff1bc287ef82f4b12d4b14",
+  "java": {
+    "component": "java-runtime-delta",
+    "majorVersion": 21
+  },
+  "downloads": {
+    "client": {
+      "sha1": "6f67d19b4467240639cb2c368ffd4b94ba889705",
+      "size": 27844259,
+      "url": "https://piston-data.mojang.com/v1/objects/6f67d19b4467240639cb2c368ffd4b94ba889705/client.jar"
+    },
+    "server": {
+      "sha1": "45810d238246d90e811d896f87b14695b7fb6839",
+      "size": 56122038,
+      "url": "https://piston-data.mojang.com/v1/objects/45810d238246d90e811d896f87b14695b7fb6839/server.jar"
+    }
+  },
+  "binary_downloaded": false,
+  "executed": false
+}
