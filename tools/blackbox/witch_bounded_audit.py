@@ -74,7 +74,10 @@ def inspect(raw, protocol, entities, name):
     require(witch is not None and len(positions)>0,'witch absent')
     require(ages and max(ages)>=end-15,'full window missing')
     require(not any(witch in ids and t<end-1 for t,ids in destroy),'witch removed early')
-    require(not any(v['health']<=0 for _,v in health),'player died')
+    receipt=init['health_receipt']
+    ready=[e for e in c['preroll'] if e['name']=='update_health']
+    require(receipt['at']<start and ready and ready[-1]['hex']==receipt['hex'] and abs(ready[-1]['at']-receipt['at'])<.01, 'HP receipt not final preroll health')
+    require(not any(v['health']<=0 for t,v in health if ready[-1]['at']<=start+t*.05 and t<end),'player died after readiness')
     require(any(x['key']==9 and x['value']>0 for _,x in metadata),'witch HP metadata missing')
     require(not any(x['key']==9 and x['value']<=0 and t<end-1 for t,x in metadata),'witch died during observation')
     if kind=='noai': require(any(x['key']==15 and x['value']&1 for _,x in metadata),'NoAI metadata missing')

@@ -23,9 +23,10 @@ def fixture(kind='near'):
             events.extend([event('spawn_entity',spawn(i,108,20),t),event('entity_metadata',{'entityId':i,'metadata':[{'key':8,'value':{'itemCount':1,'itemId':500,'components':[{'type':'potion_contents','data':{'potionId':potion}}]}}]},t),event('world_event',{'effectId':effect},t+5),event('entity_destroy',{'entityIds':[i]},t+5)])
         events += [event('entity_effect',{'entityId':10,'effectId':18},55),event('damage_event',{'entityId':10,'sourceTypeId':23,'sourceCauseId':21,'sourceDirectId':32},115)]
     actions=json.loads((Path(__file__).parent/'scenarios'/f'{name}.json').read_text())['actions']
+    ready=event('update_health',{'health':20.},-3)
     return {'protocol':777,'scenario':name,'isolate_vitals':True,'start':100.,'origin':[100,-59,100],
-       'initial':[{'entity':10,'health':20.,'position':[100.5,-59.,100.5,0.,0.],'health_receipt':{'hex':'present'}}],
-       'clients':[{'failure':None,'events':events,'outbound':[],'moves':[{'at':100.,'position':{'x':100.5,'y':-59.,'z':100.5}},{'at':100+end*.05,'position':{'x':100.5,'y':-59.,'z':100.5}}],'preroll':[event('game_state_change',{'reason':'change_game_mode','gameMode':mode},-5),event('entity_effect',{'entityId':10,'effectId':10,'amplifier':4,'duration':5000},-4)]}],
+       'initial':[{'entity':10,'health':20.,'position':[100.5,-59.,100.5,0.,0.],'health_receipt':ready}],
+       'clients':[{'failure':None,'events':events,'outbound':[],'moves':[{'at':100.,'position':{'x':100.5,'y':-59.,'z':100.5}},{'at':100+end*.05,'position':{'x':100.5,'y':-59.,'z':100.5}}],'preroll':[event('game_state_change',{'reason':'change_game_mode','gameMode':mode},-5),event('entity_effect',{'entityId':10,'effectId':10,'amplifier':4,'duration':5000},-4),ready]}],
        'sent':[{'at':100.5,'action':actions[0]},{'at':100+end*.05,'action':actions[1]}]}
 
 class Guards(unittest.TestCase):
@@ -68,6 +69,14 @@ class Guards(unittest.TestCase):
         r=fixture();r['clients'][0]['events'].append(event('entity_destroy',{'entityIds':[20]},100))
         with self.assertRaises(ValueError):self.check(r)
         r=fixture();r['clients'][0]['events']=[x for x in r['clients'][0]['events'] if x['name']!='update_time']
+        with self.assertRaises(ValueError):self.check(r)
+
+    def test_preparation_death_is_not_observation_death(self):
+        r=fixture();r['clients'][0]['preroll'].insert(0,event('update_health',{'health':0.},-10))
+        self.check(r)
+        r['clients'][0]['events'].append(event('update_health',{'health':0.},100))
+        with self.assertRaises(ValueError):self.check(r)
+        r=fixture();r['clients'][0]['preroll'].append(event('update_health',{'health':0.},-1))
         with self.assertRaises(ValueError):self.check(r)
 
 if __name__=='__main__':unittest.main()
