@@ -1,0 +1,290 @@
+{
+  "origin": "PRIMARY777 original42809842383 partialowneronly",
+  "raw_client_sha256": "9cf52ce02d924cab5089caddcda1a2c67a71ede8140a8370ae37320036b87406",
+  "protocol_sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+  "protocol": {
+    "types": {
+      "packet_login": [
+        "container",
+        [
+          {
+            "name": "entityId",
+            "type": "i32"
+          },
+          {
+            "name": "isHardcore",
+            "type": "bool"
+          },
+          {
+            "name": "worldNames",
+            "type": [
+              "array",
+              {
+                "countType": "varint",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "maxPlayers",
+            "type": "varint"
+          },
+          {
+            "name": "viewDistance",
+            "type": "varint"
+          },
+          {
+            "name": "simulationDistance",
+            "type": "varint"
+          },
+          {
+            "name": "reducedDebugInfo",
+            "type": "bool"
+          },
+          {
+            "name": "enableRespawnScreen",
+            "type": "bool"
+          },
+          {
+            "name": "doLimitedCrafting",
+            "type": "bool"
+          },
+          {
+            "name": "worldState",
+            "type": "SpawnInfo"
+          },
+          {
+            "name": "onlineMode",
+            "type": "bool"
+          },
+          {
+            "name": "enforcesSecureChat",
+            "type": "bool"
+          }
+        ]
+      ],
+      "container": "native",
+      "i32": "native",
+      "bool": "native",
+      "array": "native",
+      "varint": "native",
+      "string": [
+        "pstring",
+        {
+          "countType": "varint"
+        }
+      ],
+      "pstring": "native",
+      "SpawnInfo": [
+        "container",
+        [
+          {
+            "name": "dimension",
+            "type": "varint"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "hashedSeed",
+            "type": "i64"
+          },
+          {
+            "name": "gamemode",
+            "type": [
+              "mapper",
+              {
+                "type": "i8",
+                "mappings": {
+                  "0": "survival",
+                  "1": "creative",
+                  "2": "adventure",
+                  "3": "spectator"
+                }
+              }
+            ]
+          },
+          {
+            "name": "previousGamemode",
+            "type": "u8"
+          },
+          {
+            "name": "isDebug",
+            "type": "bool"
+          },
+          {
+            "name": "isFlat",
+            "type": "bool"
+          },
+          {
+            "name": "death",
+            "type": [
+              "option",
+              "GlobalPos"
+            ]
+          },
+          {
+            "name": "portalCooldown",
+            "type": "varint"
+          },
+          {
+            "name": "seaLevel",
+            "type": "varint"
+          }
+        ]
+      ],
+      "i64": "native",
+      "i8": "native",
+      "u8": "native",
+      "option": "native",
+      "GlobalPos": [
+        "container",
+        [
+          {
+            "name": "dimensionName",
+            "type": "string"
+          },
+          {
+            "name": "location",
+            "type": "position"
+          }
+        ]
+      ],
+      "position": [
+        "bitfield",
+        [
+          {
+            "name": "x",
+            "size": 26,
+            "signed": true
+          },
+          {
+            "name": "z",
+            "size": 26,
+            "signed": true
+          },
+          {
+            "name": "y",
+            "size": 12,
+            "signed": true
+          }
+        ]
+      ],
+      "bitfield": "native",
+      "packet_abilities": [
+        "container",
+        [
+          {
+            "name": "flags",
+            "type": "i8"
+          },
+          {
+            "name": "flyingSpeed",
+            "type": "f32"
+          },
+          {
+            "name": "walkingSpeed",
+            "type": "f32"
+          }
+        ]
+      ],
+      "f32": "native"
+    },
+    "play": {
+      "toClient": {
+        "types": {
+          "packet_login": [
+            "container",
+            [
+              {
+                "name": "entityId",
+                "type": "i32"
+              },
+              {
+                "name": "isHardcore",
+                "type": "bool"
+              },
+              {
+                "name": "worldNames",
+                "type": [
+                  "array",
+                  {
+                    "countType": "varint",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "name": "maxPlayers",
+                "type": "varint"
+              },
+              {
+                "name": "viewDistance",
+                "type": "varint"
+              },
+              {
+                "name": "simulationDistance",
+                "type": "varint"
+              },
+              {
+                "name": "reducedDebugInfo",
+                "type": "bool"
+              },
+              {
+                "name": "enableRespawnScreen",
+                "type": "bool"
+              },
+              {
+                "name": "doLimitedCrafting",
+                "type": "bool"
+              },
+              {
+                "name": "worldState",
+                "type": "SpawnInfo"
+              },
+              {
+                "name": "onlineMode",
+                "type": "bool"
+              },
+              {
+                "name": "enforcesSecureChat",
+                "type": "bool"
+              }
+            ]
+          ],
+          "packet_abilities": [
+            "container",
+            [
+              {
+                "name": "flags",
+                "type": "i8"
+              },
+              {
+                "name": "flyingSpeed",
+                "type": "f32"
+              },
+              {
+                "name": "walkingSpeed",
+                "type": "f32"
+              }
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "events": [
+    {
+      "at": 54.196494907,
+      "name": "login",
+      "hex": "000000010003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657214020200010000136d696e6563726166743a6f766572776f726c64152c46ca7bfe4831010000010000c1ffffff0f0000"
+    },
+    {
+      "at": 54.19664707,
+      "name": "abilities",
+      "hex": "0d3d4ccccd3dcccccd"
+    }
+  ],
+  "other_client_proof": "ABSENT in old partial capture; never fabricated"
+}

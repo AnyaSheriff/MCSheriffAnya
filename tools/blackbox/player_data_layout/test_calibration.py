@@ -84,3 +84,21 @@ class FixtureNormalizationTests(unittest.TestCase):
   self.assertIn('gamemode=creative\n',c.FIXTURE_FLAGS)
   with self.assertRaises(AssertionError):c.assert_ready(object(),True,dict(version=dict(protocol=775,name='26.3')))
   c.assert_ready(object(),True,dict(version=dict(protocol=777,name='26.3')))
+
+class AlreadyCreativeProofTests(unittest.TestCase):
+ def test_actual_retained_primary777_login_and_abilities(self):
+  fixture=c.read(c.BASE/'login-proof-fixture.json')
+  proof=c.creative_readiness(fixture['events'],fixture['protocol'])
+  self.assertEqual(proof['login']['decoded']['worldState']['gamemode'],'creative')
+  self.assertEqual(proof['abilities']['decoded']['flags'],13)
+  self.assertFalse(any(x.startswith('gamemode ') for x in c.SETUP))
+ def test_missing_evidence_not_fabricated(self):
+  fixture=c.read(c.BASE/'login-proof-fixture.json')
+  with self.assertRaises(c.MissingJoinProof):c.creative_readiness([],fixture['protocol'])
+  with self.assertRaises(c.MissingJoinProof):c.creative_readiness([r for r in fixture['events'] if r['name']=='login'],fixture['protocol'])
+
+ def test_actual_abilities_contradiction_is_rejected(self):
+  fixture=c.read(c.BASE/'login-proof-fixture.json');events=json.loads(json.dumps(fixture['events']))
+  row=next(e for e in events if e['name']=='abilities');payload=bytes.fromhex(row['hex']);self.assertEqual(payload[0],13)
+  row['hex']=(bytes([5])+payload[1:]).hex()
+  with self.assertRaises(AssertionError):c.creative_readiness(events,fixture['protocol'])

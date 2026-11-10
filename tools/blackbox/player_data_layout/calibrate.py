@@ -21,6 +21,7 @@ STATES=[
  dict(id='empty',selected=0,commands=['clear blackbox']),
  dict(id='plain',selected=0,commands=['clear blackbox','item replace entity blackbox weapon.mainhand with minecraft:iron_ingot 3','item replace entity blackbox weapon.offhand with minecraft:gold_ingot 5']),
  dict(id='complex',selected=2,commands=['clear blackbox','item replace entity blackbox hotbar.2 with minecraft:crossbow[damage=7,enchantments={unbreaking:3},custom_data={mcsa_layout:1,marker:"LAYOUT_FIXED"}]','item replace entity blackbox weapon.offhand with minecraft:gold_ingot 5'])]
+SETUP=['gamerule natural_health_regeneration false','gamerule spawn_mobs false','tp blackbox 0.5 65 0.5','tp blackboxb 2.5 65 0.5']
 QUERIES=['data get entity blackbox','data get entity blackbox Inventory','data get entity blackbox SelectedItem','data get entity blackbox equipment','data get entity blackbox equipment.offhand','data get entity blackbox MCSA_MISSING_LAYOUT_FIELD','data get entity blackbox Pos','data get entity blackbox OnGround','data get entity blackbox Inventory[0]','data get entity blackbox SelectedItem.count','data get entity blackbox SelectedItem.count 2','data get entity @a Pos']
 def preflight(output):
  assert os.environ.get('GITHUB_ACTIONS')=='true' and os.environ.get('GITHUB_RUN_ATTEMPT')=='1'
@@ -75,6 +76,18 @@ def enchantments(configuration,protocol):
    b=io.BytesIO(bytes.fromhex(packet['hex']));row=d.read(b,'packet_registry_data');assert not b.read()
    if row['id']=='minecraft:enchantment':return [entry['key'] for entry in row['entries']]
  raise AssertionError('missing original enchantment registry')
+class MissingJoinProof(LookupError):pass
+def creative_readiness(events,protocol):
+ from analyze777 import Decoder
+ decoder=Decoder(protocol);proof={}
+ for name in ['login','abilities']:
+  event=next((e for e in events if e['name']==name),None)
+  if event is None:raise MissingJoinProof(name)
+  b=io.BytesIO(bytes.fromhex(event['hex']));value=decoder.read(b,'packet_'+name);assert not b.read()
+  proof[name]=dict(raw=event,decoded=value)
+ assert proof['login']['decoded']['worldState']['gamemode']=='creative','actual Login is not creative'
+ flags=proof['abilities']['decoded']['flags'];assert flags&13==13,'actual Abilities creative/mayfly/invulnerable bits missing'
+ return proof
 def assert_unbreaking_three(stack,names):
  assert stack.get('enchantments')==[[names.index('minecraft:unbreaking'),3]],'exact unbreakingIII required'
 def finalize_manifest(output):
@@ -116,7 +129,7 @@ def imported_own_files():
    if path.suffix=='.py' and path.is_relative_to(ROOT):result.append(str(path.relative_to(ROOT)))
  return sorted(set(result))
 def capture(output):
- pin=preflight(output);signal.signal(signal.SIGALRM,lambda *_: (_ for _ in ()).throw(TimeoutError('finite capture deadline')));signal.alarm(300);output.mkdir();work=output/'original';work.mkdir();clients=[];configurations=[];startup_attempts=[];cleanup_control=None;proc=None;control=None;log=None
+ pin=preflight(output);signal.signal(signal.SIGALRM,lambda *_: (_ for _ in ()).throw(TimeoutError('finite capture deadline')));signal.alarm(300);output.mkdir();work=output/'original';work.mkdir();clients=[];configurations=[];join_proofs=[];startup_attempts=[];cleanup_control=None;proc=None;control=None;log=None
  result=dict(status='INVALID',source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),original_only=True,core_executed=False,compiled=False);commands=[];states=[];life={}
  try:
   for port in [26230,26231]:
@@ -149,10 +162,17 @@ def capture(output):
    def receive_configuration(sock,packet_id,payload):
     configuration.append(dict(id=packet_id,hex=payload.hex()));return False
    c=own.connect(26230,protocol,lambda s,p:RawClient(s,p),version=777,username=name,configuration_handler=receive_configuration);c.start();clients.append(c);configurations.append(configuration)
+  for c in clients:
+   deadline=time.monotonic()+5
+   while True:
+    assert c.failure is None
+    try:proof=creative_readiness(c.events,protocol);join_proofs.append(proof);break
+    except MissingJoinProof:
+     assert time.monotonic()<deadline,'actual Login/Abilities proof missing';time.sleep(.01)
   nonce='RUN'+os.environ['GITHUB_RUN_ID']
   def command(text):
    row=dict(command=text,issued=time.monotonic());row['response']=control.run(text);row['completed']=time.monotonic();commands.append(row);return row
-  for text in ['gamerule natural_health_regeneration false','gamerule spawn_mobs false','gamemode creative blackbox','gamemode creative blackboxb','tp blackbox 0.5 65 0.5','tp blackboxb 2.5 65 0.5']:validate_setup_reply(text,command(text)['response'])
+  for text in SETUP:validate_setup_reply(text,command(text)['response'])
   for state in STATES:
    clients[0].send('held_item_slot',struct.pack('>h',state['selected']))
    for text in state['commands']:command(text)
@@ -188,6 +208,7 @@ def capture(output):
   write(output/'commands.json',commands)
   write(output/'startup-attempts.json',startup_attempts)
   write(output/'configuration.json',configurations)
+  write(output/'join-readiness.json',join_proofs)
   write(output/'pins.json',pin)
   shutil.copy2(BASE/'criteria.json',output/'criteria.json')
   write(output/'raw-clients.json',[dict(entity=c.entity,events=c.events,wire_sent=c.wire_sent,failure=c.failure) for c in clients])

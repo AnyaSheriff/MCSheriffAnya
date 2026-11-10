@@ -2,7 +2,7 @@
   "source_base": "8b9a87182b7f540ff56d1afa45775078882739b4",
   "criteria_sha256": "95cdbcef7f9398777643642f063808b443d830bc15f76f740c51234b5cf09761",
   "source_files": {
-    "tools/blackbox/player_data_layout/calibrate.py": "30d18881ceb2ace698d9d0e42d60226571c356960a4b78bd19ee85993d345b11",
+    "tools/blackbox/player_data_layout/calibrate.py": "01793fee441fadceffd73729c016e282b28557be00eb52e61415953e443a124f",
     "tools/blackbox/player_data_layout/rcon_transport.py": "89798c8ec148a3f066ff448c1199f4aea54093503fd82595f1db9848d71965ca",
     "tools/blackbox/record777.py": "d63b3dd02498a6edfb4c299a2dae10cbafd49c9e9d3c8acde50280743aaebb43",
     "tools/blackbox/combat_process.py": "147980c3e3c44e2829e2d0390875a4201e89ec39ea91c358304167e167382cd2",
@@ -35,7 +35,7 @@
     "tools/blackbox/noai_ambient_ci.py": "774581c19deb46079e541f8e7648bcde9741bf679e63e41b217c7346224d108a",
     "tools/blackbox/noai_hurt_audit.py": "3ee1dc0395aa0b0e81f39f2bd32f139f94d914568ca47c7eaf14eaf5b9de1089",
     "tools/blackbox/noai_hurt_ci.py": "88298d1d73206b96c37338da8f1b05404f3615688d736f88ce3aa781094f3f61",
-    "tools/blackbox/player_data_layout/test_calibration.py": "05c0eb47b5b8fde046049d8a23793cd327e54f3226d245131c8c4d787252aaf9",
+    "tools/blackbox/player_data_layout/test_calibration.py": "ec26e051c4e1854d0bf8d30fb0392a36bb5eba23a7cf3a52ecee2150a9299a27",
     "tools/blackbox/player_data_layout/test_slots.py": "48842fd02de024157ca25c1da5f107020a914f6d68d52d40fbd583bb827f0aa3",
     "tools/blackbox/player_data_layout/test_transport.py": "a48f2f2ba5b2e2a28fe75210d25e5ccd90c3207e419dbd277fb635a3c3ebe6fe",
     "tools/blackbox/protection_edges_ci.py": "82c9cb5f3facf7317764348d81a5d2cd18373b22b88fe981b4d2a511df57da67",
@@ -360,6 +360,7 @@
     "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/run-regression-v3.py": "e07502f7e59258a44835fea570c8b832757a5a73f2c48d8ff311adb657d8bd4d",
     "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/run-regression.py": "040545cf5a912c68025a14d5bd7ab86b0038dddfa902ecfd85cc1f3923748315",
     "tools/protocol-bridge/testdata/client-chain-770-773/typed773-verification/verify.py": "03731afcca9ecff6f8f0420e3f1e61af80e13524cdd35f258c082922271dfbd4",
-    "tools/protocol-bridge/testdata/step1-774-776/completion-774-verification/s26-mv8-regress.py": "2ab35ddf9f7d207b28f5369bdb6b68962af876f977726d0a5d5538ed4daa91b5"
+    "tools/protocol-bridge/testdata/step1-774-776/completion-774-verification/s26-mv8-regress.py": "2ab35ddf9f7d207b28f5369bdb6b68962af876f977726d0a5d5538ed4daa91b5",
+    "tools/blackbox/player_data_layout/login-proof-fixture.json": "ee64abcda6e9c7d051b5c9db08a77ad74a1a6152e2f66de5b3fbb603b8e9ce1d"
   }
 }
