@@ -19,6 +19,7 @@ import time
 
 from capture_native_768 import Observer, PROTOCOL_SHA, CLIENT_SHA1, metadata, opaque_sha, require_runtime, read_handshake, status_exchange
 from live_client import launch
+from owned_client_cleanup import finish_owned, pin_owned
 from observe import frame
 from probe_core_776 import stop_server
 from probe_core_776_client import FrameDeadline, free_port, group_pids, stop_client_bounded, gui
@@ -128,7 +129,7 @@ def wait_server(server,path):
 
 def run_session(cache,java,server,port,relay,output,protocol,stone,index):
     output.mkdir();observer=CoreObserver(protocol,stone);report={'status':'failed','index':index,'packets':[],'errors':[]}
-    peers=[];workers=[];ending=threading.Event();lock=threading.Lock();client=listener=None
+    peers=[];workers=[];ending=threading.Event();lock=threading.Lock();client=listener=None;pinned_client=None
     def forward(source,target,direction):
         try:
             while not ending.is_set():
@@ -157,6 +158,8 @@ def run_session(cache,java,server,port,relay,output,protocol,stone,index):
         try:
             listener=socket.socket();listener.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1);listener.bind(('127.0.0.1',relay));listener.listen(4);listener.settimeout(120)
             client=launch(cache,game,relay,log,version='1.21.3',java=java,gui_scale=2,pause_on_lost_focus=False)
+            pinned_client=pin_owned(client)
+            report['client_launch_identity']=pinned_client
             peer,_=listener.accept();peers.append(peer);backend=socket.create_connection(('127.0.0.1',port),timeout=10);peers.append(backend)
             initial=frame(FrameDeadline(peer,30));report['handshake_hex']=initial.hex()
             if read_handshake(initial,relay)!=2:raise ValueError('expected normal Login connection')
@@ -198,10 +201,13 @@ def run_session(cache,java,server,port,relay,output,protocol,stone,index):
             if listener:listener.close()
             for w in workers:w.join(timeout=5)
             if client:
-                try:stop_client_bounded(client)
-                except Exception as e:report['errors'].append('client stop: '+repr(e))
+                try:report['owned_client_cleanup']=finish_owned(client,stop_client_bounded,pinned_client)
+                except Exception as e:
+                    report['client_cleanup_failed']=True
+                    report['owned_client_cleanup']={'status':'failed','group_gone':False,'launch_identity':pinned_client,'error':repr(e)}
+                    report['errors'].append('client stop: '+repr(e))
             report['workers_stopped']=all(not w.is_alive() for w in workers)
-            report['client_group_gone']=not group_pids(client.pid) if client else True
+            report['client_group_gone']=(report.get('owned_client_cleanup',{}).get('group_gone',False) and not group_pids(client.pid)) if client else True
             report['relay_port_free']=free_port(relay);report['packets']=observer.rows;report['teleport_acks']=len(observer.acks)
             report['status']='pass' if report.get('completed') and not report['errors'] and all(report[k] for k in ('workers_stopped','client_group_gone','relay_port_free')) else 'failed'
             (output/'report.json').write_text(json.dumps(report,indent=2)+'\n')

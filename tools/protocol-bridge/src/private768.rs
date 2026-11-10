@@ -7,6 +7,8 @@ use crate::{State,Direction,JavaVersion,ids::{RegistryKind,IdTranslationError},w
 mod tables;
 #[path="private768_play.rs"]
 mod play;
+#[path="private768_tags.rs"]
+pub mod required_tags;
 
 pub const VERSION:JavaVersion=JavaVersion::V1_21_3;
 const MAX_BYTES:usize=8*1024*1024;
