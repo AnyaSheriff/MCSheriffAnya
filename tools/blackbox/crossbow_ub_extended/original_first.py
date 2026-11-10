@@ -2,7 +2,10 @@
 """Один original-only offhand128+4 на GitHub; candidate и natural здесь не запускаются."""
 import argparse,hashlib,json,os,shutil,subprocess,sys,tempfile,traceback,urllib.request
 from pathlib import Path
-import extended_probe as probe
+if __package__:
+ from . import extended_probe as probe
+else:
+ import extended_probe as probe
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'tools/blackbox'))
 import combat_ci

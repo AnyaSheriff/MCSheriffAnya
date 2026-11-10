@@ -1,8 +1,11 @@
 """Узкий read-only import успешного первого offhand-natural original; default guards unchanged."""
 import hashlib,json,os
 from pathlib import Path
-import extended_probe as probe
-import original_first
+if __package__:
+ from . import extended_probe as probe, original_first
+else:
+ import extended_probe as probe
+ import original_first
 BASE=Path(__file__).parent
 PIN=BASE/'offhand-natural-candidate-pin.json'
 sha=probe.sha;read=probe.read

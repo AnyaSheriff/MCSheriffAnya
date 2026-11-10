@@ -24,6 +24,33 @@ class OffhandNaturalCandidateTests(unittest.TestCase):
    self.assertTrue(admission.allow_fresh_mode(a,'true','1'))
    for key,value in [('resume',True),('official_only',True),('parallel',True),('core_only',False),('scenarios',['crossbow-ub-mainhand-natural-777']),('causal_mainhand_natural_reference',reference),('output',reference/'child')]:
     b=copy.copy(a);setattr(b,key,value);self.assertFalse(admission.allow_fresh_mode(b,'true','1'))
+ def test_fresh_record777_package_import_and_loadreference_context(self):
+  import subprocess,sys
+  root=candidate.ROOT
+  code="""import sys,json,tempfile
+from pathlib import Path
+sys.path.insert(0,BLACKBOX)
+import record777
+module=record777.offhand_natural_import_guard()
+pin=module.read(module.PIN);proof=dict(api={},actual_zip_sha256={})
+for which in ['original','runtime']:
+ proof['actual_zip_sha256'][which]=pin[which+'_zip_sha256']
+ proof['api'][which]=dict(run=dict(repository=dict(full_name=pin['repository']),head_repository=dict(full_name=pin['repository']),id=pin[which+'_run'],head_sha=pin[which+'_source'],status='completed',conclusion='success',run_attempt=1),artifact=dict(id=pin[which+'_artifact'],digest='sha256:'+pin[which+'_zip_sha256'],expired=False,workflow_run=dict(repository_id=pin['repository_id'],id=pin[which+'_run'],head_sha=pin[which+'_source'])))
+with tempfile.TemporaryDirectory() as d:
+ try:module.load_reference(Path(d),proof,Path(REPO),Path(d)/'no-binary')
+ except FileNotFoundError as error:assert Path(error.filename).name=='files.json'
+ else:raise AssertionError('missing immutable reference accepted')
+print('package-import-and-real-loadreference-preflight-PASS')
+""".replace('BLACKBOX',repr(str(root/'tools/blackbox'))).replace('REPO',repr(str(root)))
+  with tempfile.TemporaryDirectory() as d:
+   result=subprocess.run([sys.executable,'-E','-s','-B','-c',code],cwd=d,text=True,capture_output=True,timeout=30)
+   self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+ def test_fresh_direct_entry_import_context(self):
+  import subprocess,sys
+  with tempfile.TemporaryDirectory() as d:
+   result=subprocess.run([sys.executable,'-E','-s','-B',str(candidate.ROOT/'tools/blackbox/crossbow_ub_extended/offhand_natural_candidate.py'),'--help'],cwd=d,text=True,capture_output=True,timeout=30)
+   self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+   self.assertIn('--original-zip',result.stdout)
  def test_api_requires_success_and_actual_zip_and_exact_repo(self):
   pin=admission.read(admission.PIN);proof=dict(api={},actual_zip_sha256={})
   for which in ['original','runtime']:
