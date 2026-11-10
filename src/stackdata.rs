@@ -1781,7 +1781,6 @@ pub fn slot_group(name: &str) -> Option<u8> {
     })
 }
 
-/// Делит по запятым вне скобок и кавычек.
 
 #[cfg(test)]
 mod tests {
