@@ -1,0 +1,36 @@
+{
+  "reason": "compiler-artifact",
+  "package_id": "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.154",
+  "manifest_path": "/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.154/Cargo.toml",
+  "target": {
+    "kind": [
+      "lib"
+    ],
+    "crate_types": [
+      "lib"
+    ],
+    "name": "serde_json",
+    "src_path": "/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.154/src/lib.rs",
+    "edition": "2021",
+    "doc": true,
+    "doctest": true,
+    "test": true
+  },
+  "profile": {
+    "opt_level": "3",
+    "debuginfo": 0,
+    "debug_assertions": false,
+    "overflow_checks": false,
+    "test": false
+  },
+  "features": [
+    "default",
+    "std"
+  ],
+  "filenames": [
+    "/home/runner/work/MCSheriffAnya/MCSheriffAnya/target/release/libserde_json.rlib",
+    "/home/runner/work/MCSheriffAnya/MCSheriffAnya/target/release/deps/libserde_json-b8e70ad02a96f8e1.rmeta"
+  ],
+  "executable": null,
+  "fresh": false
+}

@@ -1,0 +1,15 @@
+{
+  "base": "8b9a87182b7f540ff56d1afa45775078882739b4",
+  "frozen_before_capture": true,
+  "files": {
+    "tools/plugin-translator/fixtures/place-staged-a/PlaceStagedAPlugin.java": "512497eddda02114b1455b027070bea1b58169ddee910745915a7ab18fe04f58",
+    "tools/plugin-translator/fixtures/place-staged-a/plugin.yml": "957bedfc1c1aa274c43fd0a39e9ce8e1dfea5206060006020032c96ea7997b84",
+    "tools/plugin-translator/fixtures/place-staged-b/PlaceStagedBPlugin.java": "54481f6edadc0b8aa266bc87f0ddc38306ea5d385f19f52777baa7464f8f0631",
+    "tools/plugin-translator/fixtures/place-staged-b/plugin.yml": "dc5803edcdda4703746e3c3ba64f9b410ee6e49d52035fbf33c0fa207aeda9c6",
+    "tools/plugin-translator/fixtures/place-staged-empty/Empty.java": "7282b9cb4c82f329837ff35f2beccdc0b4553343b87e57d2ca87c314dd3b9c3a",
+    "tools/plugin-translator/fixtures/place-staged-empty/plugin.yml": "dac3e12fe0fc48f16f1a3964a200807358ab5e5e4a0e5f99817607d538ebdb59",
+    "tools/plugin-translator/fixtures/place-staged-expected.json": "f91cbeb93a1d847f6c350dece8954424bf6f0cef01fbe0c54cc9b0b947ad6c01",
+    "tools/plugin-translator/fixtures/place-staged-cases.json": "b20cb0a740a628475bbe9517c69395921f2a38a0aab35985a83151db57073ce7",
+    "wit/place-priority-events/world.wit": "64b42e9ae20b795eecce1faeb0661c2e6760d65dbb4d1bc6d9e47a28ec3f65c1"
+  }
+}

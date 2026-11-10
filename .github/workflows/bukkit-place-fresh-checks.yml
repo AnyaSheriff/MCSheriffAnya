@@ -1,0 +1,115 @@
+name: Optional BlockPlace fresh combined source and runtime checks
+on:
+  push:
+    branches: ['review/bukkit-place-combined-20261110']
+permissions:
+  contents: read
+  actions: read
+env:
+  CARGO_BUILD_JOBS: '4'
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  place-fresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check offline CI guards before any artifact, download or build operation
+        run: |
+          python3 -B -m unittest discover -s tools/plugin-translator -p "test_place*.py" -v
+          python3 -B -m unittest discover -s tools/plugin-translator -p test_fresh_place_ci.py -v
+      - name: Verify reviewed changed set, old inputs and exact root lock via existing helpers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/plugin-translator/fresh_place_ci.py prepare
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Own guest examples with verified public lock and genuinely locked release WASM build
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output place-staged-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 --message-format=json-render-diagnostics 2>&1 | tee place-staged-evidence/own-examples-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output place-staged-evidence
+      - name: Focused protocol package tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked -p mcsa-protocol --message-format=json-render-diagnostics container_button::tests:: -- --nocapture --test-threads=1 2>&1 | tee place-staged-evidence/button-default.log
+      - name: Focused native777 runtime menu tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics container_button_menu_tests:: -- --nocapture --test-threads=1 2>&1 | tee place-staged-evidence/focused-runtime.log
+      - name: Full locked default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --message-format=json-render-diagnostics 2>&1 | tee place-staged-evidence/default-tests.log
+      - name: Full locked no-default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features --message-format=json-render-diagnostics 2>&1 | tee place-staged-evidence/no-default-tests.log
+      - name: Strict default workspace Clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee place-staged-evidence/default-clippy.log
+      - name: Build one ordinary runtime without executing it
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee place-staged-evidence/default-build.log
+      - name: Select and record the genuinely fresh default test ELF
+        run: python3 -B tools/plugin-translator/fresh_place_ci.py select-runtime
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Actually translate all six NEW Java components with NEW SDK
+        run: python3 -B tools/plugin-translator/fresh_place_ci.py translations
+      - name: Run all 72 ignored methods on the selected fresh default test ELF
+        run: python3 -B tools/plugin-translator/fresh_place_ci.py tests
+      - name: Preserve sources JARs logs old provenance runtime and retained records
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/fresh_place_ci.py finish
+      - name: Read-only artifact semantic verification
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/plugin-translator/verify-place-staged.py place-staged-evidence 2>&1 | tee place-staged-evidence/semantic-audit.log
+      - name: Final artifact hashes and actual job status
+        if: always()
+        run: |
+          mkdir -p place-staged-evidence
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,subprocess
+          root=Path('place-staged-evidence')
+          files={str(p.relative_to(root)):{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size}for p in sorted(root.rglob('*'))if p.is_file()}
+          (root/'complete.json').write_text(json.dumps({'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'status':'${{ job.status }}','run':os.environ['GITHUB_RUN_ID'],'attempt':os.environ['GITHUB_RUN_ATTEMPT'],'files':files},indent=2)+'\n')
+          PY
+      - name: Remove only isolated job test-created tmp after preserving evidence
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import shutil
+          temporary=Path('tmp')
+          if temporary.is_dir() and not temporary.is_symlink():shutil.rmtree(temporary)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: place-fresh-${{ github.run_id }}
+          path: place-staged-evidence/
+          include-hidden-files: true
+          retention-days: 7

@@ -71,3 +71,17 @@ mod tests {
         assert!(!b.available());assert_eq!(b.native,0);
     }
 }
+
+// Два независимых состояния BlockPlaceEvent; true не означает проверку native permissions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, wasmtime::component::ComponentType, wasmtime::component::Lift, wasmtime::component::Lower)]
+#[component(record)]
+pub(super) struct PlaceState {
+    pub cancelled: bool,
+    #[component(name = "can-build")]
+    pub can_build: bool,
+}
+pub(super) type PlaceBegin = wasmtime::component::TypedFunc<(u64, super::api::mcsa::api::types::Player, super::api::mcsa::api::types::BlockPos, String, PlaceState), (Result<(), FrameError>,)>;
+pub(super) type PlacePhase = wasmtime::component::TypedFunc<(u64, u8, PlaceState), (Result<PlaceState, FrameError>,)>;
+pub(super) type PlaceFinish = wasmtime::component::TypedFunc<(u64, PlaceState), (Result<(), FrameError>,)>;
+#[derive(Clone, Copy)]
+pub(super) struct PlaceExtension { pub begin: PlaceBegin, pub phase: PlacePhase, pub finish: PlaceFinish }

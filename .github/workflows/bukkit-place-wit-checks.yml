@@ -1,0 +1,44 @@
+name: Optional BlockPlace WIT and C signatures only
+on:
+  push:
+    branches: ['feature/bukkit-place-phases-20261110']
+permissions:
+  contents: read
+jobs:
+  place-wit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Actual optional WIT codegen and C signature check only
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/plugin-translator/check-place-priority-wit.py 2>&1 | tee place-wit-check.log
+      - name: Preserve log and hashes including failed attempts
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p place-wit-evidence
+          cp place-wit-check.log place-wit-evidence/ 2>/dev/null || true
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,subprocess
+          root=Path('place-wit-evidence')
+          files={str(p.relative_to(root)):{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size} for p in sorted(root.rglob('*')) if p.is_file()}
+          (root/'artifact-hashes.json').write_text(json.dumps({'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'job_status':'${{ job.status }}','run_id':os.environ['GITHUB_RUN_ID'],'attempt':os.environ['GITHUB_RUN_ATTEMPT'],'files':files},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: place-wit-${{ github.run_id }}
+          path: place-wit-evidence/
+          include-hidden-files: true
+          retention-days: 7

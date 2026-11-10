@@ -1,0 +1,686 @@
+{
+  "base": "8b9a87182b7f540ff56d1afa45775078882739b4",
+  "scope": "stone geometry; legacy initial canBuild=true, not permission",
+  "cohorts": [
+    {
+      "name": "a-b-order",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "order",
+      "public_contract": {
+        "trace": [
+          "A0 c0>0 b1",
+          "B1 c0>0 b1",
+          "A2 c0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A5 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>0 b1",
+          "A2 c0 b1",
+          "A5 c0 b1",
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "a-b-cancel",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "cancel",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b1",
+          "B1 c1>1 b1",
+          "B4 c1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "a-b-uncancel",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "uncancel",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b1",
+          "B1 c1>0 b1",
+          "A2 c0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A5 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "a-b-buildfalse",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "buildfalse",
+      "public_contract": {
+        "trace": [
+          "A0 c0>0 b0",
+          "B1 c0>0 b0",
+          "A2 c0 b0",
+          "B3 c0 b0",
+          "B4 c0 b0",
+          "A5 c0 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": false,
+          "can_build": false
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>0 b0",
+          "A2 c0 b0",
+          "A5 c0 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": false,
+          "can_build": false
+        }
+      }
+    },
+    {
+      "name": "a-b-restore",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "restore",
+      "public_contract": {
+        "trace": [
+          "A0 c0>0 b0",
+          "B1 c0>0 b1",
+          "A2 c0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A5 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>0 b0",
+          "A2 c0 b0",
+          "A5 c0 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": false,
+          "can_build": false
+        }
+      }
+    },
+    {
+      "name": "a-b-uncancelonly",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "uncancelonly",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b0",
+          "B1 c1>0 b0",
+          "A2 c0 b0",
+          "B3 c0 b0",
+          "B4 c0 b0",
+          "A5 c0 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": false,
+          "can_build": false
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>1 b0",
+          "A5 c1 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": false
+        }
+      }
+    },
+    {
+      "name": "a-b-buildonly",
+      "load_order": [
+        "a",
+        "b"
+      ],
+      "mode": "buildonly",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b0",
+          "B1 c1>1 b1",
+          "B4 c1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>1 b0",
+          "A5 c1 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": false
+        }
+      }
+    },
+    {
+      "name": "b-a-order",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "order",
+      "public_contract": {
+        "trace": [
+          "A0 c0>0 b1",
+          "B1 c0>0 b1",
+          "A2 c0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A5 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A0 c0>0 b1",
+          "A2 c0 b1",
+          "A5 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "b-a-cancel",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "cancel",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b1",
+          "B1 c1>1 b1",
+          "B4 c1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A0 c0>1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "b-a-uncancel",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "uncancel",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b1",
+          "B1 c1>0 b1",
+          "A2 c0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A5 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A0 c0>1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "b-a-buildfalse",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "buildfalse",
+      "public_contract": {
+        "trace": [
+          "A0 c0>0 b0",
+          "B1 c0>0 b0",
+          "A2 c0 b0",
+          "B3 c0 b0",
+          "B4 c0 b0",
+          "A5 c0 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": false,
+          "can_build": false
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A0 c0>0 b0",
+          "A2 c0 b0",
+          "A5 c0 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": false,
+          "can_build": false
+        }
+      }
+    },
+    {
+      "name": "b-a-restore",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "restore",
+      "public_contract": {
+        "trace": [
+          "A0 c0>0 b0",
+          "B1 c0>0 b1",
+          "A2 c0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A5 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A0 c0>0 b0",
+          "A2 c0 b0",
+          "A5 c0 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": false,
+          "can_build": false
+        }
+      }
+    },
+    {
+      "name": "b-a-uncancelonly",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "uncancelonly",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b0",
+          "B1 c1>0 b0",
+          "A2 c0 b0",
+          "B3 c0 b0",
+          "B4 c0 b0",
+          "A5 c0 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": false,
+          "can_build": false
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A0 c0>1 b0",
+          "A5 c1 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": false
+        }
+      }
+    },
+    {
+      "name": "b-a-buildonly",
+      "load_order": [
+        "b",
+        "a"
+      ],
+      "mode": "buildonly",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b0",
+          "B1 c1>1 b1",
+          "B4 c1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1",
+          "A0 c0>1 b0",
+          "A5 c1 b0"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": false
+        }
+      }
+    },
+    {
+      "name": "a-order",
+      "load_order": [
+        "a"
+      ],
+      "mode": "order",
+      "public_contract": {
+        "trace": [
+          "A0 c0>0 b1",
+          "A2 c0 b1",
+          "A5 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>0 b1",
+          "A2 c0 b1",
+          "A5 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "a-cancel",
+      "load_order": [
+        "a"
+      ],
+      "mode": "cancel",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "a-uncancel",
+      "load_order": [
+        "a"
+      ],
+      "mode": "uncancel",
+      "public_contract": {
+        "trace": [
+          "A0 c0>1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "A0 c0>1 b1",
+          "A5 c1 b1"
+        ],
+        "verdict": "deny",
+        "final": {
+          "cancelled": true,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "b-order",
+      "load_order": [
+        "b"
+      ],
+      "mode": "order",
+      "public_contract": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "b-cancel",
+      "load_order": [
+        "b"
+      ],
+      "mode": "cancel",
+      "public_contract": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      }
+    },
+    {
+      "name": "b-uncancel",
+      "load_order": [
+        "b"
+      ],
+      "mode": "uncancel",
+      "public_contract": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      },
+      "source_predicted_legacy": {
+        "trace": [
+          "B1 c0>0 b1",
+          "B3 c0 b1",
+          "B4 c0 b1"
+        ],
+        "verdict": "allow",
+        "final": {
+          "cancelled": false,
+          "can_build": true
+        }
+      }
+    }
+  ]
+}

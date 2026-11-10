@@ -320,3 +320,23 @@ bool exports_mcsa_priority_events_block_break_finish(uint64_t id,bool cancelled,
     clear();priority_id(id);integer(cancelled);return priority_result(dispatch(42),err);
 }
 #endif
+
+#ifdef MCSA_STAGED_BLOCK_PLACE
+static bool place_priority_result(int code,exports_mcsa_place_priority_events_block_place_frame_error_t *err) {
+    if(code>=0)return true;
+    if(code < -5)abort();
+    *err=(exports_mcsa_place_priority_events_block_place_frame_error_t)(-code-1);return false;
+}
+static void place_priority_id(uint64_t id) {char s[32];snprintf(s,sizeof(s),"%016llx",(unsigned long long)id);text(s);}
+bool exports_mcsa_place_priority_events_block_place_begin(uint64_t id,mcsa_api_types_player_t *who,mcsa_api_types_block_pos_t *pos,plugin_string_t *block,exports_mcsa_place_priority_events_block_place_state_t *initial,exports_mcsa_place_priority_events_block_place_frame_error_t *err) {
+    clear();place_priority_id(id);integer(initial->cancelled);integer(initial->can_build);player(who);integer(pos->dimension);integer(pos->x);integer(pos->y);integer(pos->z);string(*block);
+    int code=dispatch(43);if(code>0)abort();return place_priority_result(code,err);
+}
+bool exports_mcsa_place_priority_events_block_place_phase(uint64_t id,uint8_t priority,exports_mcsa_place_priority_events_block_place_state_t *current,exports_mcsa_place_priority_events_block_place_state_t *ret,exports_mcsa_place_priority_events_block_place_frame_error_t *err) {
+    clear();place_priority_id(id);integer(priority);integer(current->cancelled);integer(current->can_build);int code=dispatch(44);
+    if(!place_priority_result(code,err))return false;if(code>3)abort();ret->cancelled=(code&1)!=0;ret->can_build=(code&2)!=0;return true;
+}
+bool exports_mcsa_place_priority_events_block_place_finish(uint64_t id,exports_mcsa_place_priority_events_block_place_state_t *final_state,exports_mcsa_place_priority_events_block_place_frame_error_t *err) {
+    clear();place_priority_id(id);integer(final_state->cancelled);integer(final_state->can_build);int code=dispatch(45);if(code>0)abort();return place_priority_result(code,err);
+}
+#endif

@@ -1221,3 +1221,5 @@ fn translated_bukkit_legacy_priority_baseline() {
 }
 
 include!("priority_tests.rs");
+
+include!("place_priority_tests.rs");

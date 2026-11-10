@@ -573,3 +573,24 @@ impl PlayerView {
         None
     }
 }
+
+// Только изолированный baseline: очередь настоящего worker, без нового production API.
+#[cfg(all(test, feature = "plugins", not(target_arch = "arm"), not(target_arch = "x86")))]
+pub(crate) mod place_staged_worker {
+    use super::*;
+    pub(crate) fn start(shared: Arc<Shared>, root: std::path::PathBuf) { enabled::start_in(shared, root); }
+    fn call<R: Send + 'static>(f: impl FnOnce(&mut host::Host) -> R + Send + 'static) -> R {
+        enabled::with_host_always(f).expect("worker отсутствует").expect("Host не готов")
+    }
+    pub(crate) fn count() -> usize { call(|host| host.loaded.len()) }
+    pub(crate) fn load(name: String) { call(move |host| host.load(&name).unwrap()); }
+    pub(crate) fn command(who: PlayerView, command: String, mode: String) -> bool {
+        call(move |host| host.run_command(api::mcsa::api::types::Sender {kind:api::mcsa::api::types::SenderKind::Player,uuid:Some(crate::network::login::format_uuid(&who.uuid)),name:who.name}, &command, &[mode]).unwrap().0)
+    }
+    pub(crate) fn place(who: PlayerView) -> Verdict {
+        call(move |host| host.block_place(&who,&api::mcsa::api::types::BlockPos {dimension:api::mcsa::api::types::Dimension::Overworld,x:3,y:64,z:3},"minecraft:stone"))
+    }
+    pub(crate) fn mode() -> String { call(|host| host.block_place_mode().to_owned()) }
+    pub(crate) fn trace() -> Vec<serde_json::Value> { call(|host| host.priority_test_trace().to_vec()) }
+
+}

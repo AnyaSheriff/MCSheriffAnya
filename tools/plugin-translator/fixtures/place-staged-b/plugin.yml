@@ -1,0 +1,7 @@
+name: java-place-staged-b
+version: '1.0'
+main: fixtures.PlaceStagedBPlugin
+commands:
+  placestagedb:
+    description: Собственный сценарий межкомпонентного порядка B
+    usage: /placestagedb order|cancel|uncancel
