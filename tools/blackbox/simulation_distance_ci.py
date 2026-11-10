@@ -70,7 +70,7 @@ def run(output,binary):
    if side=='ours':assert frozen[case]==sha(output/(case+'-original-frozen.json')) and sha(binary)==runtime
    folder=work/label;folder.mkdir();(folder/'config').mkdir();(folder/'eula.txt').write_text('eula=true\n')
    config=folder/('server.properties' if side=='official' else 'config/server.properties')
-   text=f'server-ip=127.0.0.1\nserver-port={port}\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nview-distance={expected_view}\nsimulation-distance=2\nlevel-type=minecraft:flat\nlevel-seed=1\ngenerate-structures=false\nspawn-protection=0\nmax-tick-time=0\n'
+   text=f'server-ip=127.0.0.1\nserver-port={port}\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nview-distance={expected_view}\nsimulation-distance=2\nlevel-type=minecraft:flat\ngenerator-settings={{"layers":[{{"block":"minecraft:bedrock","height":1}},{{"block":"minecraft:stone","height":3}}],"biome":"minecraft:plains"}}\nlevel-seed=1\ngenerate-structures=false\nspawn-protection=0\nmax-tick-time=0\n'
    config.write_text(text);(output/(label+'-server.properties.before')).write_text(text)
    if side=='ours':
     (folder/'config/mcsa.properties').write_text('java-version=26.3\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\noffline-license-mode=disabled\nbedrock-port=0\nprefetch-chunks=0\n')
@@ -87,11 +87,18 @@ def run(output,binary):
     deadline=time.monotonic()+100
     while True:
      if proc.poll() is not None:raise RuntimeError(side+' boot exit')
+     if time.monotonic()>deadline:raise TimeoutError(side+' boot readiness timeout')
+     observed_log=(output/(label+'-server.log')).read_text(errors='replace')
+     ready_marker='Done (' if side=='official' else 'Готово ('
+     if ready_marker not in observed_log:
+      time.sleep(.2);continue
      try:
-      observed=status(port);break
-     except OSError:
-      if time.monotonic()>deadline:raise TimeoutError(side+' boot timeout')
-      time.sleep(.2)
+      observed=status(port)
+      life['servers'][-1]['actual_ready_log_marker']=ready_marker
+      life['servers'][-1]['status777_observed_at']=time.monotonic();save();break
+     except (OSError,EOFError) as error:
+      life['servers'][-1].setdefault('bounded_startup_status_retries',[]).append({'at':time.monotonic(),'error':repr(error)})
+      save();time.sleep(.2)
     write(output/(label+'-status.json'),observed)
     result=capture_login(port,protocol,expected_view);result.update({'source':source,'properties_before_sha256':hashlib.sha256(text.encode()).hexdigest(),'runtime_sha256':runtime if side=='ours' else pin['official_jar']['sha256'],'production_startup_not_constructor':True})
     write(output/(label+'-login.json'),result);results[label]=result
