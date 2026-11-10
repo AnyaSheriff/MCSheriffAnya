@@ -1,0 +1,133 @@
+name: Witch integration regressions
+on:
+  push:
+    branches: ['integration/witch-throw-20261110']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: witch-integration-20261110
+      - name: Build own plugin examples
+        run: |
+          mkdir -p witch-integration-evidence
+          rustup target add wasm32-wasip2
+          cd plugins-examples
+          set -o pipefail
+          cargo build --release --target wasm32-wasip2 2>&1 | tee ../witch-integration-evidence/wasm.log
+      - name: Strict workspace Clippy
+        run: |
+          set -o pipefail
+          cargo clippy --release --all-targets --workspace -- -D warnings 2>&1 | tee witch-integration-evidence/clippy.log
+      - name: Workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --workspace 2>&1 | tee witch-integration-evidence/tests.log
+      - name: No-default tests
+        run: |
+          set -o pipefail
+          cargo test --release --no-default-features 2>&1 | tee witch-integration-evidence/no-default.log
+      - name: Build integrated runtime
+        run: |
+          set -o pipefail
+          cargo build --release 2>&1 | tee witch-integration-evidence/build.log
+      - name: Frozen analyzer guard tests
+        run: |
+          set -o pipefail
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_armor_sources*.py' -v 2>&1 | tee witch-integration-evidence/armor-tests.log
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_crossbow_nearbreak_ci.py' -v 2>&1 | tee witch-integration-evidence/crossbow-tests.log
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_witch_bounded_audit.py' -v 2>&1 | tee witch-integration-evidence/witch-tests.log
+      - name: Fresh 66 armor cases and prior combat controls
+        run: python3 -B tools/blackbox/armor_sources_sample.py ci --output armor-evidence
+      - name: Fresh 36 crossbow controls on the same runtime
+        run: python3 -B tools/blackbox/crossbow_nearbreak_ci.py --output crossbow-evidence
+      - name: Fresh existing client routes through the actual runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B - <<'PY' 2>&1 | tee witch-integration-evidence/public-driver.log
+          import json,os,subprocess,sys
+          from pathlib import Path
+          tools=Path('tools/protocol-bridge').resolve();sys.path.insert(0,str(tools))
+          from generate_client_chain import load
+          from generate_registry_26_2 import CANDIDATE,DEFAULT_OUTPUT,Sources
+          temporary=Path(os.environ['RUNNER_TEMP'])
+          cache=temporary/'via-client-chain'
+          load(cache,cache/'774',True)
+          registry=temporary/'via-registry-776'
+          sources=Sources(registry,True,json.loads(DEFAULT_OUTPUT.read_text())['sources'])
+          for kind in ['protocol','entities','items']:
+              sources.read(CANDIDATE,'data/pc/26.2/'+kind+'.json')
+          protocol776=registry/CANDIDATE[1]/'data/pc/26.2/protocol.json'
+          command=['python3','-B',str(tools/'probe_public_776.py'),
+              '--binary',str(Path('target/release/mcsheriffanya').resolve()),
+              '--protocol',str(protocol776),'--cache',str(registry),'--primary','777',
+              '--port','26184','--output',str(Path('witch-integration-evidence/public777').resolve())]
+          for version in range(769,775):
+              command += [f'--protocol{version}',str(cache/str(version)/'protocol.json'),
+                  f'--cache{version}',str(cache/str(version)),f'--admit{version}']
+          # Только отдельная сеть GitHub runner; PC/live25565 не используются.
+          subprocess.run(['sudo','unshare','--net','--','bash','-c',
+              'ip link set lo up; exec "$@"','via-isolated-net',*command],check=True)
+          result=json.loads(Path('witch-integration-evidence/public777/result.json').read_text())
+          assert result['status']=='pass' and len(result['checks'])==21
+          assert len(result['sessions'])==7
+          assert {row['client'] for row in result['sessions']}==set(range(769,775))|{776}
+          assert all(row['admitted'] and row['primary']=='26.3' and len(row['inventory'])==46 for row in result['sessions'])
+          assert all(row['exit']==0 and row['port_free'] and row['process_group_gone'] for row in result['shutdown'])
+          print(json.dumps({'status':'pass','clients':7,'checks':21,'primary':777}))
+          PY
+      - name: Preserve compact source, lock and runtime receipt
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: |
+          python3 - <<'PY2'
+          import hashlib,json,os,shutil,subprocess
+          from pathlib import Path
+          out=Path('witch-integration-evidence');out.mkdir(exist_ok=True)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          binary=Path('target/release/mcsheriffanya');locks={}
+          for name,dest in [('Cargo.lock','Cargo.lock'),('plugins-examples/Cargo.lock','plugins-examples-Cargo.lock')]:
+              path=Path(name)
+              if path.exists():shutil.copy2(path,out/dest);locks[name]=sha(path)
+          if binary.exists():
+              shutil.copy2(binary,out/'mcsheriffanya')
+              subprocess.run(['readelf','--file-header',str(binary)],stdout=(out/'elf-header.txt').open('w'),check=True)
+          source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip()
+          blobmap=subprocess.check_output(['git','ls-tree','-r','HEAD'],text=True)
+          (out/'source-blobs.txt').write_text(blobmap)
+          files={str(p.relative_to(out)):{'sha256':sha(p),'bytes':p.stat().st_size} for p in out.rglob('*') if p.is_file()}
+          receipt={'source':source,'tree':tree,'status':os.environ['MCSA_JOB_STATUS'],'locks':locks,
+              'runtime':{'sha256':sha(binary),'bytes':binary.stat().st_size} if binary.exists() else None,
+              'files':files,'scope':'Fresh integrated armor/prior/crossbow/clients. Earlier witch raw remains bounded composite; old matrix inconclusive.'}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: witch-integration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            witch-integration-evidence/
+            armor-evidence/
+            crossbow-evidence/
+            !crossbow-evidence/source.tar.gz
+            !crossbow-evidence/runtime/mcsheriffanya
+          retention-days: 7
+          if-no-files-found: warn

@@ -1,0 +1,82 @@
+name: Private768 chunk source checks only
+on:
+  push:
+    branches: ['review/private768-preflight-20261110']
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      CARGO_BUILD_JOBS: '2'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: private768-chunk-source
+      - name: Freeze reviewed inactive context and committed lock
+        run: |
+          python3 -B tools/protocol-bridge/private768_chunk_ci.py prepare --output private768-chunk-evidence
+          rustc -vV > private768-chunk-evidence/rustc-version.log
+          cargo -vV > private768-chunk-evidence/cargo-version.log
+      - name: Verify pinned allowed tables and cleanup source guards
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/generate_private768.py --cache "$RUNNER_TEMP/private768-json" --fetch --check 2>&1 | tee private768-chunk-evidence/pinned-tables.log
+          python3 -B -m unittest discover -s tools/protocol-bridge -p test_owned_client_cleanup.py -v 2>&1 | tee private768-chunk-evidence/cleanup-guards.log
+      - name: Focused typed chunk codec and contextual ACK guards
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked -p mcsa-protocol --features private-768 private768::chunk_batch_tests:: -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/focused-protocol.log
+      - name: Actual Outgoing frames and reader ACK consumption in Play
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --features private-768 --bin mcsheriffanya private_chunk_transport_guards:: -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/focused-runtime.log
+          cargo test --release --locked --features private-768 --bin mcsheriffanya private_stale_prepared_light_never_emits_an_empty_batch -- --nocapture --test-threads=1 2>&1 | tee private768-chunk-evidence/focused-stale.log
+      - name: Full default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace 2>&1 | tee private768-chunk-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features 2>&1 | tee private768-chunk-evidence/no-default-tests.log
+      - name: Full private-feature workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --features private-768 2>&1 | tee private768-chunk-evidence/private-tests.log
+      - name: Strict default and private workspace Clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee private768-chunk-evidence/default-clippy.log
+          cargo clippy --release --locked --workspace --all-targets --features private-768 -- -D warnings 2>&1 | tee private768-chunk-evidence/private-clippy.log
+      - name: Build one exact private runtime without executing it
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release --locked --features private-768 2>&1 | tee private768-chunk-evidence/private-build.log
+          cp target/release/mcsheriffanya private768-chunk-evidence/private-runtime-elf
+      - name: Preserve actual source and bounded own evidence
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/protocol-bridge/private768_chunk_ci.py archive --output private768-chunk-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private768-chunk-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: private768-chunk-evidence/
+          retention-days: 7
+          if-no-files-found: error

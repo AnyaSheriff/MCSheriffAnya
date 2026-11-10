@@ -1,0 +1,12 @@
+{
+  "scope": "source-only private chunk producer; no tag activation/native",
+  "main": "8b9a87182b7f540ff56d1afa45775078882739b4",
+  "review": "2fe9577a2b9abbcf5a8660282f32c4b5ad9a088e",
+  "branch": "review/private768-preflight-20261110",
+  "unchanged_reviewed_sources": {
+    "src/network/play/initial_776_probe.rs": "5f8aa22646947c7ce89402fe4a7451b5f9e7636c7a3620ec2516e666d63da2e6",
+    "tools/protocol-bridge/src/private768_tags.rs": "e2438358c537e294eab55b5f579a02142e6f8e58632684e7ec3bfc74e7f14226",
+    "tools/protocol-bridge/testdata/private768-reference/coherent37-tags.bin": "aac833f51d3b8cb12050575204baf375e731dd2c0568e22d0d45b45474890213",
+    "tools/protocol-bridge/testdata/private768-reference/required-tags-review.json": "536b6a4488ee449bb881fb2de289989f7fc0b91654f15254f5a61a68402041b9"
+  }
+}

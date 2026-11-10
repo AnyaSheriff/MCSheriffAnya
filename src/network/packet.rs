@@ -262,11 +262,14 @@ pub(super) async fn read_play_packet_with_route<S: AsyncRead + Unpin>(stream: &m
     if version==mcsa_protocol::private768::VERSION {
         let session=private_768.ok_or_else(||io::Error::new(io::ErrorKind::InvalidData,"Private768 missing phase/session context"))?;
         session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?.ensure_play().map_err(translate_error)?;
+        loop {
         let packet=read_packet(stream).await?;
         let translated=session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?
             .serverbound(&packet.body,wire::Context{items:item_context(content),..Default::default()}).map_err(translate_error)?;
+        if translated.chunk_ack { continue; } // Проверен Session, не передаётся игровому FIFO.
         let body=translated.body;let(id,_)=decode_varint(&body)?;
         return Ok(PacketInfo{id,length:body.len() as i32,body,teleport:translated.teleport,punch:false,foreign_inventory:false,legacy_inventory:None});
+        }
     }
     if content.is_preview() && !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !(probe_776 && matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2)) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
@@ -517,6 +520,8 @@ impl<'a> Outgoing<'a> {
     }
 
     pub(crate) async fn send_prepared_chunk(&mut self, packet: &PreparedChunkPacket) -> io::Result<()> {
+        #[cfg(feature="private-768")]
+        if self.private_768.is_some(){return Err(io::Error::other("Private768 требует исходный чанк и session batch"));}
         if packet.version != self.version || packet.content != self.content {
             return Err(io::Error::other("Чанк подготовлен для другого протокола/каталога"));
         }
@@ -528,6 +533,18 @@ impl<'a> Outgoing<'a> {
     }
 
     pub async fn send_chunk(&mut self, body: &[u8], context: mcsa_protocol::chunk::Context) -> io::Result<()> {
+        #[cfg(feature="private-768")]
+        if let Some(session)=self.private_768.clone() {
+            if self.failed{return Err(io::Error::new(io::ErrorKind::BrokenPipe,"запись уже оборвана"));}
+            let content=item_context(self.content);
+            let bodies=session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?
+                .chunk_batch(&mut self.entities,body,wire::Context{chunk:Some(context),items:content,..Default::default()}).map_err(translate_error)?;
+            // Все три тела успешно закодированы ДО первого append/flush.
+            if self.queued_at.is_none()&&timing_enabled(){self.queued_at=Some(Instant::now());}
+            for body in bodies {frame(&mut self.buffer,&body,compression_threshold());}
+            if self.buffer.len()>=OUTGOING_LIMIT{self.flush().await?;}
+            return Ok(());
+        }
         self.send_with_context(body, wire::Context { chunk: Some(context), ..wire::Context::default() }).await
     }
 
@@ -671,7 +688,13 @@ impl<'a> Outgoing<'a> {
         if let Some(start) = writing {
             eprintln!("NET_TIMING write bytes={bytes} queue_us={} write_us={}", self.queued_at.take().map_or(0, |at| start.duration_since(at).as_micros()), start.elapsed().as_micros());
         }
-        if result.is_err() { self.failed = true; }
+        if result.is_err() {
+            self.failed = true;
+            #[cfg(feature="private-768")]
+            if let Some(session)=&self.private_768 {
+                if let Ok(mut session)=session.lock(){session.chunk_write_failed();}
+            }
+        }
         #[cfg(test)]
         if matches!(self.stream, Transport::Capture) { return result; }
         self.buffer.clear();
@@ -1289,5 +1312,109 @@ impl Drop for TimingSpan {
         if let Some(start) = self.start && start.elapsed() >= Duration::from_millis(5) {
             eprintln!("NET_TIMING stage={} us={}", self.name, start.elapsed().as_micros());
         }
+    }
+}
+
+#[cfg(all(test,feature="private-768"))]
+impl Outgoing<'_> {
+    pub(crate) fn capture_private768_guard()->Self{
+        let source=super::configuration::registry_bundle_for(wire::INTERNAL,false).unwrap();
+        let mut session=mcsa_protocol::private768::Session::new(&source).unwrap();
+        session.login_success().unwrap();session.login_ack(&[]).unwrap();
+        let mut packs=vec![14,1];
+        for name in ["minecraft","core","26.1.2"]{packs.extend(super::varint::encode_string(name));}
+        session.configuration_clientbound(&packs).unwrap();
+        session.configuration_serverbound(&[7,0]).unwrap();
+        for registry in mcsa_protocol::private768::reference_registries().unwrap(){session.registry_sent(&registry).unwrap();}
+        // Тест phase-machine: локальный ACK не доказывает native acceptance/Wind.
+        session.configuration_clientbound(&[3]).unwrap();session.configuration_serverbound(&[3]).unwrap();
+        session.ensure_play().unwrap();
+        let mut out=Self::capture();out.version=mcsa_protocol::private768::VERSION;out.probe_776=true;
+        out.private_768=Some(Arc::new(std::sync::Mutex::new(session)));out
+    }
+}
+#[cfg(all(test,feature="private-768"))]
+mod private_chunk_transport_guards {
+    use super::*;
+    fn chunk()->(Vec<u8>,mcsa_protocol::chunk::Context){
+        let target=mcsa_protocol::private768::reference_registries().unwrap();
+        let biomes=target.iter().find(|r|r.name=="minecraft:worldgen/biome").unwrap().entries.len() as u32;
+        let sections=vec![mcsa_protocol::chunk_sections::Section{blocks_present:0,fluids_present:0,blocks:vec![0;4096],biomes:vec![0;64]};24];
+        let bytes=mcsa_protocol::chunk_sections::encode(wire::INTERNAL,&sections,biomes).unwrap();
+        let mut body=vec![0x2d];body.extend([0;8]);body.push(0);
+        body.extend(super::super::varint::encode_varint(bytes.len() as i32));body.extend(bytes);body.push(0);
+        let light=mcsa_protocol::light::Light{sky:vec![],block:vec![],empty_sky:vec![],empty_block:vec![],sky_arrays:vec![],block_arrays:vec![]};
+        body.extend(light.encode(wire::INTERNAL).unwrap());
+        (body,mcsa_protocol::chunk::Context{min_y:-64,sections:24,shared_biome_count:biomes})
+    }
+    async fn dimension(out:&mut Outgoing<'_>){
+        let source=super::super::configuration::registry_bundle_for(wire::INTERNAL,false).unwrap();
+        let types=source.iter().find(|r|r.name=="minecraft:dimension_type").unwrap();
+        let id=types.entries.iter().position(|e|e.name=="minecraft:overworld").unwrap() as i32;
+        let mut login=vec![0x31];login.extend(1i32.to_be_bytes());login.extend([0,1]);
+        login.extend(super::super::varint::encode_string("minecraft:overworld"));login.extend([20,2,2,0,1,0]);
+        login.extend(super::super::varint::encode_varint(id));login.extend(super::super::varint::encode_string("minecraft:overworld"));
+        login.extend([0;8]);login.extend([0,255,0,1,0,0,63,0]);
+        out.send_login(&login,false).await.unwrap();out.buffer.clear();
+    }
+    async fn send_native(native:&mut (impl AsyncWrite+Unpin),bodies:&[Vec<u8>]){
+        let mut bytes=Vec::new();for body in bodies{frame(&mut bytes,body,compression_threshold());}
+        native.write_all(&bytes).await.unwrap();
+    }
+    fn ack()->Vec<u8>{let mut body=vec![9];body.extend(1.0f32.to_be_bytes());body}
+    fn movement()->Vec<u8>{
+        let id=(0..256).find(|&id|mcsa_protocol::private768::packet_info(State::Play,Direction::Serverbound,768,id).is_ok_and(|row|row.0=="position")).unwrap();
+        let mut body=super::super::varint::encode_varint(id as i32);
+        for value in [0.5f64,65.0,0.5]{body.extend(value.to_be_bytes());}body.push(1);body
+    }
+    #[tokio::test]
+    async fn private_preencoded_wire_cannot_skip_session_batch(){
+        let mut out=Outgoing::capture_private768_guard();assert!(out.chunk_encoder().is_none());
+        let wire=PreparedChunkPacket{bytes:vec![1,2,3],version:mcsa_protocol::private768::VERSION,content:out.content};
+        assert!(out.send_prepared_chunk(&wire).await.is_err());assert!(out.queued().is_empty());
+    }
+    #[tokio::test]
+    async fn actual_play_encoder_failure_appends_nothing_and_grants_no_ack_credit(){
+        let mut out=Outgoing::capture_private768_guard();dimension(&mut out).await;
+        let(body,context)=chunk();let session=out.private_768.clone().unwrap();
+        let (mut transport,mut native)=tokio::io::duplex(1024);
+        for n in [0,1,body.len()-1]{
+            assert!(out.send_chunk(&body[..n],context).await.is_err());assert!(out.queued().is_empty());
+            send_native(&mut native,&[ack(),movement()]).await;
+            assert!(read_play_packet_with_route(&mut transport,mcsa_protocol::private768::VERSION,None,true,Default::default(),Some(&session)).await.is_err());
+            // ACK rejection leaves following gameplay packet untouched, no sentinel.
+            let packet=read_play_packet_with_route(&mut transport,mcsa_protocol::private768::VERSION,None,true,Default::default(),Some(&session)).await.unwrap();
+            assert_eq!(packet.id,0x1e);assert!(!packet.body.is_empty());
+        }
+    }
+    #[tokio::test]
+    async fn actual_outgoing_three_frames_and_reader_consumes_exactly_one_ack(){
+        let(mut transport,mut native)=tokio::io::duplex(1024*1024);
+        let fixture=Outgoing::capture_private768_guard();let session=fixture.private_768.clone().unwrap();
+        let mut out=Outgoing::duplex(&mut transport);out.version=fixture.version;out.probe_776=true;out.private_768=fixture.private_768;
+        dimension(&mut out).await;let(body,context)=chunk();
+        out.send_chunk(&body,context).await.unwrap();
+        let queued=out.buffer.clone();let mut decoded=&queued[..];let mut rows=Vec::new();
+        while !decoded.is_empty(){rows.push(read_packet(&mut decoded).await.unwrap());}
+        assert_eq!(rows.len(),3);assert_eq!(rows[0].body,[13]);assert_eq!(rows[1].id,40);assert_eq!(rows[2].body,[12,1]);
+        out.flush().await.unwrap();assert!(out.buffer.is_empty());
+        let mut transported=Vec::new();
+        for row in rows{let actual=read_packet(&mut native).await.unwrap().body;assert_eq!(actual,row.body);transported.push(actual);}
+        send_native(&mut native,&[ack(),movement()]).await;
+        drop(out);
+        let packet=read_play_packet_with_route(&mut transport,mcsa_protocol::private768::VERSION,None,true,Default::default(),Some(&session)).await.unwrap();
+        assert_eq!(packet.id,0x1e);assert!(!packet.body.is_empty());assert!(packet.teleport.is_none());
+        send_native(&mut native,&[ack()]).await;
+        let duplicate=match read_play_packet_with_route(&mut transport,mcsa_protocol::private768::VERSION,None,true,Default::default(),Some(&session)).await {Err(error)=>error,Ok(_)=>panic!("duplicate ACK accepted")};
+        println!("MCSA_PRIVATE_CHUNK_WITNESS {}",serde_json::json!({"queued_framed":queued,"compression":compression_threshold(),"transported_bodies":transported,"native_ack":ack(),"native_movement":movement(),"next_gameplay":packet.body,"duplicate_ack_rejected":duplicate.to_string(),"phase_fixture":"Configuration handshake then real Outgoing Login dimension; no native acceptance claim"}));
+    }
+    #[tokio::test]
+    async fn failed_socket_flush_is_terminal_and_cannot_append_next_chunk(){
+        let (mut writer,reader)=tokio::io::duplex(8);drop(reader);
+        let mut out=Outgoing::duplex(&mut writer);out.version=mcsa_protocol::private768::VERSION;
+        out.private_768=Outgoing::capture_private768_guard().private_768;
+        dimension(&mut out).await;let(body,context)=chunk();out.send_chunk(&body,context).await.unwrap();
+        assert!(out.flush().await.is_err());assert!(out.failed);let before=out.buffer.clone();
+        assert!(out.send_chunk(&body,context).await.is_err());assert_eq!(out.buffer,before);
     }
 }

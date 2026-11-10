@@ -1,0 +1,8 @@
+{
+  "schema": "witch-wall-v2-independent",
+  "reference": "New separate experiment; earlier 42691567188 wall remains INVALID and full matrix remains INCONCLUSIVE.",
+  "sequence": "Pin this contract, scenario and harness before capture. Record official once, require complete recording and cleanup, validate it, freeze raw SHA256 before starting candidate. Candidate uses that exact saved official reference. Never retry or select by outcome.",
+  "geometry": "Stationary survival player at origin+(0.5,0,0.5); witch at +(7.5,0,0.5). Prepared stone floor x -8..13 z -8..8 y -1. Stone enclosure x 3..12 z -5..5 y 0..5 with air interior x 4..11 z -4..4 y 0..4. Reject position outside interior margin, death, missing mode/HP/Resistance, incomplete observation, early removal or failed cleanup.",
+  "result": "A valid official and candidate must each have zero real witch-owned splash projectiles throughout 400 ticks. Official invalid or throwing is INCONCLUSIVE; candidate invalid or throwing is FAIL. No frequency, timing, general AI parity or old full-matrix claim.",
+  "evidence": "Save both raw recordings and logs, source, scenario, contract and input hashes, runtime ELF/SHA and lifecycle; reference hash must remain unchanged before and after candidate. Independently decode raw."
+}

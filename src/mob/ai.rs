@@ -38,6 +38,9 @@ pub struct Watcher {
     pub y: f64,
     pub z: f64,
     pub eye: f64,
+    /// Снимок для ведьмы; не является ссылкой на состояние подключения.
+    pub witch_health: f32,
+    pub witch_effects: u8,
 
     /// Что в основной и во второй руке (имя предмета).
     pub holding: [Option<&'static str>; 2],
@@ -119,6 +122,8 @@ pub struct Plan {
     /// Враждебный: удар в ближнем бою, выстрел, взрыв (сила).
     pub melee: Option<super::hostile::Melee>,
     pub shot: Option<super::hostile::Shot>,
+    /// Зелье ведьмы создаётся после освобождения замка мобов.
+    pub witch_potion: Option<super::hostile::WitchPotion>,
     pub blast: Option<f32>,
 
     /// Шалкер выпустил снаряд в этого игрока; снаряд попал в этого игрока.

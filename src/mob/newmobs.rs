@@ -109,7 +109,7 @@ pub fn hunt_mob(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Opt
         .filter(|m| (m.x-mob.x).powi(2)+(m.y-mob.y).powi(2)+(m.z-mob.z).powi(2) <= range*range)
         .filter(|m| hostile::sees(view, (mob.x,mob.y+mob.eye(),mob.z), (m.x,m.y+m.kind.height()*0.5,m.z)))
         .min_by(|a,b| ((a.x-mob.x).powi(2)+(a.z-mob.z).powi(2)).total_cmp(&((b.x-mob.x).powi(2)+(b.z-mob.z).powi(2))))?;
-    let watcher = Watcher { id: target.id, x: target.x, y: target.y, z: target.z, eye: target.kind.height()*0.85, holding:[None;2], spectator:false,targetable:true,look:(0.0,0.0),pumpkin:false,gold_armor:false,sprinting:false,riding:false };
+    let watcher = Watcher { id: target.id, x: target.x, y: target.y, z: target.z, eye: target.kind.height()*0.85, holding:[None;2], spectator:false,targetable:true,look:(0.0,0.0),pumpkin:false,gold_armor:false,sprinting:false,riding:false , witch_health: 20.0, witch_effects: 0, };
     // endermite-pearl: первый удар — через 18 тактов после взятия цели, дальше раз в 18.
     if mob.kind == Kind::Enderman && !was_hunting { mob.h.cooldown = mob.h.cooldown.max(15); }
     if mob.kind == Kind::Enderman { mob.newmobs.active = true; }

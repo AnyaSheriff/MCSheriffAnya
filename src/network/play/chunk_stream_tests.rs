@@ -279,3 +279,22 @@ fn oversized_completion_disconnects_even_after_its_connection_budget_is_empty() 
         assert!(matches!(&orders[..], [Order::Kick { reason }] if reason.contains("32500")));
     }
 }
+
+#[cfg(feature="private-768")]
+#[tokio::test]
+async fn private_stale_prepared_light_never_emits_an_empty_batch(){
+    let shared=shared();let dimension=crate::dimension::Dimension::Overworld;
+    let mut prepared:LitChunk={
+        let mut world=shared.world_in(dimension).lock().unwrap();
+        for x in -1..=1{for z in -1..=1{world.ensure(x,z);}}
+        let(_,fresh)=world.light_job(0,0).unwrap().finish();world.store_light(fresh);
+        world.light_job(0,0).unwrap().prepare().into()
+    };
+    shared.world_in(dimension).lock().unwrap().set_block(16,10,0,crate::blocks::state_by_name("torch").unwrap());
+    let mut out=Outgoing::capture_private768_guard();
+    assert!(send_prepared_chunk(&mut out,shared.world_in(dimension),0,0,&prepared).await.unwrap().is_none());
+    assert!(out.queued().is_empty());
+    prepared.packet=Some(ChunkPayload::Internal(vec![0x2d]));
+    assert!(send_prepared_chunk(&mut out,shared.world_in(dimension),0,0,&prepared).await.unwrap().is_none());
+    assert!(out.queued().is_empty());
+}

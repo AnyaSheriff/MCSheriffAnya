@@ -1295,6 +1295,11 @@ impl Vitals {
         }
     }
 
+    /// Снимок видимых игровых эффектов для выбора зелья ведьмой.
+    pub fn witch_effects(&self) -> u8 {
+        u8::from(self.has_effect(EffectKind::Slowness)) | (u8::from(self.has_effect(EffectKind::Poison)) << 1) | (u8::from(self.has_effect(EffectKind::Weakness)) << 2)
+    }
+
     /// Снимок без временных сетевых очередей и повторного применения выдачи.
     pub fn saved_effects(&self) -> crate::playerdata::SavedEffects {
         crate::playerdata::SavedEffects { active: self.effects.clone(), hidden: self.hidden_effects.clone(), absorption: self.absorption }

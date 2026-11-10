@@ -1,0 +1,7 @@
+name: java-priority-b
+version: '1.0'
+main: fixtures.PriorityBPlugin
+commands:
+  priorityb:
+    description: Собственный сценарий межкомпонентного порядка B
+    usage: /priorityb order|cancel|uncancel

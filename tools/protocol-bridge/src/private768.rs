@@ -216,7 +216,7 @@ mod tests {
 
 }
 
-pub struct Inbound {pub body:Vec<u8>,pub teleport:Option<crate::teleport::Confirmation>}
+pub struct Inbound {pub body:Vec<u8>,pub teleport:Option<crate::teleport::Confirmation>,pub chunk_ack:bool}
 
 #[derive(Clone,Copy,PartialEq)]
 enum Phase { Login,Configuration,Play }
@@ -238,6 +238,8 @@ pub struct Session {
     dimensions:std::sync::Arc<Vec<(i32,usize)>>,
     skin_parts:Option<u8>,
     pending_teleports:BTreeSet<i32>,
+    pending_chunk_batches:u32,
+    chunk_write_failed:bool,
 }
 impl Session {
     pub fn new(source:&[crate::registry::Registry])->Result<Self,Error>{
@@ -245,7 +247,7 @@ impl Session {
         let mapping=RegistryContext::new(source,&registries)?;
         let dimensions=play::dimension_context(&registries)?;
         Ok(Self{phase:Phase::Login,login_success:false,offered:false,replied:false,finished:false,
-            registry_sent:Default::default(),registries:std::sync::Arc::new(registries),mapping:std::sync::Arc::new(mapping),self_entity:None,dimension:None,dimensions:std::sync::Arc::new(dimensions),skin_parts:None,pending_teleports:Default::default()})
+            registry_sent:Default::default(),registries:std::sync::Arc::new(registries),mapping:std::sync::Arc::new(mapping),self_entity:None,dimension:None,dimensions:std::sync::Arc::new(dimensions),skin_parts:None,pending_teleports:Default::default(),pending_chunk_batches:0,chunk_write_failed:false})
     }
     pub fn login_success(&mut self)->Result<(),Error>{
         if self.phase!=Phase::Login||self.login_success{return Err(Error::Invalid);}self.login_success=true;Ok(())
@@ -312,11 +314,17 @@ impl Session {
         self.ensure_play()?;let mut candidate=self.clone();
         let mut input=Cursor::new(body);let id=input.uint()?;
         let (name,_,_)=packet_info(State::Play,Direction::Serverbound,768,id)?;
-        let translated=if name=="teleport_confirm" {
+        let translated=if name=="chunk_batch_received" {
+            let value=f32::from_be_bytes(input.take(4)?.try_into().map_err(|_|Error::Invalid)?);finish(&input)?;
+            if !value.is_finite()||value<=0.0||candidate.chunk_write_failed||candidate.pending_chunk_batches==0{return Err(Error::Invalid);}
+            candidate.pending_chunk_batches-=1;
+            // Это проверенный control ACK: он не является игровым действием775.
+            Inbound{body:Vec::new(),teleport:None,chunk_ack:true}
+        }else if name=="teleport_confirm" {
             let confirmation=crate::teleport::Confirmation::decode(VERSION,input.rest).map_err(|_|Error::Invalid)?;
             if !candidate.pending_teleports.remove(&confirmation.id){return Err(Error::PayloadUnavailable("private768 unknown/duplicate teleport ACK"));}
-            let mut body=vec![0];uint(&mut body,confirmation.id as u32);Inbound{body,teleport:Some(confirmation)}
-        }else{Inbound{body:serverbound(body,context)?,teleport:None}};
+            let mut body=vec![0];uint(&mut body,confirmation.id as u32);Inbound{body,teleport:Some(confirmation),chunk_ack:false}
+        }else{Inbound{body:serverbound(body,context)?,teleport:None,chunk_ack:false}};
         *self=candidate;Ok(translated)
     }
     fn tag_id(&self,registry:&str,id:u32)->Result<u32,Error>{
@@ -327,7 +335,28 @@ impl Session {
             _=>self.mapping.map(registry,id),
         }
     }
+    /// Одна настоящая пачка содержит один полностью проверенный чанк.
+    /// До read-loop ACK не ждём; это учёт контекста, не full backpressure.
+    pub fn chunk_batch(&mut self,tracker:&mut crate::entities::Tracker,body:&[u8],context:wire::Context)->Result<[Vec<u8>;3],Error>{
+        self.ensure_play()?;
+        if self.chunk_write_failed||self.pending_chunk_batches>=65_536{return Err(Error::TooLarge);}
+        let mut header=Cursor::new(body);if header.uint()?!=0x2d{return Err(Error::Invalid);}
+        let mut next=self.clone();let mut entities=tracker.clone();
+        let chunk=next.clientbound_inner(&mut entities,body,context)?;
+        // Закреплённое ребро769→768 проверяет имена, ID и payload каждого маркера.
+        let start=play_edge(Direction::Clientbound,769,&[13])?;
+        let finished=play_edge(Direction::Clientbound,769,&[12,1])?;
+        next.pending_chunk_batches+=1;
+        *self=next;*tracker=entities;
+        Ok([start,chunk,finished])
+    }
+    pub fn chunk_write_failed(&mut self){self.chunk_write_failed=true;}
     pub fn clientbound(&mut self,tracker:&mut crate::entities::Tracker,body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
+        let mut header=Cursor::new(body);
+        if matches!(header.uint()?,0x0b|0x0c|0x2d){return Err(Error::PayloadUnavailable("private768 chunk requires atomic batch producer"));}
+        self.clientbound_inner(tracker,body,context)
+    }
+    fn clientbound_inner(&mut self,tracker:&mut crate::entities::Tracker,body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
         if self.phase!=Phase::Play{return Err(Error::Invalid);}
         let mut candidate=tracker.clone();
         let intermediate=crate::client_769::clientbound(&mut candidate,body,context)?;
@@ -358,4 +387,72 @@ fn settings(input:&mut Cursor<'_>)->Result<u8,Error>{
     input.string()?;let distance=input.take(1)?[0];if !(2..=32).contains(&distance){return Err(Error::Invalid);}
     input.count(2)?;input.boolean()?;let skin=input.take(1)?[0];if skin&!127!=0{return Err(Error::Invalid);}
     input.count(1)?;input.boolean()?;input.boolean()?;input.count(2)?;finish(input)?;Ok(skin)
+}
+
+#[cfg(test)]
+mod chunk_batch_tests {
+    use super::*;
+    fn fixture()->(Session,crate::entities::Tracker,Vec<u8>,wire::Context){
+        let regs=reference_registries().unwrap();let mut session=Session::new(&regs).unwrap();session.phase=Phase::Play;
+        let dimensions=regs.iter().find(|r|r.name=="minecraft:dimension_type").unwrap();
+        let dimension=dimensions.entries.iter().position(|e|e.name=="minecraft:overworld").unwrap();
+        session.dimension=Some(dimension as u32);
+        let biomes=regs.iter().find(|r|r.name=="minecraft:worldgen/biome").unwrap().entries.len() as u32;
+        let context=wire::Context{chunk:Some(crate::chunk::Context{min_y:-64,sections:24,shared_biome_count:biomes}),..Default::default()};
+        let sections=vec![crate::chunk_sections::Section{blocks_present:0,fluids_present:0,blocks:vec![0;4096],biomes:vec![0;64]};24];
+        let bytes=crate::chunk_sections::encode(wire::INTERNAL,&sections,biomes).unwrap();
+        let mut body=vec![0x2d];body.extend([0;8]);body.push(0); // Чанк0,0, без heightmaps.
+        uint(&mut body,bytes.len() as u32);body.extend(bytes);body.push(0); // Без block entities.
+        let light=crate::light::Light{sky:vec![],block:vec![],empty_sky:vec![],empty_block:vec![],sky_arrays:vec![],block_arrays:vec![]};
+        body.extend(light.encode(wire::INTERNAL).unwrap());
+        (session,Default::default(),body,context)
+    }
+    fn ack(value:f32)->Vec<u8>{let mut b=vec![9];b.extend(value.to_be_bytes());b}
+    #[test]
+    fn genuine_one_chunk_has_typed_markers_and_one_contextual_ack(){
+        let(mut session,mut tracker,body,context)=fixture();
+        let rows=session.chunk_batch(&mut tracker,&body,context).unwrap();
+        assert_eq!(rows[0],[13]);assert_eq!(rows[2],[12,1]);
+        assert_eq!(packet_info(State::Play,Direction::Clientbound,768,u32::from(rows[1][0])).unwrap().0,"map_chunk");
+        assert_eq!(session.pending_chunk_batches,1);
+        let control=session.serverbound(&ack(1.0),Default::default()).unwrap();
+        assert!(control.chunk_ack&&control.body.is_empty()&&control.teleport.is_none());
+        assert_eq!(session.pending_chunk_batches,0);
+        assert!(session.serverbound(&ack(1.0),Default::default()).is_err());
+    }
+    #[test]
+    fn ack_without_batch_nan_infinite_nonpositive_trailing_and_truncated_fail_atomically(){
+        let(mut session,_,_,_)=fixture();
+        assert!(session.serverbound(&ack(1.0),Default::default()).is_err());
+        for v in [0.0,-0.0,-1.0,f32::NAN,f32::INFINITY,f32::NEG_INFINITY] {
+            session.pending_chunk_batches=1;
+            assert!(session.serverbound(&ack(v),Default::default()).is_err());assert_eq!(session.pending_chunk_batches,1);
+        }
+        for mut b in [vec![9],vec![9,0,0,0],ack(1.0)]{
+            if b.len()==5{b.push(0);}
+            assert!(session.serverbound(&b,Default::default()).is_err());assert_eq!(session.pending_chunk_batches,1);
+        }
+    }
+    #[test]
+    fn failed_encoder_cannot_publish_partial_batch_or_ack_credit(){
+        let(mut session,mut tracker,body,context)=fixture();
+        for n in 0..body.len(){assert!(session.chunk_batch(&mut tracker,&body[..n],context).is_err());assert_eq!(session.pending_chunk_batches,0);}
+        assert!(session.clientbound(&mut tracker,&body,context).is_err());
+        assert!(session.clientbound(&mut tracker,&[0x0c],context).is_err());
+        assert!(session.clientbound(&mut tracker,&[0x0b,1],context).is_err());
+        assert_eq!(session.pending_chunk_batches,0);
+    }
+    #[test]
+    fn failed_transport_is_terminal_for_chunk_and_ack_context(){
+        let(mut session,mut tracker,body,context)=fixture();
+        session.chunk_batch(&mut tracker,&body,context).unwrap();session.chunk_write_failed();
+        assert!(session.serverbound(&ack(1.0),Default::default()).is_err());assert_eq!(session.pending_chunk_batches,1);
+        assert!(session.chunk_batch(&mut tracker,&body,context).is_err());assert_eq!(session.pending_chunk_batches,1);
+    }
+    #[test]
+    fn pending_cap_and_new_session_have_distinct_ack_context(){
+        let(mut session,mut tracker,body,context)=fixture();session.pending_chunk_batches=65_536;
+        assert!(session.chunk_batch(&mut tracker,&body,context).is_err());assert_eq!(session.pending_chunk_batches,65_536);
+        let(mut fresh,_,_,_)=fixture();assert!(fresh.serverbound(&ack(1.0),Default::default()).is_err());
+    }
 }

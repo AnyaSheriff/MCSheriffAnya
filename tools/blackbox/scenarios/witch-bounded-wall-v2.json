@@ -1,0 +1,41 @@
+{
+  "name": "witch-bounded-wall-v2",
+  "about": "Independent enclosed wall control; original frozen before candidate",
+  "track_mobs": true,
+  "track_projectiles": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "effect give $(bot) resistance 255 4 true",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!stopfly",
+    "!wait 10",
+    "fill $(-8,-1,-8) $(13,-1,8) stone",
+    "fill $(3,0,-5) $(12,5,5) stone",
+    "fill $(4,0,-4) $(11,4,4) air"
+  ],
+  "actions": [
+    {
+      "after": 10,
+      "cmd": "summon witch $(7.5,0,0.5) {Silent:1b}"
+    },
+    {
+      "after": 410,
+      "cmd": "kill @e[type=witch,distance=..48]"
+    }
+  ],
+  "record_ticks": 430,
+  "cleanup": [
+    "kill @e[type=witch,distance=..48]",
+    "kill @e[type=splash_potion,distance=..48]",
+    "effect clear $(bot)",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "!wait 4",
+    "!startfly"
+  ]
+}

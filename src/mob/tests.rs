@@ -720,7 +720,7 @@ fn a_tempting_player_draws_the_animal_in() {
     let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
     let mut rng = Rng::new(9);
     let wheat = blocks::item_name(blocks::item_named("wheat").expect("пшеница")).expect("имя");
-    let player = ai::Watcher { x: 8.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some(wheat), None], spectator: false, id: 1, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
+    let player = ai::Watcher { x: 8.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some(wheat), None], spectator: false, id: 1, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false , witch_health: 20.0, witch_effects: 0, };
     let players = [player];
     let ctx = ai::Ctx { players: &players, mates: &[], difficulty: 2, sky: 15, sun_up: false };
 
@@ -747,7 +747,7 @@ fn a_spectator_does_not_attract() {
     let view = Flat::new();
     let mut pig = Mob::new(1, Kind::Pig, (0.5, 1.0, 0.5));
     let mut rng = Rng::new(9);
-    let players = [ai::Watcher { x: 5.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some("carrot"), None], spectator: true, id: 1, targetable: false, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false }];
+    let players = [ai::Watcher { x: 5.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some("carrot"), None], spectator: true, id: 1, targetable: false, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false , witch_health: 20.0, witch_effects: 0, }];
     let ctx = ai::Ctx { players: &players, mates: &[], difficulty: 2, sky: 15, sun_up: false };
 
     for _ in 0..20 {
@@ -1091,7 +1091,7 @@ impl View for Sunny {
 }
 
 fn player_at(id: i32, x: f64, z: f64) -> ai::Watcher {
-    ai::Watcher { id, x, y: 1.0, z, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false }
+    ai::Watcher { id, x, y: 1.0, z, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false ,  witch_health: 20.0, witch_effects: 0, }
 }
 
 fn ctx_for<'a>(players: &'a [ai::Watcher], difficulty: u8, sky: i32, sun_up: bool) -> ai::Ctx<'a> {
@@ -2712,7 +2712,7 @@ fn arthropod_loot_and_xp_credit() {
 
 #[test]
 fn small_arthropod_melee_damage() {
-    let target = ai::Watcher { id: 20, x: 0.5, y: 1.0, z: 0.9, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
+    let target = ai::Watcher { id: 20, x: 0.5, y: 1.0, z: 0.9, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false , witch_health: 20.0, witch_effects: 0, };
     let players = [target];
     let context = ai::Ctx { players: &players, ..ctx() };
     for (kind, damage) in [(Kind::CaveSpider, 2.0), (Kind::Silverfish, 1.0)] {
@@ -2762,4 +2762,63 @@ fn breeding_and_curing_send_progress_only_to_the_responsible_player() {
     assert_eq!(out.progress.len(), 1);
     assert_eq!(out.progress[0].0, [3; 16]);
     assert!(matches!(out.progress[0].1, crate::progress::Event::Trigger("story/cure_zombie_villager")));
+}
+
+#[test]
+fn witch_throw_respects_target_visibility_and_drinking() {
+    let view = Flat::new();
+    let target = player_at(99, 6.5, 0.5);
+    let mut witch = Mob::new(5, Kind::Witch, (0.5, 1.0, 0.5));
+    witch.h.target = Some(target.id);
+    witch.h.throw_wait = 1;
+    let mut rng = Rng::new(11);
+    let players = [target];
+    let plan = witch.tick(&view, &ctx_for(&players, 2, 0, false), &mut rng);
+    assert_eq!(plan.witch_potion.expect("видимая цель").potion, "poison");
+    assert!(witch.tick(&view, &ctx_for(&players, 2, 0, false), &mut rng).witch_potion.is_none(), "есть пауза после броска");
+
+    for denied in [ai::Watcher { targetable: false, ..target }, ai::Watcher { spectator: true, ..target }] {
+        let mut witch = Mob::new(5, Kind::Witch, (0.5, 1.0, 0.5));
+        witch.h.target = Some(denied.id); witch.h.throw_wait = 1;
+        let players = [denied];
+        assert!(witch.tick(&view, &ctx_for(&players, 2, 0, false), &mut rng).witch_potion.is_none());
+    }
+    let mut no_ai = Mob::new(5, Kind::Witch, (0.5, 1.0, 0.5));
+    no_ai.no_ai = true; no_ai.h.target = Some(target.id); no_ai.h.throw_wait = 1;
+    assert!(no_ai.tick(&view, &ctx_for(&players, 2, 0, false), &mut rng).witch_potion.is_none());
+    let mut drinking = Mob::new(5, Kind::Witch, (0.5, 1.0, 0.5));
+    drinking.h.target = Some(target.id); drinking.h.throw_wait = 1; drinking.h.drinking = 10;
+    assert!(drinking.tick(&view, &ctx_for(&players, 2, 0, false), &mut rng).witch_potion.is_none());
+    let mut wall = Flat::new();
+    for y in 1..=4 { wall.stone.push((3, y, 0)); }
+    let mut hidden = Mob::new(5, Kind::Witch, (0.5, 1.0, 0.5));
+    hidden.h.target = Some(target.id); hidden.h.throw_wait = 1;
+    assert!(hidden.tick(&wall, &ctx_for(&players, 2, 0, false), &mut rng).witch_potion.is_none());
+}
+
+#[test]
+fn witch_uses_published_effects_and_health_for_potion_choice() {
+    let view = Flat::new();
+    let mut rng = Rng::new(11);
+    for (target, expected) in [
+        (player_at(99, 9.5, 0.5), "slowness"),
+        (ai::Watcher { witch_effects: 1, ..player_at(99, 9.5, 0.5) }, "poison"),
+        (ai::Watcher { witch_effects: 3, ..player_at(99, 9.5, 0.5) }, "harming"),
+    ] {
+        let mut witch = Mob::new(5, Kind::Witch, (0.5, 1.0, 0.5));
+        witch.h.target = Some(target.id); witch.h.throw_wait = 1;
+        let players = [target];
+        assert_eq!(witch.tick(&view, &ctx_for(&players, 2, 0, false), &mut rng).witch_potion.expect("бросок").potion, expected);
+    }
+}
+
+#[test]
+fn witch_target_flags_track_gained_and_removed_effects() {
+    use crate::survival::{Effect, EffectKind, Vitals};
+    let mut vitals = Vitals::new();
+    assert_eq!(vitals.witch_effects(), 0);
+    vitals.give_effect_shown(Effect { kind: EffectKind::Poison, amplifier: 0, ticks_left: 2, ambient: false, visible: false, show_icon: false });
+    assert_eq!(vitals.witch_effects(), 2);
+    vitals.effects_tick(); vitals.effects_tick();
+    assert_eq!(vitals.witch_effects(), 0);
 }
