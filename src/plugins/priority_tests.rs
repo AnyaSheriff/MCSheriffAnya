@@ -198,7 +198,7 @@ fn translated_bukkit_staged_faults_and_cumulative_native_budgets() {
         let failed:Vec<_>=rows.iter().filter(|r|r["plugin"]=="java-priority-fault"&&r["ok"]==false).collect();assert_eq!(failed.len(),1,"fault={fault} rows={rows:?}");
         assert_eq!(failed[0]["stage"],if fault=="begin" {"begin"} else if fault=="finish" {"finish"} else {"phase"});
         let successful_phases=rows.iter().filter(|r|r["plugin"]=="java-priority-fault"&&r["stage"]=="phase"&&r["ok"]==true).count();
-        if matches!(fault,"fuel"|"guest"|"native") {assert!(successful_phases>=1&&successful_phases<6,"must exhaust BETWEEN phases: {fault} rows={rows:?}");}
+        if matches!(fault,"fuel"|"guest"|"native") {assert!((1..6).contains(&successful_phases),"must exhaust BETWEEN phases: {fault} rows={rows:?}");}
         if fault=="native" {assert_eq!(failed[0]["native_epochs"],0);assert_eq!(failed[0]["native_ns"],0);}
         if fault=="fuel" {assert_eq!(failed[0]["fuel"],0);}
         for healthy in ["java-priority-a","java-priority-empty"] {assert!(rows.iter().any(|r|r["plugin"]==healthy&&r["stage"]=="finish"&&r["ok"]==true&&r["cancelled"]==true));}

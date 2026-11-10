@@ -466,9 +466,9 @@ impl Host {
             let extension = (|| -> wasmtime::Result<super::priority::Extension> {
                 let begin=get(&mut store,"begin")?;let phase=get(&mut store,"phase")?;let finish=get(&mut store,"finish")?;
                 Ok(super::priority::Extension {
-                    begin: raw.get_typed_func(&mut store,&begin)?,
-                    phase: raw.get_typed_func(&mut store,&phase)?,
-                    finish: raw.get_typed_func(&mut store,&finish)?,
+                    begin: raw.get_typed_func(&mut store,begin)?,
+                    phase: raw.get_typed_func(&mut store,phase)?,
+                    finish: raw.get_typed_func(&mut store,finish)?,
                 })
             })().map_err(|error| {
                 self.drop_registrations(&manifest.name);
