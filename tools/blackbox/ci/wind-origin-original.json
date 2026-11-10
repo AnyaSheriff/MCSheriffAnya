@@ -1,0 +1,176 @@
+{
+  "schema": "windburst-I-original-underfoot-and-origin-pilot-v2",
+  "status": "REVISION_FOR_ROOT_REVIEW_BEFORE_CAPTURE",
+  "protocol": 777,
+  "version": "26.3",
+  "official_jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "mechanism": "actual player melee WindBurstI smash only",
+  "candidate_or_ordinary_charge_included": false,
+  "order": [
+    "air-entry-positive",
+    "stone",
+    "obsidian",
+    "bedrock",
+    "barrier",
+    "air-bookend-positive"
+  ],
+  "N_each_material": 1,
+  "air_controls_total": 2,
+  "maximum_actual_attack_windows": 6,
+  "retry_or_height_scan": false,
+  "abort_if_entry_air_not_qualified_or_centre_not_in_varied_volume": false,
+  "geometry": {
+    "top_T": 64,
+    "varied_cell": [
+      100,
+      63,
+      100
+    ],
+    "catch_floor_block_y": 59,
+    "catch_floor_top": 60,
+    "victim_column_xz": [
+      100,
+      102
+    ],
+    "victim_column_block_y_inclusive": [
+      60,
+      63
+    ],
+    "victim_feet": [
+      100.5,
+      64,
+      102.5
+    ],
+    "actor_xz": [
+      100.5,
+      100.5
+    ],
+    "actor_start_y": 67.38627014995919,
+    "model_frames_before_hit": 10,
+    "model_feet_y_at_hit": 64.04,
+    "accepted_actual_feet_band": [
+      64.02,
+      64.06
+    ],
+    "accepted_actual_actor_xz_band": [
+      [
+        100.49,
+        100.51
+      ],
+      [
+        100.49,
+        100.51
+      ]
+    ],
+    "centre_cell_interior_margin": 0.000244140625,
+    "actual_centre_from_network_only": true,
+    "no_assumed_feet_minus_0_1": true,
+    "required_body_above_varied_cell_top": true,
+    "postattack_collision_nonair_floor": 64,
+    "postattack_collision_air_real_catch_floor": 60,
+    "no_fake_floor_or_teleport_inside_solid": true
+  },
+  "stimulus": {
+    "initial_v0": [
+      0,
+      0,
+      0
+    ],
+    "resolved_actual_TP_velocity_and_flags_required": true,
+    "own_recorder_gravity": 0.08,
+    "own_recorder_drag": 0.98,
+    "network_frame_order_at_hit": [
+      "natural movement10 to near-top feet",
+      "one Attack on qualified living victim",
+      "TickEnd",
+      "next natural movement11 with actual terrain collision and server velocity feedback"
+    ],
+    "cadence_hz": 20,
+    "do_not_wait_or_hover_to_obtain_pose_receipt": true,
+    "no_gravity_attribute_change": true,
+    "no_tick_freeze_step_sprint": true,
+    "no_teleport_during_fall_or_manual_FallDistance": true
+  },
+  "source_qualification_mandatory_even_if_wind_absent": [
+    "native777 actualLogin/status;freshactualTPandmatchingACK;resolvedinitialvelocityzero",
+    "actualMace count1 WindBurstI full inventory/components receipt;nootherenchants/effects/charges",
+    "victimmaxHP200 verified/actualpreHP200 andpostHPdrop;noarmorThorns/shield/invulnerability",
+    "actualfallpath>1.5 andnear-topfeetAABBnonpenetrating;serverpeerpose evidence notjustlocalmath",
+    "one actualAttack wire aftermove10 beforemove11",
+    "actual victimdamage_event namedmace_smash withcorrectactor andactualsmashsound via777soundprovenance",
+    "freshattackcooldown>=40actualworldticks afterlastreset/attack",
+    "bothconnectionscomplete/livewithpostactionuniqueecho andageprogress"
+  ],
+  "observation_window": {
+    "client_frames": 80,
+    "require_actual_world_age_progress_after_attack_at_least_ticks": 40,
+    "before_age_to_after_age_minimum_ticks_with20tick_phase_bound": 60,
+    "quiet_ticks_before_each_attack": 40,
+    "latefall_damage_not_wind_damage": true,
+    "one_trial_bounded_no_wait_until_success": true
+  },
+  "observables": [
+    "typedExplosionpresent/absent,power,rawblockCountzero/nonzero,actualcentre,ownknockback",
+    "separate Wind gust/sound andsourcevelocity/lift;ordinarymace0.01resetisnotWindBurstIproof",
+    "source/victimserverpositions,sourcegroundflags,damagetype+HP,actualitems/menu",
+    "actualvariedcellstatebefore/after via777packetandboundedassertions"
+  ],
+  "absence_policy": {
+    "never_assign_counterfactual_C_as_measured": true,
+    "qualified_no_wind_requires_same_actual_source_geometry_and_positive_control_binding": true,
+    "absentpacket_with_positivewindlift_orstandalonewindparticles": "PARTIAL_EFFECT_OR_NOTIFICATION_NOT_WHOLE_VETO",
+    "absentpacket_withoutusableoriginbinding": "INCONCLUSIVE_ORIGIN",
+    "presentpacket_withCoutsidevaryingcell": "A_INCONCLUSIVE_ORIGIN_GEOMETRY; B_CONTINUE_IF_ALL_SOURCE_AND_POSE_GATES_PASS",
+    "unqualifiedsmash": "INCONCLUSIVE_SOURCE_STOP"
+  },
+  "interpretation": {
+    "768NBT_is_not777_expected_rule": true,
+    "bedrock_barrier_expected_outcomes_not_predeclared": true,
+    "onlycategoricalwholeeffect_vsrayattenuationpatternnotcountdistribution": true,
+    "N1_not_complete_immunity_set_proof": true,
+    "origin_vs_underfoot_predicate_still_conditional_when_noC_emitted": true,
+    "named_set_claim_allowed": false,
+    "canonical_wind_tag_policy_autochange": false,
+    "controlled_underfoot_effect_can_continue_with_C_in_air": true
+  },
+  "negative_guards": [
+    "missingorwrongfreshACK/initialvelocity",
+    "fakeprehitfeetfrommathwithoutserverevidence",
+    "anyprehitbodyintersectionwithsolid",
+    "attackafterlandingorwrongsmashsource/noHPdrop/smashsound",
+    "staleIenchantorcooldown/otherwindsource",
+    "fabricatedCforabsentwind",
+    "lostconnectionorinsufficientactualagewindow",
+    "treatingcount0asnoWindorordinary0.01asWindlaunch",
+    "applyingprimary768setasexpectation",
+    "automaticretiming/retry/addingcandidateorcharge",
+    "CoutsideU_must_not_be_claimed_inside_for_A",
+    "CoutsideU_does_not_turn_qualified_B_into_originproof",
+    "materialBclaim_without_positiveairbookend"
+  ],
+  "geometry_math_sha256": "12c58105ada4d6fd9f0d33389226a24a334555605c13f5a4f87b46f4b497523a",
+  "geometry_result_sha256": "0c41458df289ff016ca5c1caa163b41c680800c5f8562da930f99b8766b2e9d7",
+  "own_source_sha256": {
+    "/home/lenox/mcsa/project/src/network/play/pvp.rs": "4e48cfa944e4e03740bd6de7ed8ec9680ca1ad1a2c402c362d2ed3102b3fc1ca",
+    "/home/lenox/mcsa/project/src/tnt.rs": "8322b02901e648bf1e6bec099e19b7aaedf60e3155209289e9ed5741fe1bd1a7",
+    "/home/lenox/mcsa/project/src/combat.rs": "e1e0ae9169e8d4e520a07775b6e238d2b00d1cd5da13ed18a371d5a3306e2ba2",
+    "/home/lenox/mcsa/project/tools/blackbox/record777.py": "d63b3dd02498a6edfb4c299a2dae10cbafd49c9e9d3c8acde50280743aaebb43",
+    "/home/lenox/mcsa/project/tools/blackbox/scenarios/pvp-mace-landing-count.json": "3d01139c61b99f29ee9683f73d465c1dc065ed7d536f3fb6301966a40a25602e",
+    "/home/lenox/mcsa/project/tools/blackbox/scenarios/pvp-mace-landing-motion.json": "30ee70b14b3760be0f3b41b1ce6ad37ba9fbf2ac145b838ad972901d9adce683",
+    "/home/lenox/mcsa/project/tools/protocol-bridge/testdata/wind-burst-explosion-777.json": "b021cde8ac67ada44325be5f5baaa7c251d56a8a670121a219be1854b913b176"
+  },
+  "abort_if_entry_air_not_qualified_or_wind_not_positive": true,
+  "independent_questions": {
+    "A_origin_in_U": {
+      "if_actual_C_outside_U": "INCONCLUSIVE_ORIGIN_GEOMETRY; preserve true C; does not abort qualified B",
+      "if_event_absent": "no measured C; origin predicate not directly proven",
+      "claim": "only event-present trials with measured C inside U can support origin-in-U observation"
+    },
+    "B_underfoot_material": {
+      "precondition": "qualified positive air WindBurstI, fixed identical actual prehitfeet/AABB above T, complete smash/HP/menu/ACK/window/live and actual underfoot states",
+      "if_C_outside_U": "continue fixed trial order with no retime; underfoot comparison remains eligible",
+      "claim": "controlled material-associated whole-effect/partial-effect/ray-count observations only; no origin predicate or complete named immunity set",
+      "required_bookend": "positive qualified final air; without bookend any intervening material pattern remains provisional/inconclusive"
+    }
+  }
+}

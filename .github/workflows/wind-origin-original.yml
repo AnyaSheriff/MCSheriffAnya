@@ -1,0 +1,30 @@
+name: Wind origin ORIGINAL-only pilot
+on:
+  push:
+    branches: ['probe/wind-origin-original-20261110']
+permissions:
+  contents: read
+jobs:
+  original:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - run: python3 -m unittest discover -s tools/blackbox -p test_wind_origin_original.py -v
+      - run: python3 tools/blackbox/wind_origin_original.py --output wind-origin-original-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wind-origin-original-${{ github.run_id }}-${{ github.run_attempt }}
+          path: wind-origin-original-evidence/
+          retention-days: 14
+          if-no-files-found: error
