@@ -81,6 +81,9 @@ def inputs():
   with archive.open('wb') as stream:subprocess.run(['gh','api',f'repos/{REPO}/actions/artifacts/{number}/zip'],stdout=stream,check=True)
   assert sha(archive)==digest
   with zipfile.ZipFile(archive) as z:
+   if label=='baseline':
+    lock=z.read('source/Cargo.lock');assert hashlib.sha256(lock).hexdigest()=='9675f5683ab3b533faad08f32352dffbd79242c9043b7cec4b0caf8d8512ea35'
+    (OUT/'old-host-Cargo.lock').write_bytes(lock)
    prefix='native/plugins/' if label=='baseline' else 'reused/plugins/tmp/java-test/plugins/'
    destination=ROOT/('tmp/java-priority-baseline/plugins' if label=='baseline' else 'tmp/java-test/plugins')
    assert not destination.exists()

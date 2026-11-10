@@ -72,12 +72,14 @@ jobs:
           mkdir -p tmp/java-priority-baseline/plugins old-host-evidence
           cp -r candidate-artifact/java-priority-staged/plugins/java-priority-a tmp/java-priority-baseline/plugins/
           cp -r candidate-artifact/java-priority-staged/plugins/java-priority-b tmp/java-priority-baseline/plugins/
+          cp candidate-artifact/old-host-Cargo.lock Cargo.lock
+          sha256sum Cargo.lock > old-host-evidence/Cargo.lock.sha256
           git rev-parse HEAD > old-host-evidence/source.txt
           sha256sum tmp/java-priority-baseline/plugins/*/plugin.wasm > old-host-evidence/components.sha256
       - name: Execute old Host legacy baseline on exact new components
         run: |
           set -o pipefail
-          cargo test --release --bin mcsheriffanya plugins::tests::translated_bukkit_legacy_priority_baseline -- --ignored --exact --nocapture --test-threads=1 2>&1 | tee old-host-evidence/native.log
+          cargo test --release --locked --bin mcsheriffanya plugins::tests::translated_bukkit_legacy_priority_baseline -- --ignored --exact --nocapture --test-threads=1 2>&1 | tee old-host-evidence/native.log
       - name: Preserve actual old source proof lock and capture
         if: always()
         run: |
@@ -86,8 +88,10 @@ jobs:
           test ! -d tmp/java-priority-baseline || cp -r tmp/java-priority-baseline old-host-evidence/native
           python3 - <<'PY'
           from pathlib import Path
-          import hashlib,json
+          import hashlib,json,os
           out=Path('old-host-evidence')
+          binaries={str(p):{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size} for p in Path('target/release/deps').glob('mcsheriffanya-*') if p.is_file() and os.access(p,os.X_OK)}
+          (out/'runtime-test-binaries.json').write_text(json.dumps(binaries,indent=2)+'\n')
           files={str(p.relative_to(out)):{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size} for p in out.rglob('*') if p.is_file()}
           (out/'receipt.json').write_text(json.dumps({'source':'354a0d137b60dbd89d32246c3e0aef2ddbd062c1','files':files},indent=2)+'\n')
           PY
