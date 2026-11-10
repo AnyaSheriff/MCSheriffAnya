@@ -27,3 +27,26 @@ class CalibrationTests(unittest.TestCase):
   with self.assertRaises(AssertionError):c.inventory_proof([],[])
   with self.assertRaises((AssertionError,EOFError,IndexError,TypeError)):c.equipment([dict(name='entity_equipment',at=0,hex='01')],[])
 if __name__=='__main__':unittest.main()
+
+class CorrectionTests(unittest.TestCase):
+ def test_manifest_covers_first_namespace_after_freeze(self):
+  with tempfile.TemporaryDirectory() as d:
+   out=Path(d);(out/'a.json').write_text('{}');first=out/'FIRST-ORIGINAL';first.mkdir();(first/'a.json').write_text('{}')
+   c.finalize_manifest(out);rows=json.loads((out/'files.json').read_text())
+   self.assertEqual(set(rows),{'a.json','FIRST-ORIGINAL/a.json'})
+ def test_exact_unbreaking_three_not_arbitrary_nonempty(self):
+  names=['minecraft:thorns','minecraft:unbreaking']
+  c.assert_unbreaking_three(dict(enchantments=[[1,3]]),names)
+  for ench in [[[0,3]],[[1,2]],[[1,3],[0,7]]]:
+   with self.assertRaises(AssertionError):c.assert_unbreaking_three(dict(enchantments=ench),names)
+ def test_deadline_without_successful_ready_control_rejected(self):
+  for control,done,status in [(None,True,dict(version=dict(protocol=777,name='26.3'))),(object(),False,dict(version=dict(protocol=777,name='26.3'))),(object(),True,dict(version=dict(protocol=775,name='26.3')))]:
+   with self.assertRaises(AssertionError):c.assert_ready(control,done,status)
+  c.assert_ready(object(),True,dict(version=dict(protocol=777,name='26.3')))
+ def test_cleanup_missing_reply_cannot_escape_adapter(self):
+  class Control:
+   def stop_only(self):raise AssertionError('no stop reply')
+  errors=[];self.assertEqual(c.CleanupAdapter(Control(),errors).run('stop'),'');self.assertEqual(len(errors),1)
+ def test_own_runtime_imports_are_in_frozen_source_superset(self):
+  pin=c.read(c.BASE/'pins.json')
+  self.assertTrue(set(c.imported_own_files())<=set(pin['source_files']))

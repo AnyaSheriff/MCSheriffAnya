@@ -65,8 +65,45 @@ def barrier(clients,rcon,token):
   if all(found):return dict(token=token,issued=issued,response=response,receipts=[x[0] for x in found])
   assert all(c.failure is None for c in clients);time.sleep(.01)
  raise AssertionError('both actual barrier receipts required')
+def enchantments(configuration,protocol):
+ from analyze777 import Decoder
+ d=Decoder(protocol);d.types.update(protocol['configuration']['toClient']['types'])
+ mapping=protocol['configuration']['toClient']['types']['packet'][1][0]['type'][1]['mappings']
+ for packet in configuration:
+  if mapping.get(hex(packet['id']))=='registry_data':
+   b=io.BytesIO(bytes.fromhex(packet['hex']));row=d.read(b,'packet_registry_data');assert not b.read()
+   if row['id']=='minecraft:enchantment':return [entry['key'] for entry in row['entries']]
+ raise AssertionError('missing original enchantment registry')
+def assert_unbreaking_three(stack,names):
+ assert stack.get('enchantments')==[[names.index('minecraft:unbreaking'),3]],'exact unbreakingIII required'
+def finalize_manifest(output):
+ write(output/'files.json',{str(p.relative_to(output)):dict(bytes=p.stat().st_size,sha256=sha(p)) for p in output.rglob('*') if p.is_file() and p!=output/'files.json'})
+def assert_ready(control,done,status):
+ assert control is not None and done and status['version']['protocol']==777 and '26.3' in status['version']['name'],'original startup not ready'
+def status_query(port):
+ with socket.create_connection(('127.0.0.1',port),timeout=3) as sock:
+  body=own.varint(0)+own.varint(777)+own.varint(9)+b'localhost'+struct.pack('>H',port)+own.varint(1)
+  sock.sendall(own.varint(len(body))+body+b'\x01\x00')
+  f=sock.makefile('rb');size=own.read_varint(f.read);assert 0<size<2*1024*1024
+  b=io.BytesIO(f.read(size));assert own.read_varint(b.read)==0
+  n=own.read_varint(b.read);data=b.read(n);assert len(data)==n and not b.read()
+  return json.loads(data.decode('utf8','strict'))
+class CleanupAdapter:
+ def __init__(self,control,errors):self.control=control;self.errors=errors
+ def run(self,text):
+  assert text=='stop'
+  try:return self.control.stop_only()
+  except (AssertionError,EOFError,OSError) as error:self.errors.append(repr(error));return ''
+def imported_own_files():
+ result=[]
+ for module in list(sys.modules.values()):
+  f=getattr(module,'__file__',None)
+  if f:
+   path=Path(f).resolve()
+   if path.suffix=='.py' and path.is_relative_to(ROOT):result.append(str(path.relative_to(ROOT)))
+ return sorted(set(result))
 def capture(output):
- pin=preflight(output);signal.signal(signal.SIGALRM,lambda *_: (_ for _ in ()).throw(TimeoutError('finite capture deadline')));signal.alarm(300);output.mkdir();work=output/'original';work.mkdir();clients=[];configurations=[];proc=None;control=None;log=None
+ pin=preflight(output);signal.signal(signal.SIGALRM,lambda *_: (_ for _ in ()).throw(TimeoutError('finite capture deadline')));signal.alarm(300);output.mkdir();work=output/'original';work.mkdir();clients=[];configurations=[];startup_attempts=[];proc=None;control=None;log=None
  result=dict(status='INVALID',source=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),original_only=True,core_executed=False,compiled=False);commands=[];states=[];life={}
  try:
   for port in [26230,26231]:
@@ -79,12 +116,15 @@ def capture(output):
   (work/'server.properties').write_text('server-ip=127.0.0.1\nserver-port=26230\nenable-rcon=true\nrcon.port=26231\nrcon.password=local-layout-fixture\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\ngenerate-structures=false\nspawn-protection=0\nallow-flight=true\nview-distance=2\nsimulation-distance=2\nmax-tick-time=0\n')
   log=(work/'server.log').open('w');argv=['java','-Xmx1G','-XX:ActiveProcessorCount=2','-jar','server.jar','nogui']
   proc=subprocess.Popen(argv,cwd=work,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,start_new_session=True);life['identity']=process_identity(proc.pid);life['argv']=argv
-  deadline=time.monotonic()+120
+  deadline=time.monotonic()+120;startup_status=None;startup_done=False
   while time.monotonic()<deadline:
    assert proc.poll() is None
-   try:control=IsolatedRcon(26231,'local-layout-fixture');control.run('list');break
-   except OSError:time.sleep(.1)
-  assert control is not None
+   try:
+    candidate=IsolatedRcon(26231,'local-layout-fixture');candidate.run('list');startup_status=status_query(26230);startup_done='Done (' in (work/'server.log').read_text()
+    assert_ready(candidate,startup_done,startup_status);control=candidate;break
+   except (OSError,AssertionError) as error:
+    startup_attempts.append(dict(error=repr(error),calls=candidate.calls if 'candidate' in locals() else []));time.sleep(.1)
+  assert_ready(control,startup_done,startup_status);write(output/'startup-status.json',startup_status)
   protocol=read(data/'protocol.json');items=read(data/'items.json')
   for name in ['blackbox','blackboxb']:
    configuration=[]
@@ -116,6 +156,7 @@ def capture(output):
     assert slots[selected]['item']=='iron_ingot' and slots[selected]['count']==3 and slots[45]['item']=='gold_ingot' and slots[45]['count']==5
    else:
     assert slots[selected]['item']=='crossbow' and slots[selected]['count']==1 and slots[selected].get('damage')==7 and slots[selected].get('enchantments')
+    assert_unbreaking_three(slots[selected],enchantments(configurations[0],protocol))
     assert slots[45]['item']=='gold_ingot' and slots[45]['count']==5
     assert slots[selected]['custom_data']=={'mcsa_layout':{'type':3,'value':1},'marker':{'type':8,'value':'LAYOUT_FIXED'}}
    replies=[command(q) for q in QUERIES]
@@ -126,25 +167,30 @@ def capture(output):
   (output/'error.txt').write_text(traceback.format_exc());raise
  finally:
   write(output/'commands.json',commands)
+  write(output/'startup-attempts.json',startup_attempts)
   write(output/'configuration.json',configurations)
   write(output/'pins.json',pin)
   shutil.copy2(BASE/'criteria.json',output/'criteria.json')
-  write(output/'raw-rcon-frames.json',control.calls if control else [])
   write(output/'raw-clients.json',[dict(entity=c.entity,events=c.events,wire_sent=c.wire_sent,failure=c.failure) for c in clients])
   for c in clients:c.close()
   if proc is not None:
-   life['cleanup']=stop_process(proc,control,identity=life['identity'])
+   life['cleanup_errors']=[];life['cleanup']=stop_process(proc,CleanupAdapter(control,life['cleanup_errors']) if control else None,identity=life['identity'])
+  write(output/'raw-rcon-frames.json',control.calls if control else [])
+  used=imported_own_files();missing=[n for n in used if n not in pin['source_files']]
+  if missing:result.update(status='INVALID',unfrozen_imports=missing)
+  write(output/'own-import-closure.json',used)
   if log:log.close()
   life['ports_free']=ports_free([26230,26231])
   if not all(life['ports_free'].values()) or (proc is not None and (life['cleanup']['exit_code']!=0 or not life['cleanup']['group_gone'])):result.update(status='INVALID',cleanup_failed=True)
   with tarfile.open(output/'own-source.tar.gz','w:gz') as archive:
-   for n in [*pin['source_files'],'tools/blackbox/player_data_layout/criteria.json','tools/blackbox/player_data_layout/pins.json','.github/workflows/player-data-layout-original.yml']:archive.add(ROOT/n,arcname=n)
+   for n in sorted(set([*pin['source_files'],'tools/blackbox/player_data_layout/criteria.json','tools/blackbox/player_data_layout/pins.json','.github/workflows/player-data-layout-original.yml'])):archive.add(ROOT/n,arcname=n)
   write(output/'lifecycle.json',life);write(output/'result.json',result)
-  write(output/'files.json',{str(p.relative_to(output)):dict(bytes=p.stat().st_size,sha256=sha(p)) for p in output.rglob('*') if p.is_file() and p.name!='files.json'})
+  finalize_manifest(output)
  if result['status'].startswith('COMPLETE'):
   assert all(life['ports_free'].values()) and life['cleanup']['group_gone']
   first=output/'FIRST-ORIGINAL';first.mkdir(exist_ok=False)
   for n in ['result.json','commands.json','raw-clients.json','lifecycle.json','raw-rcon-frames.json','configuration.json','criteria.json','pins.json','own-source.tar.gz']:shutil.copy2(output/n,first/n)
+  finalize_manifest(output)
  else:raise RuntimeError('technical INVALID retained; stop without retry')
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);a=p.parse_args();capture(a.output.resolve())

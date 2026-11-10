@@ -26,7 +26,7 @@ def collect(sock,request,sentinel,frames):
   assert row['type']==0,'unexpected RCON response type'
   assert row['id'] in [request,sentinel],'unexpected/negative/stale RCON request ID'
   if row['id']==sentinel:
-   # Empty RESPONSE_VALUE request is a framing barrier, never response content.
+   # Ordinary list response with distinct ID closes the preceding query stream.
    assert parts and 0<len(bytes.fromhex(row['body_hex']))<=512,'missing command frame or oversized list barrier'
    bytes.fromhex(row['body_hex']).decode('utf-8','strict')
    return b''.join(parts).decode('utf-8','strict')
@@ -53,3 +53,16 @@ class IsolatedRcon:
     header+=exact(sock,4-len(header));receipt['frames'].append(receive(sock,header));raise AssertionError('trailing/interleaved response after list barrier')
    receipt.update(status='complete-by-list-id-barrier-and-EOF',completed=time.monotonic(),response=answer)
    return answer
+
+ def stop_only(self):
+  self.number+=3;request=self.number;row=dict(command='stop',role='cleanup-only-no-list',frames=[]);self.calls.append(row)
+  with socket.create_connection(('127.0.0.1',self.port),timeout=5) as sock:
+   sock.settimeout(5);send(sock,request,3,self.password.encode())
+   for _ in range(3):
+    frame=receive(sock);row['frames'].append(frame);assert frame['id']==request
+    if frame['type']==2:break
+    assert frame['type']==0 and frame['body_hex']==''
+   else:raise AssertionError('cleanup authentication incomplete')
+   row['request']=send(sock,request+1,2,b'stop');sock.shutdown(socket.SHUT_WR)
+   row['status']='stop-dispatched-no-reply-required'
+   return ''
