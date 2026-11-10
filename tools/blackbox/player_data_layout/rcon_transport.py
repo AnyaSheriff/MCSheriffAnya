@@ -3,17 +3,40 @@ import socket,struct,time
 MAX_FRAME=4*1024*1024
 MAX_TOTAL=16*1024*1024
 MAX_FRAMES=4096
+class IncompleteReadError(EOFError):
+ # Наследник EOFError: честное свидетельство обрыва чтения без домысленного кадра.
+ def __init__(self,wanted,received,partial):
+  self.wanted=wanted;self.received=received;self.partial_hex=partial.hex()
+  # kind='header'/'body' уточняется в receive(); сырой заголовок доступен только для обрыва тела.
+  self.kind='frame';self.raw_header_hex=None;self.declared_size=None
+  super().__init__(f'truncated RCON read wanted={wanted} received={received} partial_hex={self.partial_hex}')
+def incomplete_evidence(error):
+ # Структурированная выжимка для квитанции: только счётчики и hex обрывка, без содержимого аутентификации.
+ if not isinstance(error,IncompleteReadError):return None
+ return dict(kind=error.kind,wanted=error.wanted,received=error.received,partial_hex=error.partial_hex,raw_header_hex=error.raw_header_hex,declared_size=error.declared_size)
 def exact(sock,n):
  out=bytearray()
  while len(out)<n:
   part=sock.recv(n-len(out))
-  if not part:raise EOFError(f'truncated RCON read wanted={n} received={len(out)} partial_hex={out.hex()}')
+  if not part:
+   # Отдаём только реально принятые байты и запрошенное количество.
+   raise IncompleteReadError(n,len(out),bytes(out))
   out.extend(part)
  return bytes(out)
 def receive(sock,header=None):
- header=exact(sock,4) if header is None else header;size=struct.unpack('<i',header)[0]
+ try:
+  header=exact(sock,4) if header is None else header
+ except IncompleteReadError as error:
+  # Оборван 4-байтовый заголовок длины: полного сырого заголовка нет вовсе.
+  error.kind='header';raise
+ size=struct.unpack('<i',header)[0]
  assert 10<=size<=MAX_FRAME,'invalid RCON length'
- body=exact(sock,size);request,kind=struct.unpack('<ii',body[:8])
+ try:
+  body=exact(sock,size)
+ except IncompleteReadError as error:
+  # Оборвано тело: сохраняем полный сырой заголовок и объявленный размер тела.
+  error.kind='body';error.raw_header_hex=header.hex();error.declared_size=size;raise
+ request,kind=struct.unpack('<ii',body[:8])
  assert body[-2:]==b'\0\0','invalid RCON terminators'
  return dict(length=size,id=request,type=kind,body_hex=body[8:-2].hex(),frame_hex=(header+body).hex(),at=time.monotonic(),direction='in')
 def send(sock,request,kind,body):
@@ -62,18 +85,25 @@ class IsolatedRcon:
      receipt['frames'].append(receive(sock));raise AssertionError('buffered trailing response after delimiter')
     receipt.update(status='complete-by-actual-list-response-id',completed=time.monotonic(),response=answer)
     return answer
+  except EOFError as error:
+   # Формируем свидетельство неполного чтения в квитанции и честно поднимаем совместимый EOFError.
+   receipt['incomplete_read']=incomplete_evidence(error);raise
   finally:
    receipt['chronological']=sorted([*receipt['requests'],*receipt['frames']],key=lambda row:row['at'])
 
  def stop_only(self):
   self.number+=3;request=self.number;row=dict(command='stop',role='cleanup-only-no-list',frames=[]);self.calls.append(row)
-  with socket.create_connection(('127.0.0.1',self.port),timeout=5) as sock:
-   sock.settimeout(5);send(sock,request,3,self.password.encode())
-   for _ in range(3):
-    frame=receive(sock);row['frames'].append(frame);assert frame['id']==request
-    if frame['type']==2:break
-    assert frame['type']==0 and frame['body_hex']==''
-   else:raise AssertionError('cleanup authentication incomplete')
-   row['request']=send(sock,request+1,2,b'stop');sock.shutdown(socket.SHUT_WR)
-   row['status']='stop-dispatched-no-reply-required'
-   return ''
+  try:
+   with socket.create_connection(('127.0.0.1',self.port),timeout=5) as sock:
+    sock.settimeout(5);send(sock,request,3,self.password.encode())
+    for _ in range(3):
+     frame=receive(sock);row['frames'].append(frame);assert frame['id']==request
+     if frame['type']==2:break
+     assert frame['type']==0 and frame['body_hex']==''
+    else:raise AssertionError('cleanup authentication incomplete')
+    row['request']=send(sock,request+1,2,b'stop');sock.shutdown(socket.SHUT_WR)
+    row['status']='stop-dispatched-no-reply-required'
+    return ''
+  except EOFError as error:
+   # Структурированное свидетельство обрыва при stop-запросе; уже полные кадры остаются сохранёнными.
+   row['incomplete_read']=incomplete_evidence(error);row['status']='INVALID';raise
