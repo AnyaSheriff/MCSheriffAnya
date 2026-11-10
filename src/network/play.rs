@@ -1504,6 +1504,8 @@ async fn read_confirm_teleportation(
     let legacy = stream.stream().legacy.clone();
     let probe_776 = stream.stream().probe_776_enabled();
     let content = stream.stream().content;
+    #[cfg(feature="private-768")]
+    let private_768=stream.stream().private_768.clone();
 
     // Клиент подтвердит только то, что получил.
     stream.flush().await?;
@@ -1518,7 +1520,7 @@ async fn read_confirm_teleportation(
                     None => std::future::pending().await,
                 }
             } => return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "вход прерван")),
-            packet = tokio::time::timeout_at(deadline, super::packet::read_play_packet_with_content(stream.stream(), version, legacy.as_ref(), probe_776, content)) => {
+            packet = tokio::time::timeout_at(deadline, super::packet::read_play_packet_with_route(stream.stream(), version, legacy.as_ref(), probe_776, content,#[cfg(feature="private-768")] private_768.as_ref())) => {
                 packet.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "нет подтверждения переноса"))??
             }
         };
@@ -7907,6 +7909,8 @@ impl Inbound {
         let legacy = own.get_ref().legacy.clone();
         let probe_776 = own.get_ref().probe_776_enabled();
         let content = own.get_ref().content;
+        #[cfg(feature="private-768")]
+        let private_768=own.get_ref().private_768.clone();
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
         let starts = shared.tick_starts.subscribe();
@@ -7922,7 +7926,7 @@ impl Inbound {
         let reader = handle.spawn(async move {
             let (mut frames, mut bytes) = (0usize, 0usize);
             loop {
-                let read = super::packet::read_play_packet_with_content(&mut own, version, legacy.as_ref(), probe_776, content).await;
+                let read = super::packet::read_play_packet_with_route(&mut own, version, legacy.as_ref(), probe_776, content,#[cfg(feature="private-768")] private_768.as_ref()).await;
                 frames += 1;
                 bytes += read.as_ref().map_or(0, |packet| packet.body.len());
                 let arrived = *starts.borrow();

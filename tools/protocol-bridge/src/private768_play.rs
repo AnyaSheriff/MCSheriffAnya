@@ -13,6 +13,11 @@ impl Session {
                 for _ in 0..3{uint(&mut out,input.uint()?);}for _ in 0..3{boolean(&mut input,&mut out)?;}
                 self.spawn_info(&mut input,&mut out)?;boolean(&mut input,&mut out)?;finish(&input)?;self.self_entity=Some(player);
             },
+            "position"=>{
+                let position=crate::player_position::Position768::decode(input.rest)?;
+                if self.pending_teleports.len()>=64||!self.pending_teleports.insert(position.position.id){return Err(Error::PayloadUnavailable("private768 pending teleport context"));}
+                out.extend(position.encode()?);
+            },
             "respawn"=>{self.spawn_info(&mut input,&mut out)?;let flags=input.take(1)?[0];if flags&!3!=0{return Err(Error::Invalid);}out.push(flags);finish(&input)?;},
             "map_chunk"=>{
                 let chunk_context=context.chunk.ok_or(Error::MissingChunkContext)?;

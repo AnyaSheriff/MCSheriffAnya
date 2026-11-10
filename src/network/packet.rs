@@ -250,19 +250,23 @@ pub(super) fn probe_legacy_lock_wait(sender: std::sync::mpsc::Sender<()>) {
     *LEGACY_LOCK_PROBE.lock().unwrap() = Some(sender);
 }
 
+#[cfg(test)]
 pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>, probe_776: bool, content: mcsa_protocol::content::ContentCodec) -> io::Result<PacketInfo> {
+    read_play_packet_with_route(stream,version,legacy,probe_776,content,#[cfg(feature="private-768")] None).await
+}
+
+pub(super) async fn read_play_packet_with_route<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>, probe_776: bool, content: mcsa_protocol::content::ContentCodec,
+    #[cfg(feature="private-768")] private_768:Option<&super::connection::Private768Session>,
+)->io::Result<PacketInfo>{
     #[cfg(feature="private-768")]
     if version==mcsa_protocol::private768::VERSION {
+        let session=private_768.ok_or_else(||io::Error::new(io::ErrorKind::InvalidData,"Private768 missing phase/session context"))?;
+        session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?.ensure_play().map_err(translate_error)?;
         let packet=read_packet(stream).await?;
-        if packet.id==0 {
-            let confirmation=mcsa_protocol::teleport::Confirmation::decode(version,packet.payload())
-                .map_err(|e|io::Error::new(io::ErrorKind::InvalidData,format!("Private768 teleport: {e:?}")))?;
-            let mut body=vec![0];push_varint(&mut body,confirmation.id);
-            return Ok(PacketInfo{id:0,length:body.len() as i32,body,teleport:Some(confirmation),punch:false,foreign_inventory:false,legacy_inventory:None});
-        }
-        let body=mcsa_protocol::private768::serverbound(&packet.body,wire::Context{items:item_context(content),..Default::default()}).map_err(translate_error)?;
-        let (id,_)=decode_varint(&body)?;
-        return Ok(PacketInfo{id,length:body.len() as i32,body,teleport:None,punch:false,foreign_inventory:false,legacy_inventory:None});
+        let translated=session.lock().map_err(|_|io::Error::other("Private768 poisoned"))?
+            .serverbound(&packet.body,wire::Context{items:item_context(content),..Default::default()}).map_err(translate_error)?;
+        let body=translated.body;let(id,_)=decode_varint(&body)?;
+        return Ok(PacketInfo{id,length:body.len() as i32,body,teleport:translated.teleport,punch:false,foreign_inventory:false,legacy_inventory:None});
     }
     if content.is_preview() && !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !(probe_776 && matches!(version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2)) {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));

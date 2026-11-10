@@ -11,6 +11,8 @@ pub(crate) async fn chat_login(socket: &mut Connection, shared: &Shared,
     let probe = socket.probe_776_enabled();
     socket.content = shared.catalog().content_codec();
     let content = socket.content;
+    #[cfg(feature="private-768")]
+    let private_768=socket.private_768.clone();
     let mut out = Outgoing::new(socket);
     let mut player = PlayerState::new(identity.uuid, identity.name.clone(), None, None, 0, 0, (0.5, 65.0, 0.5));
     player.entity_id = 1;
@@ -33,7 +35,7 @@ pub(crate) async fn chat_login(socket: &mut Connection, shared: &Shared,
             if service.blocked(ip) { return Ok(Err(crate::auth::BLOCKED)); }
             let permitted = crate::auth::Service::registration_allowed(&shared.ops.lock().expect("ops"), &identity.name, verified);
             if !identity.registered && !permitted { return Ok(Err(crate::auth::OP_PROTECTED)); }
-            let mut packet = super::super::packet::read_play_packet_with_content(out.stream(), version, None, probe, content).await?;
+            let mut packet = super::super::packet::read_play_packet_with_route(out.stream(), version, None, probe, content,#[cfg(feature="private-768")] private_768.as_ref()).await?;
             // Никаких обычных обработчиков чата/команд; тело стирается до проверки.
             let command = if matches!(packet.id, SERVERBOUND_CHAT_COMMAND | SERVERBOUND_CHAT_MESSAGE) {
                 Cursor::new(packet.payload()).string().map(Zeroizing::new)
@@ -80,7 +82,7 @@ pub(crate) async fn chat_login(socket: &mut Connection, shared: &Shared,
             out.send(&encode_varint(0x76)).await?; out.flush().await?;
             loop {
                 let packet = tokio::time::timeout_at(deadline,
-                    super::super::packet::read_play_packet_with_content(out.stream(), version, None, probe, content)).await
+                    super::super::packet::read_play_packet_with_route(out.stream(), version, None, probe, content,#[cfg(feature="private-768")] private_768.as_ref())).await
                     .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, crate::auth::dialog::TIMEOUT))??;
                 if packet.id == 0x10 { return Ok(true); }
             }

@@ -187,7 +187,34 @@ mod tests {
         assert!(session.skin_parts.is_none());
     }
 
+    #[test]
+    fn serverbound_requires_phase_and_unknown_or_duplicate_ack_is_atomic(){
+        let regs=reference_registries().unwrap();let mut session=Session::new(&regs).unwrap();
+        let packet=packet(State::Play,Direction::Serverbound,768,"teleport_confirm",&[7]);
+        assert!(session.serverbound(&packet,Default::default()).is_err());
+        session.phase=Phase::Play;session.pending_teleports.insert(8);
+        assert!(session.serverbound(&packet,Default::default()).is_err());assert!(session.pending_teleports.contains(&8));
+        session.pending_teleports.insert(7);assert_eq!(session.serverbound(&packet,Default::default()).unwrap().teleport.unwrap().id,7);
+        assert!(session.serverbound(&packet,Default::default()).is_err());assert!(session.pending_teleports.contains(&8));
+    }
+    #[test]
+    fn configuration_tags_use_static_and_dynamic_domains_with_no_zero_fallback(){
+        let regs=reference_registries().unwrap();let mut session=Session::new(&regs).unwrap();session.phase=Phase::Configuration;
+        assert_eq!(session.tag_id("minecraft:item",836).unwrap(),827);
+        assert_eq!(session.tag_id("minecraft:block",1).unwrap(),1);
+        assert_eq!(session.tag_id("minecraft:entity_type",0).unwrap(),0);
+        assert!(session.tag_id("minecraft:item",u32::MAX).is_err());
+        assert!(session.tag_id("minecraft:unknown",0).is_err());
+        let canonical=crate::ids::translate(RegistryKind::Item,JavaVersion::V1_21_4,wire::INTERNAL,836).unwrap();
+        let mut body=vec![13,1];put_string(&mut body,"minecraft:item");uint(&mut body,1);put_string(&mut body,"minecraft:example");uint(&mut body,1);uint(&mut body,canonical);
+        let converted=session.configuration_clientbound(&body).unwrap();let mut reader=Cursor::new(&converted);
+        assert_eq!(reader.uint().unwrap(),13);assert_eq!(reader.uint().unwrap(),1);assert_eq!(reader.string().unwrap(),"minecraft:item");
+        assert_eq!(reader.uint().unwrap(),1);assert_eq!(reader.string().unwrap(),"minecraft:example");assert_eq!(reader.uint().unwrap(),1);assert_eq!(reader.uint().unwrap(),827);assert_eq!(reader.remaining(),0);
+    }
+
 }
+
+pub struct Inbound {pub body:Vec<u8>,pub teleport:Option<crate::teleport::Confirmation>}
 
 #[derive(Clone,Copy,PartialEq)]
 enum Phase { Login,Configuration,Play }
@@ -208,6 +235,7 @@ pub struct Session {
     dimension:Option<u32>,
     dimensions:std::sync::Arc<Vec<(i32,usize)>>,
     skin_parts:Option<u8>,
+    pending_teleports:BTreeSet<i32>,
 }
 impl Session {
     pub fn new(source:&[crate::registry::Registry])->Result<Self,Error>{
@@ -215,7 +243,7 @@ impl Session {
         let mapping=RegistryContext::new(source,&registries)?;
         let dimensions=play::dimension_context(&registries)?;
         Ok(Self{phase:Phase::Login,login_success:false,offered:false,replied:false,finished:false,
-            registry_sent:Default::default(),registries:std::sync::Arc::new(registries),mapping:std::sync::Arc::new(mapping),self_entity:None,dimension:None,dimensions:std::sync::Arc::new(dimensions),skin_parts:None})
+            registry_sent:Default::default(),registries:std::sync::Arc::new(registries),mapping:std::sync::Arc::new(mapping),self_entity:None,dimension:None,dimensions:std::sync::Arc::new(dimensions),skin_parts:None,pending_teleports:Default::default()})
     }
     pub fn login_success(&mut self)->Result<(),Error>{
         if self.phase!=Phase::Login||self.login_success{return Err(Error::Invalid);}self.login_success=true;Ok(())
@@ -268,7 +296,7 @@ impl Session {
                 for _ in 0..n {
                     let registry=input.string()?;put_string(&mut out,registry);let n=input.count(65536)?;uint(&mut out,n as u32);
                     for _ in 0..n{copy_string(&mut input,&mut out)?;let n=input.count(65536)?;uint(&mut out,n as u32);
-                        for _ in 0..n{uint(&mut out,self.mapping.map(registry,input.uint()?)?);}}
+                        for _ in 0..n{uint(&mut out,self.tag_id(registry,input.uint()?)?);}}
                 }finish(&input)?;
             },
             "finish_configuration"=>{
@@ -276,6 +304,26 @@ impl Session {
             },
             _=>return Err(Error::PayloadUnavailable(name)),
         }Ok(out)
+    }
+    pub fn ensure_play(&self)->Result<(),Error>{if self.phase==Phase::Play{Ok(())}else{Err(Error::Invalid)}}
+    pub fn serverbound(&mut self,body:&[u8],context:wire::Context)->Result<Inbound,Error>{
+        self.ensure_play()?;let mut candidate=self.clone();
+        let mut input=Cursor::new(body);let id=input.uint()?;
+        let (name,_,_)=packet_info(State::Play,Direction::Serverbound,768,id)?;
+        let translated=if name=="teleport_confirm" {
+            let confirmation=crate::teleport::Confirmation::decode(VERSION,input.rest).map_err(|_|Error::Invalid)?;
+            if !candidate.pending_teleports.remove(&confirmation.id){return Err(Error::PayloadUnavailable("private768 unknown/duplicate teleport ACK"));}
+            let mut body=vec![0];uint(&mut body,confirmation.id as u32);Inbound{body,teleport:Some(confirmation)}
+        }else{Inbound{body:serverbound(body,context)?,teleport:None}};
+        *self=candidate;Ok(translated)
+    }
+    fn tag_id(&self,registry:&str,id:u32)->Result<u32,Error>{
+        match registry {
+            "minecraft:block"=>map_id(RegistryKind::Block,769,id),
+            "minecraft:item"=>map_id(RegistryKind::Item,769,id),
+            "minecraft:entity_type"=>map_id(RegistryKind::Entity,769,id),
+            _=>self.mapping.map(registry,id),
+        }
     }
     pub fn clientbound(&mut self,tracker:&mut crate::entities::Tracker,body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
         if self.phase!=Phase::Play{return Err(Error::Invalid);}
@@ -287,7 +335,7 @@ impl Session {
     }
 }
 
-pub fn serverbound(body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
+fn serverbound(body:&[u8],context:wire::Context)->Result<Vec<u8>,Error>{
     let intermediate=play_edge(Direction::Serverbound,768,body)?;
     Ok(crate::client_769::serverbound(&intermediate,context)?.into_owned())
 }
