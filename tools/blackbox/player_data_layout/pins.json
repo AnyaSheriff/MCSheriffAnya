@@ -2,7 +2,7 @@
   "source_base": "8b9a87182b7f540ff56d1afa45775078882739b4",
   "criteria_sha256": "4c27b69363fbda2e96f2a833d3ac6b6dfc37b2bb7068b3009df18ebf7c5b8a07",
   "source_files": {
-    "tools/blackbox/player_data_layout/calibrate.py": "c0a5846cd9825f89b7ceba85c250ee62fa5fdef23191f55d0b6bb072cfa17c40",
+    "tools/blackbox/player_data_layout/calibrate.py": "6e7aea20f5c893724c714ba853dcf63adb9a14b0fa4090e9b051f25c3f0a0110",
     "tools/blackbox/player_data_layout/rcon_transport.py": "be727b78ba2d24ce62edfbe9b114c9ccf55ce1e430bd629a7c35919305043aa6",
     "tools/blackbox/record777.py": "d63b3dd02498a6edfb4c299a2dae10cbafd49c9e9d3c8acde50280743aaebb43",
     "tools/blackbox/combat_process.py": "147980c3e3c44e2829e2d0390875a4201e89ec39ea91c358304167e167382cd2",
@@ -35,7 +35,7 @@
     "tools/blackbox/noai_ambient_ci.py": "774581c19deb46079e541f8e7648bcde9741bf679e63e41b217c7346224d108a",
     "tools/blackbox/noai_hurt_audit.py": "3ee1dc0395aa0b0e81f39f2bd32f139f94d914568ca47c7eaf14eaf5b9de1089",
     "tools/blackbox/noai_hurt_ci.py": "88298d1d73206b96c37338da8f1b05404f3615688d736f88ce3aa781094f3f61",
-    "tools/blackbox/player_data_layout/test_calibration.py": "45f7777f79be103e0bf0ba2fe0887015ac9e7d820e70b8365c33dd46dc47d205",
+    "tools/blackbox/player_data_layout/test_calibration.py": "a76079ea83ee7e49e5837fe9c40e302aa97fe946573739ba195840e783e3675b",
     "tools/blackbox/player_data_layout/test_slots.py": "48842fd02de024157ca25c1da5f107020a914f6d68d52d40fbd583bb827f0aa3",
     "tools/blackbox/player_data_layout/test_transport.py": "f310e0df938088130514deda51215d8129be8266e986533b7c7eca1d76e21e7d",
     "tools/blackbox/protection_edges_ci.py": "82c9cb5f3facf7317764348d81a5d2cd18373b22b88fe981b4d2a511df57da67",

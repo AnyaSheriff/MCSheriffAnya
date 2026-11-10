@@ -50,3 +50,30 @@ class CorrectionTests(unittest.TestCase):
  def test_own_runtime_imports_are_in_frozen_source_superset(self):
   pin=c.read(c.BASE/'pins.json')
   self.assertTrue(set(c.imported_own_files())<=set(pin['source_files']))
+
+class SemanticCorrectionTests(unittest.TestCase):
+ def test_padded_registry_packet_id_is_decoded(self):
+  from unittest.mock import patch
+  protocol={'configuration':{'toClient':{'types':{'packet':['container',[{'type':['mapper',{'mappings':{'0x07':'registry_data'}}]}]]}}}}
+  class Decoder:
+   def __init__(self,*args):self.types={}
+   def read(self,b,*args):return dict(id='minecraft:enchantment',entries=[dict(key='minecraft:unbreaking')])
+  with patch('analyze777.Decoder',Decoder):
+   self.assertEqual(c.enchantments([dict(id=7,hex='')],protocol),['minecraft:unbreaking'])
+ def test_first_semantic_failure_is_not_retried(self):
+  class Broken:
+   calls=0
+   def run(self,*args):self.calls+=1;raise AssertionError('invalid actual frame')
+  broken=Broken()
+  with self.assertRaises(AssertionError):c.semantic_startup(broken,True,lambda:{})
+  self.assertEqual(broken.calls,1)
+  class WrongProtocol:
+   calls=0
+   def run(self,*args):self.calls+=1;return 'list'
+  wrong=WrongProtocol()
+  with self.assertRaises(AssertionError):c.semantic_startup(wrong,True,lambda:dict(version=dict(protocol=775,name='26.3')))
+  self.assertEqual(wrong.calls,1)
+ def test_actual777_gamerule_success_and_old_names_not_used(self):
+  c.validate_setup_reply('gamerule spawn_mobs false','Game rule spawn_mobs is now set to false')
+  c.validate_setup_reply('gamerule natural_health_regeneration false','Game rule natural_health_regeneration is now set to false')
+  with self.assertRaises(AssertionError):c.validate_setup_reply('gamerule spawn_mobs false','Unknown gamerule')

@@ -70,7 +70,7 @@ def enchantments(configuration,protocol):
  d=Decoder(protocol);d.types.update(protocol['configuration']['toClient']['types'])
  mapping=protocol['configuration']['toClient']['types']['packet'][1][0]['type'][1]['mappings']
  for packet in configuration:
-  if mapping.get(hex(packet['id']))=='registry_data':
+  if (mapping.get(hex(packet['id'])) or mapping.get(f"0x{packet['id']:02x}"))=='registry_data':
    b=io.BytesIO(bytes.fromhex(packet['hex']));row=d.read(b,'packet_registry_data');assert not b.read()
    if row['id']=='minecraft:enchantment':return [entry['key'] for entry in row['entries']]
  raise AssertionError('missing original enchantment registry')
@@ -88,6 +88,18 @@ def status_query(port):
   b=io.BytesIO(f.read(size));assert own.read_varint(b.read)==0
   n=own.read_varint(b.read);data=b.read(n);assert len(data)==n and not b.read()
   return json.loads(data.decode('utf8','strict'))
+def semantic_startup(candidate,done,status_reader):
+ # После actual response никаких повторов: contradiction/frame failure завершают capture.
+ assert done
+ candidate.run('list')
+ status=status_reader();assert_ready(candidate,done,status);return status
+def validate_setup_reply(command,response):
+ expected={
+  'gamerule spawn_mobs false':'Game rule spawn_mobs is now set to false',
+  'gamerule natural_health_regeneration false':'Game rule natural_health_regeneration is now set to false',
+ }
+ if command in expected:assert response==expected[command],'setup gamerule rejected'
+ else:assert response and not response.startswith(('Unknown','Incorrect','Invalid')),'setup failed'
 class CleanupAdapter:
  def __init__(self,control,errors):self.control=control;self.errors=errors
  def run(self,text):
@@ -119,12 +131,17 @@ def capture(output):
   deadline=time.monotonic()+120;startup_status=None;startup_done=False
   while time.monotonic()<deadline:
    assert proc.poll() is None
-   try:
-    candidate=IsolatedRcon(26231,'local-layout-fixture');candidate.run('list');startup_status=status_query(26230);startup_done='Done (' in (work/'server.log').read_text()
-    assert_ready(candidate,startup_done,startup_status);control=candidate;break
-   except (OSError,AssertionError) as error:
-    startup_attempts.append(dict(error=repr(error),calls=candidate.calls if 'candidate' in locals() else []));time.sleep(.1)
-  assert_ready(control,startup_done,startup_status);write(output/'startup-status.json',startup_status)
+   startup_done='Done (' in (work/'server.log').read_text()
+   if startup_done:break
+   time.sleep(.1)
+  assert startup_done,'Done readiness deadline'
+  candidate=IsolatedRcon(26231,'local-layout-fixture')
+  try:
+   startup_status=semantic_startup(candidate,startup_done,lambda:status_query(26230))
+  except BaseException as error:
+   startup_attempts.append(dict(error=repr(error),calls=candidate.calls));raise
+  control=candidate
+  write(output/'startup-status.json',startup_status)
   protocol=read(data/'protocol.json');items=read(data/'items.json')
   for name in ['blackbox','blackboxb']:
    configuration=[]
@@ -134,7 +151,7 @@ def capture(output):
   nonce='RUN'+os.environ['GITHUB_RUN_ID']
   def command(text):
    row=dict(command=text,issued=time.monotonic());row['response']=control.run(text);row['completed']=time.monotonic();commands.append(row);return row
-  for text in ['gamerule naturalRegeneration false','gamerule doMobSpawning false','gamemode creative blackbox','gamemode creative blackboxb','tp blackbox 0.5 65 0.5','tp blackboxb 2.5 65 0.5']:command(text)
+  for text in ['gamerule natural_health_regeneration false','gamerule spawn_mobs false','gamemode creative blackbox','gamemode creative blackboxb','tp blackbox 0.5 65 0.5','tp blackboxb 2.5 65 0.5']:validate_setup_reply(text,command(text)['response'])
   for state in STATES:
    clients[0].send('held_item_slot',struct.pack('>h',state['selected']))
    for text in state['commands']:command(text)
