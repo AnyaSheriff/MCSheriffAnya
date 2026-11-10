@@ -1,0 +1,44 @@
+name: One candidate93 offhand-natural against immutable successful first original
+on:
+  push:
+    branches: ['test/crossbow-offhand-natural-candidate-20261110']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  candidate-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Offline frozen guards and existing recorder contracts, no server or compilation
+        env:
+          MCSA_EXTENDED_PROBE_REPO: ${{ github.workspace }}
+        run: |
+          mkdir -p natural-candidate-check-logs
+          python3 -B -m unittest discover -s tools/blackbox/crossbow_ub_extended -p 'test_*probe.py' -v 2>&1 | tee natural-candidate-check-logs/extended-unit.log
+          python3 -B -m unittest discover -s tools/blackbox -p test_record777.py -v 2>&1 | tee natural-candidate-check-logs/recorder-unit.log
+      - name: Download two exact immutable ZIPs, no original execution or build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/AnyaSheriff/MCSheriffAnya/actions/artifacts/13748212998/zip > "$RUNNER_TEMP/first-offhand-natural-original.zip"
+          gh api repos/AnyaSheriff/MCSheriffAnya/actions/artifacts/13710052720/zip > "$RUNNER_TEMP/verified-runtime93.zip"
+      - name: One fresh candidate93 offhand-natural, no original or mainhand-natural or retry
+        run: |
+          python3 -B tools/blackbox/crossbow_ub_extended/offhand_natural_candidate.py --output offhand-natural-candidate-evidence --original-zip "$RUNNER_TEMP/first-offhand-natural-original.zip" --runtime-zip "$RUNNER_TEMP/verified-runtime93.zip" 2>&1 | tee natural-candidate-check-logs/candidate-entry.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offhand-natural-candidate93-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            natural-candidate-check-logs/
+            offhand-natural-candidate-evidence/
+          retention-days: 7
+          if-no-files-found: warn

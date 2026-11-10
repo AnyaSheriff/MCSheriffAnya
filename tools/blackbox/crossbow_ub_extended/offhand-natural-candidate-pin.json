@@ -1,0 +1,156 @@
+{
+  "runtime_source": "93bbae85da4d2b90df9979b5ba3a5f7c965ee21f",
+  "runtime_run": 42690720281,
+  "runtime_artifact": 13710052720,
+  "runtime_zip_sha256": "72961169c5235ea2390d8334ef7c574e8f5324a9efcee085825bef4baba42077",
+  "runtime_sha256": "4a456bd552edd3a46bd3755b40055c731a97e199a5116cb7d9bdae1d5aa65110",
+  "runtime_lock_sha256": "9675f5683ab3b533faad08f32352dffbd79242c9043b7cec4b0caf8d8512ea35",
+  "schema": "one-offhand-natural-success-reference-v1",
+  "scenario": "crossbow-ub-offhand-natural-777",
+  "original_run": 42784228484,
+  "original_artifact": 13748212998,
+  "original_source": "60e45f5a782fd8039c599b815395c0d599476a0e",
+  "original_zip_sha256": "5cee6219ca2cb6a5c13dcbf2128bd02f128c620e7ea70f00ad037f1f6eb61760",
+  "original_raw_sha256": "761c475eb7dba480b472250e8fbee5d1b111c1a69f821fe2fc4fab71dd8fe81b",
+  "criteria_sha256": "24e96f7b79c34111d6239c80bb16cb04f3c602895147e93ee881f3a366ea1cbe",
+  "scenario_sha256": "b4aa0157a2e1df6251fd835359a07272d940bbb19b6a0d2a5e1179f9f1251a30",
+  "original_recorder_sha256": "8cf356f058047433dffd75090280dfd81c42e210e8505c2ef2140c1276abc59f",
+  "original_CI_conclusion_REQUIRED": "success",
+  "original_selected_source_sha256": "4342c63dae480ba199aa3bb859e38f60777b2f5e66db3fad8b08ebb054f55a2a",
+  "accepted_fixed_parser_sha256": "2b158644f02b09f4d6d8934cbc6606961c3039d5bccf4959644c8ccded9fbcd1",
+  "original_counts": {
+    "one_arrow_then_break": 30,
+    "two_arrows_then_break": 21,
+    "three_arrows_then_break": 24,
+    "three_arrows_survived": 53
+  },
+  "N": 128,
+  "fresh_controls": 4,
+  "gameplay_base": "e3e90d74f60f0750459ebe964c709195f92b49ef",
+  "no_new_original": true,
+  "no_recompile": true,
+  "reader_sha256": {
+    "tools/protocol-bridge/probe_crossbow_session.py": "2dcb7d891a931c7f7d11874dc6e22a38d1829194bbd634c2d6b861acc13a2ecc",
+    "tools/protocol-bridge/probe_player_actions_runtime.py": "e9bbef78ce6cd5ca082791903b67eaa8451da6a06f7cda75c989099fcd5ca316",
+    "tools/protocol-bridge/smoke.py": "dd57d7b615de376f1b4dfe8339bebf214ce960269e2390dc95b16dba273b3be3",
+    "tools/blackbox/crossbow_nearbreak_ci.py": "c8a5a4314a2e892be6a8dfd6365dfe304507a6efd323979dada0e10abbece271",
+    "tools/blackbox/analyze777.py": "02364605db5d39893f50250b5c560a0fda6f8907aa0f526dc9bb23325890b632",
+    "tools/blackbox/combat_wire.py": "b5d24d64c6a7ac5a034cde5d091cace8def17b61e0bd11d2f513799cb3fa727a",
+    "tools/protocol-bridge/probe_persistence_777.py": "5ed06e7808a40b4a0df48197358463983148f7d4265b9799581cd04c8f274253"
+  },
+  "reference_files": {
+    "approved-source-pin.json": {
+      "bytes": 3172,
+      "sha256": "eff3ea82db330885fbea48bb962b2fd6b28333d26de56d80ed0f9856248d2ee0"
+    },
+    "command.json": {
+      "bytes": 749,
+      "sha256": "4bc104273e49211d9feb18893fad592166a3cb39407f7eb4facf72fac4c06767"
+    },
+    "runtime-input-API-ZIP.json": {
+      "bytes": 16527,
+      "sha256": "473cf33e8568a0e1f3596eb3fe73a0dc861a7bd9318c5c05ca54aa015ac88187"
+    },
+    "capture-receipt.json": {
+      "bytes": 899,
+      "sha256": "15c51896a5795df5eca2bcbea054d811dd8613c757381d5b01b3f4ae9f669639"
+    },
+    "recorder.log": {
+      "bytes": 207,
+      "sha256": "f7d5038ca4861de9f63882ebb7c3933f123f2559f915b781205ec68d7fc84de1"
+    },
+    "pin.json": {
+      "bytes": 958,
+      "sha256": "9e8cf54f95530d8f18797273adaad81e6ff81a37f72c00554e643090371b76c3"
+    },
+    "prebuilt-build-receipt.json": {
+      "bytes": 62903,
+      "sha256": "a3730e926ccd183445c03622f04f966366cbda99a0aeced78c3a85a8ccf199e8"
+    },
+    "prebuilt-Cargo.lock": {
+      "bytes": 81543,
+      "sha256": "9675f5683ab3b533faad08f32352dffbd79242c9043b7cec4b0caf8d8512ea35"
+    },
+    "scenario.json": {
+      "bytes": 270903,
+      "sha256": "b4aa0157a2e1df6251fd835359a07272d940bbb19b6a0d2a5e1179f9f1251a30"
+    },
+    "result.json": {
+      "bytes": 1786,
+      "sha256": "7c277ab1658eec6e064c520c1c9c101663987ab7735e51c00e6d3b7dccce461a"
+    },
+    "selected-own-source.tar.gz": {
+      "bytes": 51752,
+      "sha256": "4342c63dae480ba199aa3bb859e38f60777b2f5e66db3fad8b08ebb054f55a2a"
+    },
+    "criteria.json": {
+      "bytes": 2379,
+      "sha256": "24e96f7b79c34111d6239c80bb16cb04f3c602895147e93ee881f3a366ea1cbe"
+    },
+    "negative-controls.json": {
+      "bytes": 695,
+      "sha256": "6f6e4ffd2fb125ab5afcb24d243211c0ac387bfabdc3f146c2c060e281717973"
+    },
+    "official-server.log": {
+      "bytes": 268186,
+      "sha256": "bf75e61091af5248df3eadf74607aa773323feed0d706d94f73791495ca48d6c"
+    },
+    "FIRST-ORIGINAL/original-raw.json": {
+      "bytes": 5694551,
+      "sha256": "761c475eb7dba480b472250e8fbee5d1b111c1a69f821fe2fc4fab71dd8fe81b"
+    },
+    "FIRST-ORIGINAL/original-first-pin.json": {
+      "bytes": 578,
+      "sha256": "8787ae0dbfba8b6d237e07b78d9b0780603589299c5b44d14fd0883c35caa199"
+    },
+    "FIRST-ORIGINAL/observation.json": {
+      "bytes": 420424,
+      "sha256": "ccf41aadc7ce586529a0123d900ad0119d9881b0d967b7cae133ed6f94fec85a"
+    },
+    "FIRST-ORIGINAL/criteria.json": {
+      "bytes": 2379,
+      "sha256": "24e96f7b79c34111d6239c80bb16cb04f3c602895147e93ee881f3a366ea1cbe"
+    },
+    "recordings/run-1794299940360857585.json": {
+      "bytes": 1433,
+      "sha256": "654bb0666b8bd489a33a5998dd73de07dd368b3503b3d3e40e872c72acfe9e01"
+    },
+    "recordings/sound-observations.json": {
+      "bytes": 342572,
+      "sha256": "4661f0d09c8abb7ddb89da79fb235c01e159e5a5caf0daf533df3d4b13fd0ade"
+    },
+    "recordings/summary.json": {
+      "bytes": 192,
+      "sha256": "a02fbc79ef7bc3bd83d1b33a1c354eda232220e9b08e97936d5e2a2c85e1b607"
+    },
+    "recordings/lifecycle.json": {
+      "bytes": 751,
+      "sha256": "d30e9acca223da92419b60ff8c4e8787c8c08b405ee550f81d8fcf6e74794110"
+    },
+    "recordings/crossbow-ub-offhand-natural-777-official.json": {
+      "bytes": 5694551,
+      "sha256": "761c475eb7dba480b472250e8fbee5d1b111c1a69f821fe2fc4fab71dd8fe81b"
+    },
+    "data/entities.json": {
+      "bytes": 90138,
+      "sha256": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+    },
+    "data/protocol.json": {
+      "bytes": 347504,
+      "sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727"
+    },
+    "data/blocks.json": {
+      "bytes": 976252,
+      "sha256": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873"
+    },
+    "data/items.json": {
+      "bytes": 207286,
+      "sha256": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb"
+    }
+  },
+  "reference_ledger_sha256": "96bf8846869418ab859fee73e6971c4bae19cf746f4de0e5a42c44ef4749ba34",
+  "repository": "AnyaSheriff/MCSheriffAnya",
+  "repository_id": 1380133300,
+  "candidate_recorder_sha256": "953d2cdf847e1679d5f174518d4985c2215dd67651125ccffdd27c11ab3219c9",
+  "no_mainhand_natural": true
+}

@@ -12,8 +12,8 @@ class OffhandNaturalOriginalTests(unittest.TestCase):
     with patch.dict(os.environ,env):
      with self.assertRaises(AssertionError):n.run(output,Path('no-zip'))
     self.assertFalse(output.exists())
- def test_recorder_pin_matches_actual_file_before_workflow_download(self):
-  self.assertEqual(n.read(n.PIN)['recorder_sha256'],n.sha(R/'tools/blackbox/record777.py'))
+ def test_original_recorder_pin_matches_immutable_capture_source(self):
+  self.assertEqual(n.read(n.PIN)['recorder_sha256'],hashlib.sha256(__import__('subprocess').check_output(['git','show','60e45f5a:tools/blackbox/record777.py'],cwd=R)).hexdigest())
  def test_stale_recorder_pin_stops_before_fetch_API_or_Popen(self):
   with tempfile.TemporaryDirectory() as directory:
    root=Path(directory);pin=n.read(n.PIN);pin['recorder_sha256']='0'*64
