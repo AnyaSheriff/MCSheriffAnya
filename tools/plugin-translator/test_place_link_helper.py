@@ -27,3 +27,15 @@ class PathGuards(unittest.TestCase):
    link=deps/'libserde_json-fake.rlib';link.symlink_to(outside)
    for path in [link,outside,Path('relative.rlib'),deps/'sub'/'..'/'file.rlib']:
     with self.assertRaises(ValueError):confined_file(path,deps)
+
+class CanonicalRegression(unittest.TestCase):
+ def test_existing_dotdot_path_resolves_inside_but_lexical_parents_skip_root(self):
+  from pathlib import Path
+  from tempfile import TemporaryDirectory
+  from place_link_helper import confined_file
+  with TemporaryDirectory() as directory:
+   base=Path(directory);deps=base/'deps';deps.mkdir();(base/'other').mkdir()
+   target=deps/'libserde_json-real.rlib';target.write_bytes(b'actual')
+   path=base/'other'/'..'/'deps'/target.name
+   self.assertTrue(path.is_file());self.assertEqual(path.resolve(),target)
+   with self.assertRaises(ValueError):confined_file(path,deps)
