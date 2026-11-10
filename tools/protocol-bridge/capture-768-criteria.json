@@ -41,5 +41,6 @@
     "packets": 2048,
     "ordinary_bytes": 33554432,
     "entry_seconds": 120
-  }
+  },
+  "render_observation": "Fixed8seconds after identical wirecriteria before screenshot; screenshot must be reviewed independently, not assumed worldrender"
 }

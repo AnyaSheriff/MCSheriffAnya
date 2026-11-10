@@ -301,6 +301,10 @@ def main():
                     if complete: break
                     if time.monotonic()>deadline: raise TimeoutError('initial opaque E2E criteria incomplete')
                     time.sleep(.05)
+                report['render_settle_seconds']=8
+                time.sleep(8)
+                if report['errors'] or client.poll() is not None or server.poll() is not None:
+                    raise RuntimeError('native session failed during fixed render settling')
                 report['screenshot_sha256']=capture(client,a.output/'initial-play.png')
                 time.sleep(2)
                 if report['errors'] or 'Failed to handle packet' in (a.output/'client.log').read_text():
