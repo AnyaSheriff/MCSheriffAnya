@@ -21,6 +21,8 @@ use crate::snbt::{self, Value};
 
 mod custom_data;
 pub use custom_data::CustomData;
+mod split_components;
+pub(crate) use split_components::split_top_level;
 pub(crate) mod storage_depth;
 pub(crate) mod main_import;
 #[cfg(test)]
@@ -1512,7 +1514,11 @@ pub fn stack_from_value(value: &crate::snbt::Value) -> Result<crate::inventory::
     let id = value.get("id").and_then(crate::snbt::Value::as_str).ok_or("нет id предмета")?;
     let mut parts = Vec::new();
     if let Some(crate::snbt::Value::Map(fields)) = value.get("components") {
-        for (key, value) in fields { parts.push(format!("{key}={}",value.text())); }
+        for (key, value) in fields {
+            let key = key.trim().strip_prefix("minecraft:").unwrap_or(key.trim());
+            if key == "custom_data" { return Err("custom_data в стеке из готового SNBT-значения не поддерживается".into()); }
+            parts.push(format!("{key}={}",value.text()));
+        }
     }
     let (name, extra) = parse_item_spec(&format!("{id}[{}]",parts.join(",")))?;
     let item = crate::blocks::item_named(&name).ok_or("неизвестный предмет")?;
@@ -1531,7 +1537,13 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
         let (key, value) = part.split_once('=').ok_or_else(|| format!("нет значения у {part}"))?;
         let key = key.trim().strip_prefix("minecraft:").unwrap_or(key.trim());
         if key == "custom_data" {
-            return Err("custom_data в командах пока не поддерживается: NBT нельзя сохранить без потери типов".into());
+            if data.custom_data.is_some() {
+                return Err("custom_data встречается в одном предмете дважды".into());
+            }
+            let custom = CustomData::from_snbt(value.trim())
+                .ok_or_else(|| format!("не разобрать custom_data {value}: синтаксис или тип не поддерживаются"))?;
+            data.custom_data = Some(custom);
+            continue;
         }
         let value = snbt::parse(value.trim()).ok_or_else(|| format!("не разобрать значение {value}"))?;
 
@@ -1770,33 +1782,6 @@ pub fn slot_group(name: &str) -> Option<u8> {
 }
 
 /// Делит по запятым вне скобок и кавычек.
-pub(crate) fn split_top_level(text: &str) -> Vec<&str> {
-    let mut parts = Vec::new();
-    let mut depth = 0;
-    let mut quote: Option<char> = None;
-    let mut start = 0;
-
-    for (at, c) in text.char_indices() {
-        match (quote, c) {
-            (Some(q), c) if c == q => quote = None,
-            (Some(_), _) => {}
-            (None, '"' | '\'') => quote = Some(c),
-            (None, '[' | '{') => depth += 1,
-            (None, ']' | '}') => depth -= 1,
-            (None, ',') if depth == 0 => {
-                parts.push(&text[start..at]);
-                start = at + 1;
-            }
-            _ => {}
-        }
-    }
-
-    if !text[start..].trim().is_empty() {
-        parts.push(&text[start..]);
-    }
-
-    parts
-}
 
 #[cfg(test)]
 mod tests {

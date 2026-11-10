@@ -7,6 +7,11 @@
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CustomData(Vec<u8>);
 
+/// Разбор SNBT-команд и его интеграционные тесты — дочерние модули.
+mod command;
+#[cfg(test)]
+mod command_tests;
+
 impl CustomData {
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
         let (value, length) = Self::read_prefix(bytes)?;
@@ -20,6 +25,14 @@ impl CustomData {
         reader.value(10, 0, &mut out)?;
         if out.len() > u16::MAX as usize { return None; }
         Some((Self(out), reader.at))
+    }
+
+    /// Разбор SNBT-компонента `custom_data` из команды: поддерживается
+    /// подмножество — compound, кавычки, точные числа b/s/i32/l и bool.
+    /// Списки, float и неизвестные экранирования отвергаются, поэтому
+    /// типы и байты не пережимаются через f64/JSON.
+    pub fn from_snbt(text: &str) -> Option<Self> {
+        Self::from_bytes(&command::parse(text)?)
     }
 
     pub fn as_bytes(&self) -> &[u8] { &self.0 }

@@ -1,0 +1,20 @@
+{
+  "source": "original26.3/protocol777",
+  "capture_run": 42817233062,
+  "capture_source": "3c36b489575366c0ba9096be83808835e34e8b1f",
+  "original_result_sha256": "0894a713ca23a2cdbdbedaeb177d3fc6ccda6aa8f4f1f9a2cf22ac11ae9abb45",
+  "command": "crossbow[damage=7,enchantments={unbreaking:3},custom_data={mcsa_layout:1,marker:\"LAYOUT_FIXED\"}]",
+  "snbt": "{mcsa_layout:1,marker:\"LAYOUT_FIXED\"}",
+  "raw_hex": "0a03000b6d6373615f6c61796f7574000000010800066d61726b6572000c4c41594f55545f464958454400",
+  "typed_value": {
+    "mcsa_layout": {
+      "type": 3,
+      "value": 1
+    },
+    "marker": {
+      "type": 8,
+      "value": "LAYOUT_FIXED"
+    }
+  },
+  "scope": "one actual int/string compound observation, not full syntax or numeric execute-store contract"
+}

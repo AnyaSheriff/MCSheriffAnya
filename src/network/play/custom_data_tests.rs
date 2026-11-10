@@ -145,8 +145,28 @@ fn custom_data_nested_items_and_tnt_extras_survive_creative_and_storage() {
 }
 
 #[test]
-fn custom_data_commands_fail_explicitly_even_inside_items() {
-    for spec in ["stone[custom_data={x:1b}]","stone[minecraft:custom_data={}]",
+fn creative_slot_roundtrip_keeps_known_tnt_kind() {
+    let kind = crate::custom_tnt::by_name(crate::custom_tnt::names().next().expect("список типов не пуст"))
+        .expect("известный тип TNT по имени");
+    let marker_field = format!("{}:\"{}\"", crate::custom_tnt::MARKER, kind.name);
+    let specs = [
+        format!("tnt[custom_data={{{marker_field}}}]"),
+        format!("tnt[custom_data={{{marker_field},flag:1b}}]"),
+    ];
+    for spec in specs {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
+        let stack = crate::commands::stack_from_spec_for_catalog(catalog, &spec, 2).unwrap().unwrap();
+        assert_eq!(stack.tnt, Some(kind.id), "{spec}");
+        let payload = received_payload(stack, 36, mcsa_protocol::JavaVersion::V26_3);
+        let mut player = player();
+        assert!(read_creative_slot_with_catalog(&payload, &mut player, catalog).is_none(), "{spec}");
+        assert_eq!(player.inventory.slot(36), Some(stack), "{spec}");
+    }
+}
+
+#[test]
+fn untyped_nested_custom_data_components_fail_explicitly() {
+    for spec in [
         "shulker_box[container=[{slot:0,item:{id:stone,components:{custom_data:{x:1L}}}}]]",
         "bundle[bundle_contents=[{id:stone,components:{custom_data:{x:1s}}}]]",
         "crossbow[charged_projectiles=[{id:arrow,components:{custom_data:{x:1}}}]]"] {

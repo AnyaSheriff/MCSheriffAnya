@@ -203,7 +203,7 @@ pub(crate) fn stack_from_spec_for_catalog(catalog: crate::gameplay_catalog::Cata
 
     let number = catalog.item_named(&name).ok().flatten().ok_or_else(|| format!("Нет такого предмета: {}", spec.split('[').next().unwrap_or(spec)))?;
 
-    Ok(Some(crate::inventory::Stack::new(number, count.min(catalog.stack_size(number).map_err(|_| format!("Нет такого предмета: {name}"))?)).with_extras(data)))
+    Ok(Some(crate::stackdata::stack_with_components(number, count.min(catalog.stack_size(number).map_err(|_| format!("Нет такого предмета: {name}"))?), data)))
 }
 
 pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
@@ -1715,6 +1715,10 @@ pub(crate) fn item_from_text(text: &str) -> Option<crate::inventory::Stack> {
     if count <= 0 { return None; }
     let mut spec = name.to_string();
     if let Some(crate::snbt::Value::Map(components)) = item.get("components") {
+        for (key, _) in components.iter() {
+            let key = key.trim().strip_prefix("minecraft:").unwrap_or(key.trim());
+            if key == "custom_data" { return None; }
+        }
         spec.push('[');
         for (index, (key, value)) in components.iter().enumerate() {
             if index > 0 { spec.push(','); }

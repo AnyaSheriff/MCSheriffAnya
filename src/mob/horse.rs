@@ -277,6 +277,10 @@ fn stack(data: &crate::snbt::Value) -> Option<Stack> {
     if count <= 0 { return None; }
     let mut stack = Stack::new(item, count.min(crate::blocks::stack_size(item)));
     if let Some(crate::snbt::Value::Map(fields)) = data.get("components") {
+        for (key, _) in fields.iter() {
+            let key = key.trim().strip_prefix("minecraft:").unwrap_or(key.trim());
+            if key == "custom_data" { return Some(stack); }
+        }
         // Один разбор довесков с /give: имена, чары и атрибуты не теряются.
         let fields = fields.iter().map(|(key, value)| format!("{key}={}", snbt_text(value))).collect::<Vec<_>>().join(",");
         let spec = format!("{}[{fields}]", crate::blocks::item_name(item)?);
