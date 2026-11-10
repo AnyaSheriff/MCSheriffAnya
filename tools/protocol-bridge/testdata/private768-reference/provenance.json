@@ -1,0 +1,14 @@
+{
+  "scope": "bounded ordinary RegistryData network records, NOT reports/datapack/resource dump",
+  "source": "0a97f8ca4d16f0efd69f8366cbf28ffc411701c0",
+  "run": 42758565880,
+  "original_server_sha1": "45810d238246d90e811d896f87b14695b7fb6839",
+  "protocol_sha256": "abcd44462eebc703fea2423572719d79b16e92ad398d94ab3235c5a193656865",
+  "network_report_sha256": "fcbd324e5baee985cf89c878e51790a509f0821000e2a7a0d05d1f54c80fb729",
+  "registry_packets": 12,
+  "entries": 323,
+  "values_present": 323,
+  "registry_network_sha256": "f8989a8b67930b52af2be9652f5dfa1d5f0582cd740193e4011f0b6f415c1735",
+  "jar_unpacked": false,
+  "special_registry_query": false
+}

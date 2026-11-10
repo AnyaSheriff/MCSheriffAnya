@@ -1,0 +1,111 @@
+{
+  "scope": "private768 edge tables ONLY; no runtime/public support",
+  "registries": {
+    "Item/768-769": {
+      "source_count": 1375,
+      "missing": 0
+    },
+    "Block/768-769": {
+      "source_count": 1084,
+      "missing": 0
+    },
+    "BlockState/768-769": {
+      "source_count": 27318,
+      "missing": 9
+    },
+    "Entity/768-769": {
+      "source_count": 150,
+      "missing": 1
+    },
+    "Component/768-769": {
+      "source_count": 67,
+      "missing": 0
+    },
+    "Particle/768-769": {
+      "source_count": 111,
+      "missing": 0
+    },
+    "Item/769-768": {
+      "source_count": 1385,
+      "missing": 10
+    },
+    "Block/769-768": {
+      "source_count": 1095,
+      "missing": 11
+    },
+    "BlockState/769-768": {
+      "source_count": 27866,
+      "missing": 557
+    },
+    "Entity/769-768": {
+      "source_count": 149,
+      "missing": 0
+    },
+    "Component/769-768": {
+      "source_count": 67,
+      "missing": 0
+    },
+    "Particle/769-768": {
+      "source_count": 112,
+      "missing": 1
+    }
+  },
+  "changed_packets": {
+    "login/toClient/768": [],
+    "login/toServer/768": [],
+    "configuration/toClient/768": [],
+    "configuration/toServer/768": [],
+    "play/toClient/768": [
+      "window_items",
+      "set_slot",
+      "explosion",
+      "world_particles",
+      "trade_list",
+      "craft_recipe_response",
+      "player_info",
+      "recipe_book_add",
+      "set_cursor_item",
+      "entity_metadata",
+      "entity_equipment",
+      "held_item_slot",
+      "set_player_inventory",
+      "advancements",
+      "declare_recipes"
+    ],
+    "play/toServer/768": [
+      "window_click",
+      "vehicle_move",
+      "pick_item",
+      "set_creative_slot"
+    ],
+    "login/toClient/769": [],
+    "login/toServer/769": [],
+    "configuration/toClient/769": [],
+    "configuration/toServer/769": [],
+    "play/toClient/769": [
+      "window_items",
+      "set_slot",
+      "explosion",
+      "world_particles",
+      "trade_list",
+      "craft_recipe_response",
+      "player_info",
+      "recipe_book_add",
+      "set_cursor_item",
+      "entity_metadata",
+      "entity_equipment",
+      "held_item_slot",
+      "set_player_inventory",
+      "advancements",
+      "declare_recipes"
+    ],
+    "play/toServer/769": [
+      "window_click",
+      "vehicle_move",
+      "pick_item_from_block",
+      "pick_item_from_entity",
+      "player_loaded",
+      "set_creative_slot"
+    ]
+  }
+}

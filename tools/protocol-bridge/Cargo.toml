@@ -8,6 +8,8 @@ publish = false
 [features]
 # Только явный test-probe API; обычные admission/wire guards не меняются.
 probe-776 = []
+# Не public support: отдельное typed ребро и compile-time private gate.
+private-768 = []
 
 [dependencies]
 

@@ -1,0 +1,75 @@
+name: Private 768 typed route development
+on:
+  push:
+    branches: ['feature/via-private768-20261110']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protocol:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: via-private768-protocol
+      - name: Verify pinned tables and ordinary reference fixture
+        run: |
+          mkdir -p private768-evidence
+          python3 -B tools/protocol-bridge/generate_private768.py --cache "$RUNNER_TEMP/private768-json" --fetch --check
+          python3 -B - <<'PY'
+          import hashlib,json,struct
+          from pathlib import Path
+          root=Path('tools/protocol-bridge/testdata/private768-reference')
+          provenance=json.loads((root/'provenance.json').read_text());raw=(root/'registry-network.bin').read_bytes()
+          assert hashlib.sha256(raw).hexdigest()==provenance['registry_network_sha256']
+          assert raw[:4]==b'R768' and struct.unpack('>I',raw[4:8])[0]==12
+          assert provenance['entries']==323 and provenance['values_present']==323 and not provenance['jar_unpacked']
+          PY
+      - name: Default shipping protocol remains closed
+        run: |
+          set -o pipefail
+          cargo test --release -p mcsa-protocol 2>&1 | tee private768-evidence/default-tests.log
+      - name: Compile and test distinct private protocol and registry contexts
+        run: |
+          set -o pipefail
+          cargo test --release -p mcsa-protocol --features private-768 2>&1 | tee private768-evidence/private-tests.log
+          cargo clippy --release --all-targets -p mcsa-protocol --features private-768 -- -D warnings 2>&1 | tee private768-evidence/private-clippy.log
+      - name: Compile the actual runtime with opt-in feature
+        run: |
+          set -o pipefail
+          cargo check --release --all-targets --features private-768 2>&1 | tee private768-evidence/runtime-check.log
+      - name: Preserve source and actual development status
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+          MCSA_RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 -B - <<'PY'
+          import hashlib,json,os,subprocess,tarfile
+          from pathlib import Path
+          out=Path('private768-evidence');out.mkdir(exist_ok=True)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          selected=[Path('Cargo.toml'),Path('tools/protocol-bridge/Cargo.toml'),Path('.github/workflows/via-private-768.yml')]
+          selected+=list(Path('tools/protocol-bridge/src').glob('*.rs'))
+          selected+=[Path('tools/protocol-bridge/generate_private768.py'),Path('tools/protocol-bridge/client-chain-sources.json')]
+          selected+=list(Path('tools/protocol-bridge/testdata/private768-reference').iterdir())
+          with tarfile.open(out/'selected-source.tar.gz','w:gz') as tar:
+              for p in selected:tar.add(p,arcname=str(p))
+          receipt={'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+              'status':os.environ['MCSA_JOB_STATUS'],'run_id':os.environ['MCSA_RUN_ID'],
+              'sources':{str(p):sha(p) for p in selected},
+              'files':{str(p.relative_to(out)):sha(p) for p in out.iterdir() if p.is_file()},
+              'scope':'development protocol compile only; runtime route NOT yet connected; no native/client/gameplay/public support claim'}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private768-dev-${{ github.run_id }}-${{ github.run_attempt }}
+          path: private768-evidence/
+          retention-days: 7
+          if-no-files-found: error

@@ -37,6 +37,8 @@ pub(crate) fn nbt_payload_length(kind: u8, bytes: &[u8]) -> Result<usize, Error>
 }
 
 fn supported(version: JavaVersion) -> Result<(), Error> {
+    #[cfg(feature="private-768")]
+    if version == JavaVersion::V1_21_3 { return Ok(()); }
     if !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
 
@@ -85,7 +87,9 @@ impl Registry {
         supported(self.version)?;
         if self.entries.len() > MAX_ENTRIES { return Err(Error::TooLarge); }
         // Готовое содержимое builder-а; private lookup не открывает общий wire776.
-        let id = if matches!(self.version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2) {
+        let id = if cfg!(feature="private-768") && self.version.protocol()==768 {
+            7 // Собственный Registry768 builder, pinned ordinary reference ID7.
+        } else if matches!(self.version,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11|JavaVersion::V26_2) {
             let info = crate::packet_layouts::packet_info(RegistryKind::ConfigurationClientbound,
                 JavaVersion::V26_1_2, self.version, 7).ok_or(Error::Invalid)?;
             if info.name != "registry_data" || !info.schema_equal { return Err(Error::Invalid); }

@@ -16,6 +16,8 @@ default = ["plugins"]
 plugins = ["dep:wasmtime", "dep:wasmtime-wasi"]
 # Стабильный C-интерфейс отдельного Android-ядра; обычному бинарнику не нужен.
 android-core = []
+# Только отдельный isolated protocol768 test runtime; public admission закрыт.
+private-768 = ["mcsa-protocol/private-768"]
 
 [dependencies]
 seedmap-core = { path = "tools/seedmap" }

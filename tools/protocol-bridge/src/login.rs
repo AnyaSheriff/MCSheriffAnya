@@ -25,6 +25,8 @@ pub struct Success {
 pub enum Error { UnsupportedVersion, Truncated, Invalid, TooLarge, MissingSessionId, UnexpectedSessionId }
 
 fn supported(version: JavaVersion) -> Result<(), Error> {
+    #[cfg(feature="private-768")]
+    if version == JavaVersion::V1_21_3 { return Ok(()); }
     if !matches!(version, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
 
@@ -67,6 +69,7 @@ impl Success {
         if !valid_name(&self.username) { return Err(Error::Invalid); }
         if self.properties.len() > MAX_PROPERTIES { return Err(Error::TooLarge); }
         match (version, self.session_id) {
+            #[cfg(feature="private-768")] (JavaVersion::V1_21_3, Some(_)) => return Err(Error::UnexpectedSessionId),
             (JavaVersion::V26_2 | JavaVersion::V26_3, None) => return Err(Error::MissingSessionId),
             (JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 | JavaVersion::V26_1_2, Some(_)) => return Err(Error::UnexpectedSessionId),
             _ => {}
