@@ -298,7 +298,9 @@ def audit(raw, protocol, items, block_states):
     enchantments = [c['data']['enchantments'] for c in occupied[0]['components'] if c['type'] == 'enchantments']
     ench_names = clients[0]['registries']['minecraft:enchantment']
     assert len(enchantments) == 1 and [(ench_names[x['id']], x['level']) for x in enchantments[0]] == [('minecraft:wind_burst', 1)], 'INCONCLUSIVE_ENCHANT'
-    assert trial['victim_inventory_receipt']['response'].rstrip().endswith('[]'), 'INCONCLUSIVE_VICTIM_EQUIPMENT'
+    assert trial['victim_inventory_receipt']['response'].rstrip().endswith('[]'), 'INCONCLUSIVE_VICTIM_INVENTORY'
+    equipment = trial['victim_equipment_receipt']['response'].rstrip()
+    assert 'Found no elements matching equipment' in equipment or equipment.endswith('{}'), 'INCONCLUSIVE_VICTIM_EQUIPMENT'
     for side in events:
         active = {}
         for e in side:
@@ -498,6 +500,9 @@ class Experiment:
         self.command('effect clear blackboxb')
         row['victim_inventory_receipt'] = self.command('data get entity blackboxb Inventory')
         assert row['victim_inventory_receipt']['response'].rstrip().endswith('[]'), 'victim inventory/armor/offhand not empty'
+        row['victim_equipment_receipt'] = self.command('data get entity blackboxb equipment')
+        equipment = row['victim_equipment_receipt']['response'].rstrip()
+        assert 'Found no elements matching equipment' in equipment or equipment.endswith('{}'), 'victim equipment not empty'
         row['quiet_at'] = time.monotonic()
         # 80 real cadence frames give >=40 world ticks via independently checked age.
         self.frames(80)
@@ -534,6 +539,23 @@ def status(port):
         result = json.loads(packet.read(read_varint(packet.read)))
         assert result['version'] == dict(name='26.3', protocol=777), result
         return result
+
+
+def wait_ready(proc, log_path, port, timeout=120):
+    deadline = time.monotonic() + timeout
+    errors = []
+    while time.monotonic() < deadline:
+        assert proc.poll() is None, 'original exited during startup'
+        lines = log_path.read_text(errors='replace').splitlines()
+        done = [line for line in lines if '[Server thread/INFO]: Done (' in line]
+        if done:
+            try:
+                actual = status(port)
+                return dict(done_line=done[-1], actual_status=actual, earlier_status_errors=errors)
+            except (OSError, EOFError, ValueError, AssertionError) as error:
+                errors.append(repr(error))
+        time.sleep(.1)
+    raise TimeoutError('original Done + successful native777 status deadline: ' + repr(errors))
 
 
 def run(output):
@@ -604,18 +626,10 @@ def run(output):
         servers.append((proc, log, None, PORT))
         lifecycle['servers'].append(dict(pid=proc.pid, identity=process_identity(proc.pid), port=PORT))
         save()
-        limit = time.monotonic() + 120
-        while True:
-            assert proc.poll() is None, 'original exited during startup'
-            try:
-                control = base.Rcon(PORT+1, 'local-blackbox')
-                break
-            except OSError:
-                if time.monotonic() > limit:
-                    raise TimeoutError('startup')
-                time.sleep(.2)
+        manifest['startup'] = wait_ready(proc, output / 'official-server.log', PORT)
+        control = base.Rcon(PORT+1, 'local-blackbox')
         servers[-1] = (proc, log, control, PORT)
-        manifest['actual_status'] = status(PORT)
+        manifest['actual_status'] = manifest['startup']['actual_status']
         for name in ('blackbox', 'blackboxb'):
             registries, config_raw = {}, []
             def configuration(sock, packet_id, payload):

@@ -26,7 +26,8 @@ def fixture():
     attack, end = 20.461, 24.6
     trial = dict(index=0, material='air', reset_at=10., heal_at=10.3, quiet_at=15., start_tp_at=20.,
                  attack_at=attack, end_at=end, cell_change_at=11., echo='unique_live',
-                 victim_inventory_receipt={'response':'blackboxb has the following entity data: []'})
+                 victim_inventory_receipt={'response':'blackboxb has the following entity data: []'},
+                 victim_equipment_receipt={'response':'Found no elements matching equipment'})
     clients = []
     for entity in (actor, victim):
         events = [event('login', 0., {}), event('game_state_change', 1., dict(reason='change_game_mode',gameMode=0)),
@@ -145,6 +146,20 @@ class EvidenceGuards(unittest.TestCase):
         self.assertFalse(ag)
         self.assertEqual(stone[1],64)
         self.assertTrue(sg)
+
+    def test_startup_does_not_trust_rcon_listening(self):
+        from unittest.mock import Mock
+        process=Mock();process.poll.return_value=None
+        log=Mock();log.read_text.side_effect=['RCON listening on127.0.0.1:26185', '[Server thread/INFO]: Done (0.7s)! For help, type help']
+        with patch.object(pilot,'status',return_value={'version':{'protocol':777}}) as probe, patch.object(pilot.time,'sleep'):
+            result=pilot.wait_ready(process,log,26184)
+        self.assertEqual(log.read_text.call_count,2)
+        probe.assert_called_once_with(26184)
+        self.assertIn('Done (',result['done_line'])
+
+    def test_equipped_victim_does_not_qualify(self):
+        raw=fixture();raw['trial']['victim_equipment_receipt']['response']='entity data: {head: {id: "minecraft:iron_helmet"}}'
+        with self.assertRaisesRegex(AssertionError,'INCONCLUSIVE_VICTIM_EQUIPMENT'):self.check(raw)
 
     def test_no_local_execution(self):
         with patch.dict(pilot.os.environ,{},clear=True):
