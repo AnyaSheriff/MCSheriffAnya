@@ -1,0 +1,34 @@
+{
+  "schema": "one-original-player-data-layout-v1",
+  "protocol": 777,
+  "states": [
+    "empty",
+    "plain",
+    "complex"
+  ],
+  "queries_each": 12,
+  "total_queries": 36,
+  "selected": [
+    0,
+    0,
+    2
+  ],
+  "no_gameplay": true,
+  "no_core": true,
+  "no_Cargo": true,
+  "max_seconds": 300,
+  "ports": [
+    26230,
+    26231
+  ],
+  "original_only": true,
+  "no_retry": true,
+  "first_complete_freeze": true,
+  "expected_command_results": "discovery: retain errors/missing fields without guessing root/Inventory layouts or parity",
+  "readiness": "actual full46 inventory seed and all deltas; positive item/count/damage/enchant fixture, both actual marker receipts; full raw equipment+configuration+RCON frames",
+  "RCON": "Isolated authenticated TCP per query; send target command and ordinary list command with distinct IDs; concatenate target frames in TCP order until actual bounded list response ID; then require EOF after client write-half-close, reject trailing frames. Preserve full request and response frames. StrictUTF8 only after concat. No timeout/content-length completion.",
+  "transport_semantics_unverified": false,
+  "complex_custom_data": "positive typed custom_data component intmcsa_layout1/stringmarkerLAYOUT_FIXED plusrawNBT hex; enchant/damage exact and observerequipment before queries",
+  "transport_protocol_reference": "https://minecraft.wiki/w/RCON#Fragmentation",
+  "transport_actual_original_unexecuted": true
+}

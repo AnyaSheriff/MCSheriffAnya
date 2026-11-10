@@ -1,0 +1,15 @@
+{
+  "source_base": "8b9a87182b7f540ff56d1afa45775078882739b4",
+  "criteria_sha256": "4c27b69363fbda2e96f2a833d3ac6b6dfc37b2bb7068b3009df18ebf7c5b8a07",
+  "source_files": {
+    "tools/blackbox/player_data_layout/calibrate.py": "d3ea0ffc651f089f3f09b0fc3b8549b5fe65d5960d5f01923c5a391b751a5911",
+    "tools/blackbox/player_data_layout/rcon_transport.py": "5b952ade366077befcec5be58e1c02b7299b2f8285d4e5605b8968d06716c9ee",
+    "tools/blackbox/record777.py": "d63b3dd02498a6edfb4c299a2dae10cbafd49c9e9d3c8acde50280743aaebb43",
+    "tools/blackbox/combat_process.py": "147980c3e3c44e2829e2d0390875a4201e89ec39ea91c358304167e167382cd2",
+    "tools/protocol-bridge/probe_crossbow_session.py": "2dcb7d891a931c7f7d11874dc6e22a38d1829194bbd634c2d6b861acc13a2ecc",
+    "tools/protocol-bridge/probe_player_actions_runtime.py": "e9bbef78ce6cd5ca082791903b67eaa8451da6a06f7cda75c989099fcd5ca316",
+    "tools/blackbox/ci/protection-edges-777.json": "eff3ea82db330885fbea48bb962b2fd6b28333d26de56d80ed0f9856248d2ee0",
+    "tools/blackbox/player_data_layout/slots.py": "d1b434d55999642b1ff04dc6efee50bc87169dbfa4a7d3f74af07665527b81c4",
+    ".github/workflows/player-data-layout-original.yml": "1ad5dde24d5ddb7b656c13c4c936262ff3f1692ec8444b0dd1f512b42acccbd8"
+  }
+}
