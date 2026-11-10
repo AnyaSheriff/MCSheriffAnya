@@ -93,20 +93,12 @@ def inputs():
    assert len(hashes)==(4 if label=='baseline' else 11)
    assert sum(name.endswith('/plugin.wasm') for name in hashes)==(2 if label=='baseline' else 5)
   write(OUT/(label+'-input.json'),dict(api=api,files=hashes,archive_sha256=digest));archive.unlink()
- # Только собственный component: меняются имена optional exports, длины binary строк прежние.
- # Оба malformed bytes проходят wasm-tools validate до проверки host type gate.
- original=(ROOT/'tmp/java-priority-staged/plugins/java-priority-empty/plugin.wasm').read_bytes()
- assert b'\x05phase' in original and b'\x05begin' in original
- variants={
-  'missing':original.replace(b'\x05phase',b'\x05phaze'),
-  'type':original.replace(b'\x05phase',b'\x05zzzzz').replace(b'\x05begin',b'\x05phase').replace(b'\x05zzzzz',b'\x05begin'),
- }
- for label,content in variants.items():
-  target=ROOT/('tmp/java-priority-staged/plugins/java-priority-invalid-'+label);target.mkdir()
-  (target/'plugin.wasm').write_bytes(content)
-  (target/'plugin.toml').write_text('name = "java-priority-invalid-'+label+'"\nversion = "1.0"\napi = "0.1"\nmain = "plugin.wasm"\n')
-  subprocess.run([str(ROOT/'tools/plugin-translator/.toolchain/wasm-tools-1.262.0-x86_64-linux/wasm-tools'),'validate','--features','all',str(target/'plugin.wasm')],check=True)
- write(OUT/'invalid-components.json',{label:hashlib.sha256(value).hexdigest() for label,value in variants.items()})
+ # Exact malformed bytes уже прошли wasm-tools validate в pinned producer.
+ # Здесь они повторно компилируются настоящим новым Host в rejection tests.
+ invalid={}
+ for label in ['missing','type']:
+  path=ROOT/('tmp/java-priority-staged/plugins/java-priority-invalid-'+label+'/plugin.wasm');assert path.is_file();invalid[label]=sha(path)
+ write(OUT/'invalid-components.json',invalid)
  for staged_letter in 'ab':
   target=ROOT/f'tmp/java-priority-mixed-{staged_letter}/plugins';target.mkdir(parents=True)
   for letter in 'ab':
