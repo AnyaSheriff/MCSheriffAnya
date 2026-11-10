@@ -44,6 +44,8 @@ mod attributes;
 #[cfg(feature = "plugins")]
 mod host;
 #[cfg(feature = "plugins")]
+mod priority;
+#[cfg(feature = "plugins")]
 mod manifest;
 #[cfg(feature = "plugins")]
 mod plugman;

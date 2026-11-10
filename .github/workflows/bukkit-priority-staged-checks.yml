@@ -8,7 +8,7 @@ permissions:
 jobs:
   optional-abi:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,13 +17,35 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: Swatinem/rust-cache@v2
+      - name: Compile all actual Rust targets first
+        run: cargo check --release --all-targets
       - name: Parse cross-package WIT and generate actual C API
         run: |
           mkdir staged-evidence
           set -o pipefail
           python3 -B tools/plugin-translator/check-priority-wit.py 2>&1 | tee staged-evidence/wit.log
+      - name: Build two unchanged own fixture JARs and translate optional world
+        run: |
+          set -o pipefail
+          python3 -B tools/plugin-translator/build-priority-fixtures.py 2>&1 | tee staged-evidence/fixtures.log
+          for letter in a b; do
+            python3 -B tools/plugin-translator/translate.py tools/plugin-translator/target/priority-$letter.jar --staged-block-break --output tmp/java-priority-staged/plugins 2>&1 | tee staged-evidence/translate-$letter.log
+          done
+      - name: Actual Rust budget contracts and staged host
+        run: |
+          set -o pipefail
+          cargo test --release --bin mcsheriffanya plugins::priority::tests -- --nocapture --test-threads=1 2>&1 | tee staged-evidence/budget.log
+          cargo test --release --bin mcsheriffanya plugins::tests::translated_bukkit_staged_priority_contract -- --ignored --exact --nocapture --test-threads=1 2>&1 | tee staged-evidence/native.log
+      - name: Preserve actual raw capture and selected source
+        if: always()
+        run: |
+          mkdir -p staged-evidence
+          test ! -d tmp/java-priority-staged || cp -r tmp/java-priority-staged staged-evidence/native
+          git rev-parse HEAD > staged-evidence/source-commit.txt
+          git diff 354a0d137b60dbd89d32246c3e0aef2ddbd062c1 HEAD > staged-evidence/source.patch
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: staged-wit-${{ github.run_id }}
+          name: staged-prototype-${{ github.run_id }}
           path: staged-evidence/

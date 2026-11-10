@@ -1,7 +1,7 @@
 name: Native Bukkit legacy priority baseline
 on:
   push:
-    branches: ['feature/bukkit-priority-*']
+    branches: ['feature/bukkit-priority-20261109']
   workflow_dispatch:
 permissions:
   contents: read

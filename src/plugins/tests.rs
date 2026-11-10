@@ -1219,3 +1219,5 @@ fn translated_bukkit_legacy_priority_baseline() {
     writeln!(file, "{}", serde_json::to_string_pretty(&output).unwrap()).unwrap();
     println!("PRIORITY_CAPTURE {}", path.display());
 }
+
+include!("priority_tests.rs");
