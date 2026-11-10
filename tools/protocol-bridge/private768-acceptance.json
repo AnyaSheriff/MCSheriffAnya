@@ -1,0 +1,11 @@
+{
+  "scope": "First bounded actual private768 to OUR primary777; PUBLIC gate remains CLOSED",
+  "source_base": "e3e90d74f60f0750459ebe964c709195f92b49ef",
+  "original_reference": {"native_run":42760162357,"headless_run":42758565880,"registry_packets":12,"ordered_identifiers":323,"full_NBT_values_in_headless":323},
+  "ordinary_test_config": {"primary":"26.3","online-mode":false,"white-list":false,"auth-enabled":false,"skin_fetch":false,"ports":[26270,26271],"world":"fresh isolated flat"},
+  "negative_admission": ["default shipping binary refuses768 BEFORE LoginStart even with --private-768 argument","private-feature binary without explicit flag refuses BEFORE LoginStart","private-feature binary with flag and actual nonloopback source refuses BEFORE LoginStart","playerdata/plugins/auth snapshots unchanged across each refusal"],
+  "positive": ["pinned exact1.21.3 native client and normal runtime loading on GitHub only","our runtime primary777 Status stays honest","actual LoginACK/ConfigACK/12 reference registries","matching TP ACK and finite movement","chunks/light and own PlayerInfo","initial46 empty slots/carried","review world/HUD frame after fixed8s settling","console give stone5 authoritative real inventory update","actual native W-key movement changes X/Z after initial pose","logout and fresh session rejoin preserves stone5","review second world/HUD/stone5 frame","all own workers/client/server groups gone, normal server exit0, ports free"],
+  "limits": {"session_packets":2048,"session_bytes":33554432,"phase_deadline_seconds":60,"frame_bytes":8388608},
+  "forbidden": ["public768 admission opening","raw768 interpreted as769","air/unknown-ID fallback","manual JAR read/unpack/code/resources/datapack/worldgen dumps","runtime or game asset artifact uploads"],
+  "pending_after_first_positive": ["full workspace/default/no-default/strictClippy on final exact source","fresh old7clients regression on same final runtime","full196payload/6GUI/4pose/11gameplay/restart/recipes/Nether","unsupported component/entity/blockentity/view contracts"]
+}

@@ -55,6 +55,7 @@ jobs:
           sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
           selected=[Path('Cargo.toml'),Path('tools/protocol-bridge/Cargo.toml'),Path('.github/workflows/via-private-768.yml')]
           selected+=list(Path('tools/protocol-bridge/src').glob('*.rs'))
+          selected+=list(Path('src').rglob('*.rs'))
           selected+=[Path('tools/protocol-bridge/generate_private768.py'),Path('tools/protocol-bridge/client-chain-sources.json'),Path('tools/protocol-bridge/private768-extra-sources.json')]
           selected+=list(Path('tools/protocol-bridge/testdata/private768-reference').iterdir())
           with tarfile.open(out/'selected-source.tar.gz','w:gz') as tar:
@@ -71,5 +72,138 @@ jobs:
         with:
           name: private768-dev-${{ github.run_id }}-${{ github.run_attempt }}
           path: private768-evidence/
+          retention-days: 7
+          if-no-files-found: error
+  native:
+    needs: protocol
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: '2'
+      LIBGL_ALWAYS_SOFTWARE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: via-private768-runtime
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Guard assertions and fixed acceptance before builds
+        run: |
+          mkdir -p private768-native-evidence
+          python3 -B -m unittest discover -s tools/protocol-bridge -p test_probe_private768.py -v > private768-native-evidence/guards.log 2>&1
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb xauth xdotool imagemagick libgl1 libglx-mesa0 libgl1-mesa-dri libasound2t64
+      - name: Build the actual shipping and private feature binaries sequentially
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release 2>&1 | tee private768-native-evidence/shipping-build.log
+          cp target/release/mcsheriffanya "$RUNNER_TEMP/private768-shipping"
+          cargo build --release --features private-768 2>&1 | tee private768-native-evidence/private-build.log
+      - name: Prepare exact opaque client and pinned allowed JSON
+        run: |
+          python3 -B tools/protocol-bridge/generate_private768.py --cache "$RUNNER_TEMP/private768-json" --fetch --check
+          python3 -B - <<'PY'
+          import hashlib,json,os,urllib.request
+          from pathlib import Path
+          pin=json.loads(Path('tools/protocol-bridge/capture-768-pins.json').read_text())
+          raw=urllib.request.urlopen(pin['entry']['url'],timeout=60).read()
+          assert hashlib.sha1(raw).hexdigest()==pin['entry']['sha1']
+          Path(os.environ['RUNNER_TEMP'],'private768-version.json').write_bytes(raw)
+          PY
+          python3 -B tools/protocol-bridge/prepare_registry_client.py --version 1.21.3 \
+            --metadata "$RUNNER_TEMP/private768-version.json" --metadata-sha1 5fa4228474e3d59b829637553262b6c06c0a38cf \
+            --output "$RUNNER_TEMP/private768-client" > private768-native-evidence/prepare.log
+          python3 -B - <<'PY'
+          import hashlib,json,os,shutil
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']);out=Path('private768-native-evidence')
+          receipt=json.loads((root/'private768-client/download-verification.json').read_text());receipt.pop('files')
+          receipt['binary_inputs']={name:{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+              for name,p in [('client',root/'private768-client/client.jar'),('shipping',root/'private768-shipping'),('private',Path('target/release/mcsheriffanya'))]}
+          (out/'inputs.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          shutil.copyfile(root/'private768-version.json',out/'version.json')
+          PY
+      - name: Fresh existing seven public clients on the same private-feature binary
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B - <<'PY' 2>&1 | tee private768-native-evidence/old7-driver.log
+          import json,os,subprocess,sys
+          from pathlib import Path
+          tools=Path('tools/protocol-bridge').resolve();sys.path.insert(0,str(tools))
+          from generate_client_chain import load
+          from generate_registry_26_2 import CANDIDATE,DEFAULT_OUTPUT,Sources
+          temporary=Path(os.environ['RUNNER_TEMP']);cache=temporary/'private768-old7-json'
+          load(cache,cache/'774',True)
+          registry=temporary/'private768-old776-json';sources=Sources(registry,True,json.loads(DEFAULT_OUTPUT.read_text())['sources'])
+          for kind in ['protocol','entities','items']:sources.read(CANDIDATE,'data/pc/26.2/'+kind+'.json')
+          protocol776=registry/CANDIDATE[1]/'data/pc/26.2/protocol.json'
+          command=['python3','-B',str(tools/'probe_public_776.py'),
+              '--binary',str(Path('target/release/mcsheriffanya').resolve()),'--protocol',str(protocol776),
+              '--cache',str(registry),'--primary','777','--port','26184',
+              '--output',str(Path('private768-native-evidence/old7').resolve())]
+          for version in range(769,775):command += [f'--protocol{version}',str(cache/str(version)/'protocol.json'),f'--cache{version}',str(cache/str(version)),f'--admit{version}']
+          subprocess.run(['sudo','unshare','--net','--','bash','-c','ip link set lo up; exec "$@"','private768-old7',*command],check=True)
+          result=json.loads(Path('private768-native-evidence/old7/result.json').read_text())
+          assert result['status']=='pass' and len(result['checks'])==21 and len(result['sessions'])==7
+          assert all(row['exit']==0 and row['port_free'] and row['process_group_gone'] for row in result['shutdown'])
+          print(json.dumps({'status':'pass','actual_clients':7,'positive_checks':21,'primary':777}))
+          PY
+      - name: Actual native768 on OUR opt-in primary777, stone5 movement logout rejoin
+        shell: bash
+        run: |
+          set -o pipefail
+          sudo --preserve-env=GITHUB_ACTIONS,LIBGL_ALWAYS_SOFTWARE unshare --net -- \
+            bash -c 'ip link set lo up; ip addr add 10.254.68.2/32 dev lo; exec "$@"' private768-net \
+            python3 -B tools/protocol-bridge/probe_private768.py \
+            --binary "$GITHUB_WORKSPACE/target/release/mcsheriffanya" \
+            --shipping-binary "$RUNNER_TEMP/private768-shipping" \
+            --metadata "$RUNNER_TEMP/private768-version.json" --protocol "$RUNNER_TEMP/private768-json/768/protocol.json" \
+            --items "$RUNNER_TEMP/private768-json/768/items.json" --client-dir "$RUNNER_TEMP/private768-client" \
+            --java "$JAVA_HOME/bin/java" --server-port 26270 --relay-port 26271 \
+            --output "$GITHUB_WORKSPACE/private768-native-evidence/capture" \
+            --allow-normal-native-loading 2>&1 | tee private768-native-evidence/driver.log
+      - name: Preserve exact source and own bounded evidence only
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+          MCSA_RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 -B - <<'PY'
+          import hashlib,json,os,shutil,subprocess,tarfile
+          from pathlib import Path
+          out=Path('private768-native-evidence');out.mkdir(exist_ok=True)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          paths=list(Path('src').rglob('*.rs'))+list(Path('tools/protocol-bridge/src').glob('*.rs'))
+          paths+=list(Path('tools/protocol-bridge').glob('*.py'))
+          paths+=[Path('Cargo.toml'),Path('tools/protocol-bridge/Cargo.toml'),Path('.github/workflows/via-private-768.yml'),
+              Path('tools/protocol-bridge/private768-acceptance.json'),Path('tools/protocol-bridge/private768-extra-sources.json'),
+              Path('tools/protocol-bridge/client-chain-sources.json'),Path('tools/protocol-bridge/capture-768-pins.json')]
+          paths+=list(Path('tools/protocol-bridge/testdata/private768-reference').iterdir())
+          with tarfile.open(out/'own-source.tar.gz','w:gz') as tar:
+              for p in paths:tar.add(p,arcname=str(p))
+          lock=Path('Cargo.lock')
+          if lock.is_file():shutil.copyfile(lock,out/'Cargo.lock')
+          files={str(p.relative_to(out)):{'sha256':sha(p),'bytes':p.stat().st_size} for p in out.rglob('*') if p.is_file()}
+          receipt={'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+              'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),
+              'status':os.environ['MCSA_JOB_STATUS'],'run_id':os.environ['MCSA_RUN_ID'],
+              'sources':{str(p):sha(p) for p in paths},'files':files,
+              'scope':'bounded PRIVATE768 runtime development; public shipping768 CLOSED; no full support',
+              'native_permission':'owner explicit normal runtime loading only; no manual JAR/code/resource inspection',
+              'runtime_or_game_assets_uploaded':False}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private768-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: private768-native-evidence/
           retention-days: 7
           if-no-files-found: error

@@ -7,11 +7,11 @@ import subprocess
 import uuid
 
 
-CLIENT_SHA1 = {"1.21.4": "a7e5a6024bfd3cd614625aa05629adf760020304", "1.21.5": "b88808bbb3da8d9f453694b5d8f74a3396f1a533", "1.21.6": "740a125b83dd3447feaa3c5e891ead7fbb21ae28", "1.21.8": "a19d9badbea944a4369fd0059e53bf7286597576", "1.21.10": "d3bdf582a7fa723ce199f3665588dcfe6bf9aca8", "1.21.11": "ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd", "26.2": "2dc72797acbc1b63fc16a11c4ac393605f453754",
+CLIENT_SHA1 = {"1.21.3": "6f67d19b4467240639cb2c368ffd4b94ba889705", "1.21.4": "a7e5a6024bfd3cd614625aa05629adf760020304", "1.21.5": "b88808bbb3da8d9f453694b5d8f74a3396f1a533", "1.21.6": "740a125b83dd3447feaa3c5e891ead7fbb21ae28", "1.21.8": "a19d9badbea944a4369fd0059e53bf7286597576", "1.21.10": "d3bdf582a7fa723ce199f3665588dcfe6bf9aca8", "1.21.11": "ba2df812c2d12e0219c489c4cd9a5e1f0760f5bd", "26.2": "2dc72797acbc1b63fc16a11c4ac393605f453754",
                "26.3": "e877b6a07acd633fb3bb475002175cec036e7b87"}
 
 
-def launch(cache, root, port, log, *, version="26.3", gui_scale=None, pause_on_lost_focus=None):
+def launch(cache, root, port, log, *, version="26.3", gui_scale=None, pause_on_lost_focus=None, java=None):
     assert version in CLIENT_SHA1
     metadata = json.loads((cache / 'version.json').read_text())
     assert metadata['id'] == version
@@ -29,7 +29,7 @@ def launch(cache, root, port, log, *, version="26.3", gui_scale=None, pause_on_l
     (root / 'options.txt').write_text(options)
     identity = uuid.UUID(bytes=hashlib.md5(b'OfflinePlayer:McsaProbe').digest(), version=3)
     command = ['xvfb-run', '-a', '-s', '-screen 0 854x480x24',
-               '/usr/lib/jvm/java-25-openjdk/bin/java', '-Xmx1G', '-XX:StackShadowPages=32',
+               str(java) if java is not None else '/usr/lib/jvm/java-25-openjdk/bin/java', '-Xmx1G', '-XX:StackShadowPages=32',
                '--enable-native-access=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.misc=ALL-UNNAMED',
                '-Djava.library.path=' + str(root / 'natives/java'),
                '-Djna.tmpdir=' + str(root / 'natives/jna'),
