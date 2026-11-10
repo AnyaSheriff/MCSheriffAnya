@@ -1,0 +1,79 @@
+{
+  "schema": "wind-instrumented-gap-original777-v1-source-only",
+  "protocol": 777,
+  "status": "SOURCE_ONLY_NO_CAPTURE_GATE",
+  "order": [
+    "air",
+    "stone",
+    "obsidian",
+    "bedrock",
+    "barrier",
+    "air"
+  ],
+  "maximum_attacks": 6,
+  "timeline_ms_from_movement10": {
+    "query_scheduled": 60,
+    "worker_start_deadline": 65,
+    "all_three_reads_deadline": 90,
+    "attack_fixed_or_abort": 100,
+    "movement11_resume": 150
+  },
+  "query_order": [
+    "Pos",
+    "OnGround",
+    "Pos"
+  ],
+  "required_authority": {
+    "named_player": "blackbox",
+    "both_Pos": [
+      100.5,
+      64.04,
+      100.5
+    ],
+    "absolute_xyz_tolerance": 1e-09,
+    "OnGround": "0b",
+    "fresh_after_movement10": true,
+    "no_local_pose_substitution": true,
+    "no_retry_or_value_wait": true
+  },
+  "environment": {
+    "floor_inclusive": [
+      [
+        68,
+        59,
+        68
+      ],
+      [
+        132,
+        59,
+        132
+      ]
+    ],
+    "clear_air_inclusive": [
+      [
+        68,
+        60,
+        68
+      ],
+      [
+        132,
+        96,
+        132
+      ]
+    ],
+    "all_six_same_background": true,
+    "new_environment_no_old_ray_equivalence_claim": true
+  },
+  "scope": "NEW instrumented fall with fixed packet gap; sampled authority NOT atomic Attack-tick proof; old87 unchanged",
+  "A_B_independent": true,
+  "assumed_tag_predicate": false,
+  "all_previous_smash_menu_HP_ACK_window_live_gates_retained": true,
+  "plan_sha256": "7ec30ce43a920458845ffab100c111b655d93d363674f8e0ea99aa77dca563d8",
+  "actual_Attack_wire": {
+    "unique": true,
+    "at_equals_claimed_attack_at": true,
+    "not_before_gate": true,
+    "deadline_ms": 105,
+    "gate_timestamp_separate": true
+  }
+}
