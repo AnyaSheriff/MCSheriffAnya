@@ -1,0 +1,20 @@
+{
+  "runtime_source": "93bbae85da4d2b90df9979b5ba3a5f7c965ee21f",
+  "runtime_run": 42690720281,
+  "runtime_artifact": 13710052720,
+  "runtime_zip_sha256": "72961169c5235ea2390d8334ef7c574e8f5324a9efcee085825bef4baba42077",
+  "runtime_sha256": "4a456bd552edd3a46bd3755b40055c731a97e199a5116cb7d9bdae1d5aa65110",
+  "runtime_lock_sha256": "9675f5683ab3b533faad08f32352dffbd79242c9043b7cec4b0caf8d8512ea35",
+  "schema": "one-offhand-natural-original-v1",
+  "scenario": "crossbow-ub-offhand-natural-777",
+  "criteria_sha256": "24e96f7b79c34111d6239c80bb16cb04f3c602895147e93ee881f3a366ea1cbe",
+  "scenario_sha256": "b4aa0157a2e1df6251fd835359a07272d940bbb19b6a0d2a5e1179f9f1251a30",
+  "recorder_sha256": "7eb582965fdce46de00642138f659cf38f324bcf027448d6a688d2dbe1427d02",
+  "gameplay_base": "e3e90d74f60f0750459ebe964c709195f92b49ef",
+  "N": 128,
+  "fresh_controls": 4,
+  "no_core": true,
+  "no_retry": true,
+  "max_seconds": 900,
+  "no_mainhand_natural": true
+}
