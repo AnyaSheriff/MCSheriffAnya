@@ -50,6 +50,11 @@ class Guards(unittest.TestCase):
     def test_wall_bypass_and_noai_missing_are_rejected(self):
         r=fixture('wall');e=next(x for x in r['clients'][0]['events'] if x['name']=='spawn_entity');v=json.loads(bytes.fromhex(e['hex']));v['z']=110.;e['hex']=json.dumps(v).encode().hex()
         with self.assertRaises(ValueError):self.check(r)
+
+    def test_wall_v2_enclosure_rejects_escape(self):
+        r=fixture('wall');r['scenario']='witch-bounded-wall-v2';self.check(r)
+        r['clients'][0]['events'].insert(2,event('rel_entity_move',{'entityId':20,'move':{'steps':[{'delta':[0,0,18432]}]}},30))
+        with self.assertRaises(ValueError):self.check(r)
         r=fixture('noai');e=next(x for x in r['clients'][0]['events'] if x['name']=='entity_metadata');v=json.loads(bytes.fromhex(e['hex']));v['metadata']=[x for x in v['metadata'] if x['key']!=15];e['hex']=json.dumps(v).encode().hex()
         with self.assertRaises(ValueError):self.check(r)
     def test_mode_switch_dead_witch_and_drinking_attack_rejected(self):

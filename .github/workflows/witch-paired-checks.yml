@@ -1,7 +1,5 @@
 name: Witch fresh paired 26.3 and combat controls
 on:
-  push:
-    branches: ['feature/witch-throw-20261109']
   workflow_dispatch:
 permissions:
   contents: read

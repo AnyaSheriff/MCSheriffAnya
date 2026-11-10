@@ -1,0 +1,34 @@
+name: Witch separate wall v2
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wall:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: python3 -m unittest discover -s tools/blackbox -p test_witch_bounded_audit.py -v
+      - run: cargo build --release
+      - run: python3 tools/blackbox/witch_wall_v2_ci.py --output witch-wall-v2-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: witch-wall-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            witch-wall-v2-evidence/
+            target/release/mcsheriffanya
+          retention-days: 7
+          if-no-files-found: warn

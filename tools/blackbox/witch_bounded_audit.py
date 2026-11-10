@@ -84,6 +84,8 @@ def inspect(raw, protocol, entities, name):
     if kind=='wall':
         # Стена x=origin+3, z=origin-8..+9, y=origin..+5.
         require(all(p[0]>=origin[0]+4.25 and origin[2]-7.75<=p[2]<=origin[2]+8.75 and abs(p[1]-origin[1])<2 for _,p in positions),'wall bypass/out of sight')
+        if name=='witch-bounded-wall-v2':
+            require(all(p[0]<=origin[0]+11.75 and origin[2]-3.75<=p[2]<=origin[2]+4.75 for _,p in positions),'witch left enclosure')
     else:
         require(all(abs(p[1]-origin[1])<2 for _,p in positions),'witch left floor level')
         if kind in ('near','far'):
