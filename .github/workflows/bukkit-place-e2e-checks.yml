@@ -22,7 +22,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 -B tools/plugin-translator/place_staged_ci.py lock
       - uses: Swatinem/rust-cache@v2
-      - name: Strict default workspace and both test profiles before expensive Java translation
+      - name: Restore verified default ELF, prepare required own Rust fixtures and complete both test profiles
         run: python3 -B tools/plugin-translator/place_staged_ci.py strict
       - name: Verify OLD source and immutable components; no current SDK equality claim
         env:

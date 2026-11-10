@@ -43,7 +43,7 @@ F=A/'source/tools/plugin-translator/fixtures';spec=load(F/'place-staged-expected
 for f,h in load(F/'place-staged-frozen.json')['files'].items():assert sha(A/'source'/f)==h
 assert len(refs)==20 and len(matrix['native'])==14 and len(oldrefs)==12
 for f in A.glob('*.status.json'):assert load(f)['exit_code']==0 and not load(f)['timeout'],f
-statuses=list(A.glob('*.status.json'));assert len(statuses)==79
+statuses=list(A.glob('*.status.json'));assert len(statuses)==83
 runtime_statuses=[]
 for p in statuses:
  status=load(p)
@@ -52,9 +52,21 @@ for p in statuses:
   log=p.with_name(p.name.removesuffix('.status.json')+'.log').read_text()
   assert 'running 1 test' in log and 'test result: ok. 1 passed; 0 failed; 0 ignored;' in log,p
 assert len(runtime_statuses)==72
-for name in ['clippy-default','tests-default','tests-no-default','build']:
+for name in ['rust-target','rust-examples','tests-default','tests-no-default','tests-seedmap-default','tests-protocol-doc','integration-default-compile','integration-default']:
  assert (A/(name+'.status.json')).is_file()
+for name in ['rust-examples','tests-no-default','tests-seedmap-default','tests-protocol-doc']:
  assert 'Finished `release`' in (A/(name+'.log')).read_text()
+assert 'test result: ok. 3454 passed; 0 failed; 124 ignored;' in (A/'tests-default.log').read_text()
+assert '3 passed; 0 failed;' in (A/'integration-default.log').read_text()
+retained=load(A/'retained-runtime.json');assert retained['source']=='3d86b705e425d794008945cb8d647757a0ac21d3' and retained['historical_status']=='failure' and retained['default_strict_exit']==0 and retained['protocol_default_passed']==351 and not retained['core_rebuilt']
+assert retained['test_elf']=='b5c46d45b52b6f0a2f8ea6cc24c8fbd002cb8d553e6cbacd9762170d3bfa33c9' and retained['server_elf']=='f522a9fc3ea62305127b007d0902356eec5184ee29975e1fcc1ba57ac7ade146'
+assert load(A/'default-integration.json')['source_unmodified'] and load(A/'default-integration.json')['tests']==3
+assert sha(A/'runtime-elf/mcsheriffanya')==retained['server_elf']
+for path in runtime_statuses:
+ command=load(path)['command'];assert command[0].endswith('/target/release/deps/mcsheriffanya-628cb65e72047376') and 'cargo'not in command
+examples=load(A/'rust-example-inputs.json');assert len(examples['wasm'])==6
+for name,v in examples['wasm'].items():assert sha(A/'rust-examples'/(name+'.wasm'))==v['sha256']
+assert load(A/'no-default-runtime.json')['compiled_once']
 for name,count in [('new-fixtures',3),('new-fault',1),('new-invalid',2)]:
  s=(A/(name+'.log')).read_text();assert s.count('INFO: Running TeaVM')==count and s.count('INFO: Output file successfully built')==count
 # Artifact provenance receives separate full OLD Git proof in external audit; no equality with current compiler inputs.
@@ -128,4 +140,4 @@ assert len(list((A/'sdk-inputs').glob('*.jar')))==6
 assert len(load(A/'toolpins.json'))==3 and all(v['exit_code']==0 for v in load(A/'toolpins.json').values())
 # Actual current test ELF and built server are retained independently of source hashes.
 assert list((A/'test-elf').glob('mcsheriffanya-*')) and (A/'runtime-elf/mcsheriffanya').read_bytes()[:4]==b'\x7fELF'
-print(json.dumps({'pass':True,'receipt_checks':checks,'fresh_worker_cases':56,'fresh_native':24,'new_host':20,'new_native':14,'old_host':12,'old_native':10,'direct_host_contract':32,'faults':24,'new_actual_component_translations':6,'no_full_permission_context_or_client_rollback_claim':True}))
+print(json.dumps({'pass':True,'receipt_checks':checks,'fresh_worker_cases':56,'fresh_native':24,'new_host':20,'new_native':14,'old_host':12,'old_native':10,'direct_host_contract':32,'faults':24,'new_actual_component_translations':6,'rust_example_components_built_once':6,'same_retained_default_test_elf_all_72':True,'no_full_permission_context_or_client_rollback_claim':True}))

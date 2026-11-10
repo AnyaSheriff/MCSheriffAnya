@@ -6,6 +6,7 @@ ROOT=Path(__file__).resolve().parents[2]
 TOOL=ROOT/'tools/plugin-translator'
 OUT=ROOT/'place-staged-evidence'
 PINS={
+ 'reuse-failed':{'id':13751597037,'sha256':'07e9e1855ee7843d58918250ab28576449869e43a1c03fea13e34ef65426d06e','source':'3d86b705e425d794008945cb8d647757a0ac21d3'},
  'place-baseline':{'id':13742938896,'sha256':'137e101ee864de14551f8b198b4d01526375096c5d9812cf5d477c168ecde714','source':'f141103e54860a40c2fe26eb40af8e659e8fff82'},
  'break-staged':{'id':13736169830,'sha256':'ef99d8235d016900c1487d7de7600fea4c44f316a9c9a501ba7771f57733b1c6','source':'def3439f9fc445d5308cc718ff951f18549c37c0'},
  'break-baseline':{'id':13707523078,'sha256':'87e30ea72931475940fe4d802425ba2db0ff47d8c26b7d2817a65e501707b7aa','source':'354a0d137b60dbd89d32246c3e0aef2ddbd062c1'},
@@ -70,7 +71,7 @@ def verify_receipt(z,label):
   b=git('show',source+':'+name);assert digest(b)==value,name
   p=folder/'old-source'/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b);checked[name]=value
  assert len(checked)>100
- write(folder/'provenance.json',{'artifact_source':pin['source'],'actual_compile_source':source,'old_source_files':checked,'new_sdk_inputs_equal_old':False,'old_retranslated':False,'producer_status':receipt.get('status',receipt.get('job_status'))})
+ write(folder/'provenance.json',{'artifact_source':pin['source'],'actual_compile_source':source,'old_source_files':checked,'new_sdk_inputs_equal_old':label=='reuse-failed','old_retranslated':False,'producer_status':receipt.get('status',receipt.get('job_status'))})
  return receipt
 
 def install(z,prefix,destination,count):
@@ -111,16 +112,76 @@ def inputs():
    shutil.copytree(src,target/f'java-priority-{member}')
  write(OUT/'pins.json',PINS)
 
+RETAINED_TEST='mcsheriffanya-628cb65e72047376'
+RETAINED_TEST_SHA='b5c46d45b52b6f0a2f8ea6cc24c8fbd002cb8d553e6cbacd9762170d3bfa33c9'
+RETAINED_SERVER_SHA='f522a9fc3ea62305127b007d0902356eec5184ee29975e1fcc1ba57ac7ade146'
+
+def restore_runtime():
+ # env!(CARGO_MANIFEST_DIR) in retained libtest must resolve to the same absolute checkout.
+ assert str(ROOT)=='/home/runner/work/MCSheriffAnya/MCSheriffAnya'
+ with archive('reuse-failed') as z:
+  receipt=verify_receipt(z,'reuse-failed');assert receipt['status']=='failure'
+  complete=json.loads(z.read('complete.json'));assert complete['status']=='failure'
+  for name,value in complete['files'].items():
+   b=z.read(name);assert digest(b)==value['sha256']and len(b)==value['bytes'],name
+  assert not git('diff',PINS['reuse-failed']['source'],'HEAD','--','src','tests','Cargo.toml','plugins-examples','wit','tools/seedmap','tools/protocol-bridge')
+  assert digest(z.read('source/Cargo.lock'))==digest((ROOT/'Cargo.lock').read_bytes())
+  status=json.loads(z.read('clippy-default.status.json'));assert status['exit_code']==0 and not status['timeout']
+  failed=json.loads(z.read('tests-default.status.json'));assert failed['exit_code']==101 and not failed['timeout']
+  log=z.read('tests-default.log').decode();assert 'test result: ok. 351 passed; 0 failed;'in log and 'test result: FAILED. 3424 passed; 30 failed; 124 ignored;'in log
+  assert log.count('panicked at src/plugins/tests.rs:20:5:')==30
+  proof=OUT/'old-inputs/reuse-failed'
+  for name in ['clippy-default.status.json','clippy-default.log','tests-default.status.json','tests-default.log']:
+   (proof/name).write_bytes(z.read(name))
+  for name,sha in [('runtime-elf/mcsheriffanya',RETAINED_SERVER_SHA),('test-elf/'+RETAINED_TEST,RETAINED_TEST_SHA)]:
+   b=z.read(name);assert digest(b)==sha and b[:4]==b'\x7fELF'
+   target=ROOT/('target/release/mcsheriffanya'if name.startswith('runtime-')else'target/release/deps/'+RETAINED_TEST)
+   target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(b);target.chmod(0o755)
+ write(OUT/'retained-runtime.json',{'source':PINS['reuse-failed']['source'],'historical_status':'failure','default_strict_exit':0,'protocol_default_passed':351,'historical_root_default':{'passed':3424,'missing_example_failures':30,'ignored':124},'test_elf':RETAINED_TEST_SHA,'server_elf':RETAINED_SERVER_SHA,'root':str(ROOT),'core_rebuilt':False,'all_later_one_calls_direct_same_test_elf':True})
+
 def strict():
- # Failed42787380610 keeps the newly broadened no-default -Dwarnings result.
- # Its pre-existing dead_code/unused_imports remain OPEN; no suppression/source cleanup.
- # Required default strict workspace + default/no-default tests stay mandatory.
- commands=[
- ('clippy-default',['cargo','clippy','--release','--locked','--workspace','--all-targets','--','-D','warnings']),
- ('tests-default',['cargo','test','--release','--locked','--workspace']),
- ('tests-no-default',['cargo','test','--release','--locked','--workspace','--no-default-features']),
- ('build',['cargo','build','--release','--locked'])]
- for name,args in commands:run(name,args,timeout=1800)
+ restore_runtime()
+ run('rust-target',['rustup','target','add','wasm32-wasip2'])
+ example_pin=json.loads((TOOL/'fixtures/place-rust-examples-lock.json').read_text())
+ for name,sha in example_pin['old_inputs_sha256'].items():assert digest((ROOT/name).read_bytes())==sha and digest(git('show',example_pin['source']+':'+name))==sha
+ data=example_pin['lock_text'].encode();assert digest(data)==example_pin['lock_sha256']
+ example_lock=ROOT/'plugins-examples/Cargo.lock';assert not example_lock.exists();example_lock.write_bytes(data)
+ run('rust-examples',['cargo','build','--release','--locked','--manifest-path','plugins-examples/Cargo.toml','--target','wasm32-wasip2'])
+ wasm={}
+ for name in ['hello','misbehave','chat_filter','custom_tablist','modinfo','protect_spawn']:
+  path=ROOT/'plugins-examples/target/wasm32-wasip2/release'/(name+'.wasm');b=path.read_bytes();assert b[:8]==b'\0asm\r\0\1\0';wasm[name]={'sha256':digest(b),'bytes':len(b)}
+ write(OUT/'rust-example-inputs.json',{'old_source':example_pin['source'],'inputs':example_pin['old_inputs_sha256'],'lock_sha256':digest(example_lock.read_bytes()),'wasm':wasm,'fresh_example_build_only':True})
+ test=ROOT/'target/release/deps'/RETAINED_TEST
+ assert digest(test.read_bytes())==RETAINED_TEST_SHA
+ log=run('tests-default',[test],timeout=1800)
+ assert 'test result: ok. 3454 passed; 0 failed; 124 ignored;'in log
+ # Only the no-default core has never been built/tested; compile that profile ONCE.
+ no_default_log=run('tests-no-default',['cargo','test','--release','--locked','--workspace','--no-default-features'],timeout=1800)
+ import re
+ runners=re.findall(r'Running unittests src/main.rs \(target/release/deps/(mcsheriffanya-[a-z0-9]+)\)',no_default_log)
+ assert len(runners)==1
+ no_default_test=ROOT/'target/release/deps'/runners[0]
+ for path in [ROOT/'target/release/mcsheriffanya',no_default_test]:
+  q=OUT/'no-default-artifacts'/path.name;q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(path,q)
+ write(OUT/'no-default-runtime.json',{'test_elf':runners[0],'test_sha256':digest(no_default_test.read_bytes()),'server_sha256':digest((ROOT/'target/release/mcsheriffanya').read_bytes()),'compiled_once':True,'test_exit':0})
+ # Default protocol351 already passed in the retained failed run; finish missing default members/doc tests separately.
+ run('tests-seedmap-default',['cargo','test','--release','--locked','-p','seedmap-core'])
+ run('tests-protocol-doc',['cargo','test','--release','--locked','-p','mcsa-protocol','--doc'])
+ # cargo test no-default overwrites this path; restore EXACT retained default server before default integration.
+ with archive('reuse-failed')as z:
+  b=z.read('runtime-elf/mcsheriffanya');assert digest(b)==RETAINED_SERVER_SHA
+  server=ROOT/'target/release/mcsheriffanya';server.write_bytes(b);server.chmod(0o755)
+ assert digest(test.read_bytes())==RETAINED_TEST_SHA
+ # world_startup.rs uses std only and exactly one Cargo env!; source/assertions remain unchanged.
+ integration=ROOT/'tests/world_startup.rs';source=integration.read_text()
+ assert source==git('show',PINS['reuse-failed']['source']+':tests/world_startup.rs').decode()
+ assert source.count('env!(')==1 and 'env!("CARGO_BIN_EXE_mcsheriffanya")'in source and source.count('#[test]')==3
+ env=os.environ.copy();env['CARGO_BIN_EXE_mcsheriffanya']=str(server)
+ binary=ROOT/'target/release/deps/world_startup_retained_default'
+ run('integration-default-compile',['rustc','--edition=2024','--test','--crate-name','world_startup','-C','opt-level=3','-C','debug-assertions=off',integration,'-o',binary],env)
+ log=run('integration-default',[binary]);assert '3 passed; 0 failed;'in log
+ write(OUT/'default-integration.json',{'source_sha256':digest(integration.read_bytes()),'source_unmodified':True,'env':{'CARGO_BIN_EXE_mcsheriffanya':str(server)},'server_sha256':digest(server.read_bytes()),'test_elf_sha256':digest(binary.read_bytes()),'tests':3,'standalone_std_only_harness':True,'core_rebuilt':False})
+
 
 def translations():
  run('new-fixtures',[sys.executable,'-B',TOOL/'build-place-staged-fixtures.py'],timeout=2400)
@@ -128,7 +189,8 @@ def translations():
  run('new-invalid',[sys.executable,'-B',TOOL/'build-place-invalid.py'],timeout=1800)
 
 def one(name,test,env=None):
- log=run(name,['cargo','test','--release','--locked','--bin','mcsheriffanya',test,'--','--ignored','--exact','--nocapture','--test-threads=1'],env=env,timeout=300)
+ binary=ROOT/'target/release/deps'/RETAINED_TEST;assert digest(binary.read_bytes())==RETAINED_TEST_SHA
+ log=run(name,[binary,test,'--ignored','--exact','--nocapture','--test-threads=1'],env=env,timeout=300)
  assert 'running 1 test' in log and 'test result: ok. 1 passed; 0 failed; 0 ignored;' in log,name
 
 def tests():
@@ -150,21 +212,24 @@ def finish():
  for name in ['place-staged','place-old-baseline','java-priority-staged','java-priority-baseline','java-priority-mixed-a','java-priority-mixed-b','java-test']:
   p=ROOT/'tmp'/name
   if p.exists():shutil.copytree(p,OUT/'runtime'/name)
- for name in ['src','tools/plugin-translator','tools/seedmap','tools/protocol-bridge','wit','.github/workflows']:
+ for name in ['src','tools/plugin-translator','tools/seedmap','tools/protocol-bridge','plugins-examples','tests','wit','.github/workflows']:
   for p in (ROOT/name).rglob('*'):
    if not p.is_file()or any(x in p.relative_to(ROOT/name).parts for x in ['target','.toolchain','__pycache__']):continue
    if p.suffix not in ['.rs','.java','.py','.c','.h','.wit','.xml','.yml','.json','.toml']:continue
    q=OUT/'source'/p.relative_to(ROOT);q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,q)
- for name in ['Cargo.toml','Cargo.lock','build.rs']:
+ for name in ['Cargo.toml','Cargo.lock','plugins-examples/Cargo.lock','build.rs']:
   p=ROOT/name
   if p.is_file():q=OUT/'source'/name;q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,q)
  jar_dir=TOOL/'target'
  for p in list(jar_dir.glob('place-staged-*.jar'))+[jar_dir/'mcsa-bukkit.jar']:
   if p.is_file():q=OUT/'new-jars'/p.name;q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,q)
- for p in (ROOT/'target/release/deps').glob('mcsheriffanya-*'):
+ for p in [*list((ROOT/'target/release/deps').glob('mcsheriffanya-*')),ROOT/'target/release/deps/world_startup_retained_default']:
   if p.is_file()and os.access(p,os.X_OK):q=OUT/'test-elf'/p.name;q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,q)
  p=ROOT/'target/release/mcsheriffanya'
  if p.is_file():q=OUT/'runtime-elf/mcsheriffanya';q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,q)
+ for name in ['hello','misbehave','chat_filter','custom_tablist','modinfo','protect_spawn']:
+  p=ROOT/'plugins-examples/target/wasm32-wasip2/release'/(name+'.wasm')
+  if p.is_file():q=OUT/'rust-examples'/(name+'.wasm');q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,q)
  tools={}
  for name in ['wit-bindgen-0.63.0-x86_64-linux/wit-bindgen','wasi-sdk-34.0-x86_64-linux/bin/clang','wasm-tools-1.262.0-x86_64-linux/wasm-tools']:
   p=TOOL/'.toolchain'/name
@@ -172,6 +237,10 @@ def finish():
    version=subprocess.run([str(p),'--version'],capture_output=True,text=True,check=False)
    tools[name]={'sha256':digest(p.read_bytes()),'bytes':p.stat().st_size,'version':version.stdout,'stderr':version.stderr,'exit_code':version.returncode}
  write(OUT/'toolpins.json',tools)
+ host_tools={}
+ for executable in ['rustc','cargo']:
+  version=subprocess.run([executable,'--version','--verbose'],capture_output=True,text=True,check=False);host_tools[executable]={'stdout':version.stdout,'stderr':version.stderr,'exit_code':version.returncode}
+ write(OUT/'host-toolchain.json',host_tools)
  files={str(p.relative_to(OUT)):{'sha256':digest(p.read_bytes()),'bytes':p.stat().st_size}for p in sorted(OUT.rglob('*'))if p.is_file()}
  write(OUT/'receipt.json',{'source':git('rev-parse','HEAD').decode().strip(),'run_id':os.environ.get('GITHUB_RUN_ID'),'attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'status':os.environ.get('MCSA_JOB_STATUS'),'files':files})
 if __name__=='__main__':{'lock':lock,'inputs':inputs,'strict':strict,'translations':translations,'tests':tests,'finish':finish}[sys.argv[1]]()
