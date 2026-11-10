@@ -1,0 +1,78 @@
+name: Native original 768 headless wire capture
+on:
+  push:
+    branches: ['feature/via-closed768-capture-20261110']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Validate frozen criteria and own guards
+        run: |
+          mkdir -p headless768-evidence
+          python3 -B -m unittest discover -s tools/protocol-bridge -p 'test_capture*768.py' -v > headless768-evidence/guards.log 2>&1
+          python3 -B - <<'PY'
+          import ast
+          from pathlib import Path
+          for name in ('capture_headless_768.py','prepare_headless_768.py','capture_native_768.py','test_capture_headless_768.py'):
+              ast.parse((Path('tools/protocol-bridge')/name).read_text(),filename=name)
+          PY
+      - name: Fetch only pinned metadata and opaque original server
+        run: |
+          python3 -B tools/protocol-bridge/prepare_headless_768.py --output "$RUNNER_TEMP/headless768-inputs"
+          cp "$RUNNER_TEMP/headless768-inputs/inputs.json" headless768-evidence/
+          cp "$RUNNER_TEMP/headless768-inputs/version.json" headless768-evidence/
+      - name: Ordinary headless768 entry in separate runner network
+        shell: bash
+        run: |
+          set -o pipefail
+          sudo unshare --net -- bash -c 'ip link set lo up; exec "$@"' headless768-net \
+            python3 -B tools/protocol-bridge/capture_headless_768.py \
+            --metadata "$RUNNER_TEMP/headless768-inputs/version.json" \
+            --protocol "$RUNNER_TEMP/headless768-inputs/protocol.json" \
+            --server-jar "$RUNNER_TEMP/headless768-inputs/server.jar" \
+            --java "$JAVA_HOME/bin/java" --port 26268 \
+            --output "$GITHUB_WORKSPACE/headless768-evidence/capture" \
+            2>&1 | tee headless768-evidence/driver.log
+      - name: Preserve exact source and bounded evidence
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+          MCSA_RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 -B - <<'PY'
+          import hashlib,json,os,subprocess,tarfile
+          from pathlib import Path
+          out=Path('headless768-evidence');out.mkdir(exist_ok=True)
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          paths=sorted(p for p in Path('tools/protocol-bridge').glob('*.py'))
+          paths += [Path('.github/workflows/via-headless-768.yml')]
+          paths += list(Path('tools/protocol-bridge').glob('capture*criteria.json'))
+          paths += [Path('tools/protocol-bridge/capture-768-pins.json'),Path('tools/protocol-bridge/client-chain-sources.json')]
+          with tarfile.open(out/'own-source.tar.gz','w:gz') as tar:
+              for p in paths:tar.add(p,arcname=str(p))
+          files={str(p.relative_to(out)):{'sha256':sha(p),'bytes':p.stat().st_size} for p in out.rglob('*') if p.is_file()}
+          receipt={'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+              'tree':subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(),
+              'status':os.environ['MCSA_JOB_STATUS'],'run_id':os.environ['MCSA_RUN_ID'],
+              'files':files,'sources':{str(p):sha(p) for p in paths},
+              'scope':'ordinary original768 headless only; NOT nativeGUI/core adapter; native gate unchanged'}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: headless768-${{ github.run_id }}-${{ github.run_attempt }}
+          path: headless768-evidence/
+          retention-days: 7
+          if-no-files-found: error

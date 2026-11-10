@@ -1,0 +1,9 @@
+{
+  "scope": "Own headless TCP client768 to opaque original1.21.3 only; NOT nativeGUI/core adapter",
+  "required": ["exact metadata/client-version/protocol/server pins", "original status1.21.3/768", "LoginSuccess with synthetic identity then actual outgoing LoginACK", "KnownPacks exact core1.21.3 offer and empty ordinary response", "at least1 ordinary RegistryData with bounded raw", "FinishConfiguration then actual ACK", "Play login", "matching teleport ACK and finite absolute matching movement", "window0 exactly46 empty slots and carried", "PlayerInfo", "map_chunk and chunk_batch_received", "exit0, process group gone, port free"],
+  "limits": {"packets":2048,"ordinary_bytes":33554432,"frame_bytes":8388608,"entry_seconds":60},
+  "never": ["nativeGUI gate opening", "fullsupport claim", "custom dump command", "reports", "JAR reading/unpack", "manual native extraction", "special registry requests"],
+  "known_packs": "Empty normal response exposes full ordinary registry values for headless client",
+  "server_native": "use-native-transport=false; jna.nounpack=true; io.netty.noNative=true",
+  "native_capture": "Still BLOCKED_NATIVE_RUNTIME; independent pending owner answer"
+}
