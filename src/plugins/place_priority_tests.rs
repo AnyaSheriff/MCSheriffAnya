@@ -41,6 +41,7 @@ fn translated_bukkit_place_public_and_whole_legacy_fallback() {
             }).collect();
             let raw=place_messages(&shared);assert_eq!(raw,expected,"case={case} legacy={legacy:?}");
             let boundaries=host.priority_test_trace().to_vec();
+            let mut cross_place_raw=Vec::new();
             if legacy.is_none() {
                 assert_eq!(boundaries.len(),letters.len()*8);
                 for row in boundaries.iter().filter(|r|r["stage"]=="finish") {
@@ -50,11 +51,11 @@ fn translated_bukkit_place_public_and_whole_legacy_fallback() {
                 assert_eq!(host.block_break(&view(),&wit::BlockPos{dimension:wit::Dimension::Overworld,x:3,y:64,z:3},"minecraft:stone"),Verdict::Allow);
                 assert!(place_messages(&shared).is_empty());
                 assert_eq!(host.block_place(&view(),&wit::BlockPos{dimension:wit::Dimension::Overworld,x:3,y:64,z:3},"minecraft:stone"),verdict);
-                assert_eq!(place_messages(&shared),expected);
+                let cross=place_messages(&shared);assert_eq!(cross,expected);cross_place_raw=cross;
                 assert_eq!(host.block_break(&view(),&wit::BlockPos{dimension:wit::Dimension::Overworld,x:3,y:64,z:3},"minecraft:stone"),Verdict::Allow);
                 assert!(place_messages(&shared).is_empty());
             } else {assert!(boundaries.is_empty());}
-            rows.push(serde_json::json!({"case":case["name"],"legacy":legacy,"mode":host.block_place_mode(),"boundaries":boundaries,"raw_nbt":raw.iter().map(|s|s.iter().map(|b|format!("{b:02x}")).collect::<String>()).collect::<Vec<_>>() }));
+            rows.push(serde_json::json!({"case":case["name"],"legacy":legacy,"mode":host.block_place_mode(),"boundaries":boundaries,"cross_boundaries":host.priority_test_trace(),"cross_place_raw_nbt":cross_place_raw.iter().map(|s|s.iter().map(|b|format!("{b:02x}")).collect::<String>()).collect::<Vec<_>>(),"raw_nbt":raw.iter().map(|s|s.iter().map(|b|format!("{b:02x}")).collect::<String>()).collect::<Vec<_>>() }));
             host.unload_all();assert!(host.is_empty());
         }
     }

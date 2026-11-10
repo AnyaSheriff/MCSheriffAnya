@@ -44,6 +44,8 @@ static void priority_burn_guest(void) {
  needle='    clear();place_priority_id(id);integer(final_state->cancelled);integer(final_state->can_build);int code=dispatch(45);if(code>0)abort();return place_priority_result(code,err);'
  assert adapter.count(needle)==1;adapter=adapter.replace(needle,'    if(priority_fault==3)abort();\n'+needle)
  path=folder/'fault-adapter.c';path.write_text(adapter)
+ evidence=root.parents[1]/'place-staged-evidence/sdk-inputs';evidence.mkdir(parents=True,exist_ok=True)
+ shutil.copyfile(root/'target/mcsa-bukkit.jar',evidence/'sdk-fault.jar')
  translate.translate(root/'target/place-staged-empty.jar',folder/'output',staged_block_place=True,adapter=path)
  out=root.parents[1]/'tmp/place-staged/plugins/java-place-staged-fault';assert not out.exists()
  shutil.copytree(folder/'output/java-place-staged-empty',out)

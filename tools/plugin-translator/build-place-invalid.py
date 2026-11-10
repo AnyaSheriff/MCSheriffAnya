@@ -27,6 +27,8 @@ for kind in ['missing','type']:
                 old='ret->cancelled=(code&1)!=0;ret->can_build=(code&2)!=0;'
                 assert adapter.count(old)==1;adapter=adapter.replace(old,'*ret=(code&1)!=0;')
             path=folder/'invalid-adapter.c';path.write_text(adapter)
+            evidence=root.parents[1]/'place-staged-evidence/sdk-inputs';evidence.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(root/'target/mcsa-bukkit.jar',evidence/('sdk-invalid-'+kind+'.jar'))
             translate.translate(root/'target/place-staged-a.jar',folder/'output',adapter=path,staged_block_place=True)
             name='java-place-staged-invalid-'+kind;out=root.parents[1]/'tmp/place-staged/plugins'/name;assert not out.exists()
             shutil.copytree(folder/'output/java-place-staged-a',out)

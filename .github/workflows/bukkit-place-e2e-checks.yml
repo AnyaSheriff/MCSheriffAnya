@@ -1,0 +1,66 @@
+name: Optional BlockPlace actual Rust and new WASM E2E
+on:
+  push:
+    branches: ['feature/bukkit-place-e2e-20261110']
+permissions:
+  contents: read
+  actions: read
+env:
+  CARGO_BUILD_JOBS: '4'
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  place-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Freeze criteria and verified same-generation Cargo lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/plugin-translator/place_staged_ci.py lock
+      - uses: Swatinem/rust-cache@v2
+      - name: Strict Rust workspace checks before expensive Java translation
+        run: python3 -B tools/plugin-translator/place_staged_ci.py strict
+      - name: Verify OLD source and immutable components; no current SDK equality claim
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B tools/plugin-translator/place_staged_ci.py inputs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Actually compile NEW own fixture JARs and six NEW components with NEW SDK
+        run: python3 -B tools/plugin-translator/place_staged_ci.py translations
+      - name: Current runtime on immutable old components and actual NEW Host and native actions
+        run: python3 -B tools/plugin-translator/place_staged_ci.py tests
+      - name: Preserve sources runtimes old provenance fresh raw and failed attempt
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/place_staged_ci.py finish
+      - name: Read-only artifact semantic verification
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/plugin-translator/verify-place-staged.py place-staged-evidence 2>&1 | tee place-staged-evidence/semantic-audit.log
+      - name: Final artifact hashes and actual job status
+        if: always()
+        run: |
+          mkdir -p place-staged-evidence
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,subprocess
+          root=Path('place-staged-evidence')
+          files={str(p.relative_to(root)):{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'bytes':p.stat().st_size}for p in sorted(root.rglob('*'))if p.is_file()}
+          (root/'complete.json').write_text(json.dumps({'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'status':'${{ job.status }}','run':os.environ['GITHUB_RUN_ID'],'attempt':os.environ['GITHUB_RUN_ATTEMPT'],'files':files},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: place-e2e-${{ github.run_id }}
+          path: place-staged-evidence/
+          include-hidden-files: true
+          retention-days: 7

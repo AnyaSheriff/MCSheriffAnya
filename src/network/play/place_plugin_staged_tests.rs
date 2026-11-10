@@ -17,7 +17,11 @@ fn stacks(player: &PlayerState) -> Value {
 #[ignore = "только отдельные CI процессы с двумя собственными WASM"]
 async fn place_staged_cohort() {
     let id = std::env::var("MCSA_PLACE_CASE").expect("не задан cohort");
-    let spec: Value = serde_json::from_str(include_str!("../../../tools/plugin-translator/fixtures/place-staged-expected.json")).unwrap();
+    let legacy=std::env::var("MCSA_PLACE_LEGACY").as_deref()==Ok("1");
+    let spec: Value = serde_json::from_str(if legacy {include_str!("../../../tools/plugin-translator/fixtures/place-old-expected.json")} else {include_str!("../../../tools/plugin-translator/fixtures/place-staged-expected.json")}).unwrap();
+    let suite=if legacy {"place-old-baseline"} else {"place-staged"};
+    let fixture_kind=if legacy {"priority"} else {"staged"};
+    let oracle=if legacy {"source_predicted_legacy"} else {"public_contract"};
     let (kind, name) = id.split_once(':').unwrap();
     let native = kind == "native";
     assert!(native || kind == "host");
@@ -27,7 +31,7 @@ async fn place_staged_cohort() {
     let reference = spec["cohorts"].as_array().unwrap().iter().find(|v| v["name"] == cohort_name).unwrap();
     let letters: Vec<String> = reference["load_order"].as_array().unwrap().iter().map(|s|s.as_str().unwrap().to_owned()).collect();
     let mode = reference["mode"].as_str().unwrap().to_string();
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/place-staged/work").join(format!("{}-{}", name, std::process::id()));
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("tmp/{suite}/work")).join(format!("{}-{}", name, std::process::id()));
     assert!(!root.exists()); std::fs::create_dir_all(&root).unwrap();
     let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3);
     let shared = Arc::new(Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog), Default::default(), Default::default(), Default::default(), crate::ops::Ops::open(&root.join("ops.json")), crate::skins::Settings::default()));
@@ -57,9 +61,9 @@ async fn place_staged_cohort() {
     worker::start(Arc::clone(&shared),root.clone());
     assert!(!crate::plugins::active());
     for letter in &letters {
-        let plugin=format!("java-place-staged-{letter}");
+        let plugin=format!("java-place-{fixture_kind}-{letter}");
         let folder=root.join("plugins").join(&plugin);std::fs::create_dir_all(folder.join("data")).unwrap();
-        for file in ["plugin.toml","plugin.wasm"] {std::fs::copy(Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/place-staged/plugins").join(&plugin).join(file),folder.join(file)).unwrap();}
+        for file in ["plugin.toml","plugin.wasm"] {std::fs::copy(Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("tmp/{suite}/plugins")).join(&plugin).join(file),folder.join(file)).unwrap();}
         worker::load(plugin);
     }
     assert!(crate::plugins::active());
@@ -69,10 +73,10 @@ async fn place_staged_cohort() {
     crate::plugins::player_join(&shared,&player.name);
     messages(&shared,&player.uuid);
     for letter in &letters {
-        assert!(worker::command(plugin_view(&player),format!("placestaged{letter}"),mode.clone()));
+        assert!(worker::command(plugin_view(&player),format!("place{fixture_kind}{letter}"),mode.clone()));
         assert_eq!(messages(&shared,&player.uuid),[hex(&crate::network::nbt::text_component(&format!("mode {} {mode}",letter.to_ascii_uppercase())))]);
     }
-    assert!(worker::mode().contains("общим приоритетам"));
+    assert_eq!(worker::mode().contains("общим приоритетам"),!legacy);
     let before=stacks(&player);
     let stone_state=blocks::state_by_name("stone").unwrap();
     let before_cells={let w=shared.world_in(player.dimension).lock().unwrap();vec![w.get_block(3,63,3),w.get_block(3,64,3)]};
@@ -92,17 +96,17 @@ async fn place_staged_cohort() {
         let verdict=worker::place(view);
         (if verdict==crate::plugins::Verdict::Allow {"allow"} else {"deny"},Value::Null,String::new())
     };
-    assert_eq!(verdict,reference["public_contract"]["verdict"].as_str().unwrap());
+    assert_eq!(verdict,reference[oracle]["verdict"].as_str().unwrap());
     let boundaries=worker::trace();
     let raw=messages(&shared,&player.uuid);
     assert_eq!(worker::count(),letters.len(),"fixture был выгружен при вызове");
     assert!(!raw.is_empty(),"fixture не вызван");
-    let expected_raw:Vec<_>=reference["public_contract"]["trace"].as_array().unwrap().iter().map(|v|hex(&crate::network::nbt::text_component(&format!("PLACE|{}|{}|world|3|64|3|STONE|same=1",v.as_str().unwrap(),crate::network::login::format_uuid(&player.uuid))))).collect();
+    let expected_raw:Vec<_>=reference[oracle]["trace"].as_array().unwrap().iter().map(|v|hex(&crate::network::nbt::text_component(&format!("PLACE|{}|{}|world|3|64|3|STONE|same=1",v.as_str().unwrap().strip_prefix("trace ").unwrap_or(v.as_str().unwrap()),crate::network::login::format_uuid(&player.uuid))))).collect();
     assert_eq!(raw,expected_raw,"actual event states/order/context differ");
     let after=stacks(&player);
     let after_cells={let w=shared.world_in(player.dimension).lock().unwrap();vec![w.get_block(3,63,3),w.get_block(3,64,3)]};
-    let output=json!({"phase_boundaries":boundaries,"id":id,"cohort":cohort_name,"kind":kind,"pid":std::process::id(),"load_order":letters,"mode":mode,"verdict":verdict,"raw_message_nbt_hex":raw,"uuid":crate::network::login::format_uuid(&player.uuid),"native_input_hex":hex(&input),"native_hand":hand,"event_hand_item_against_replaced":"UNSUPPORTED","before_stacks":before,"after_stacks":after,"before_cells":before_cells,"after_cells":after_cells,"reaction":reaction,"wire_hex":wire,"geometry":{"target_explicit_air":true,"actor_body_clear":[[2,64,4],[4,66,6]],"actor_support":[3,63,5],"actor_aabb":[[player.x-0.3,player.y,player.z-0.3],[player.x+0.3,player.y+1.8,player.z+0.3]],"target_aabb":[[3,64,3],[4,65,4]],"collision_free_asserted":true},"ready_java_view":true,"actual_worker":true,"sdk_canBuild_is_native_permission":false,"denial_claim":"commit prevention only"});
-    let capture=Path::new(env!("CARGO_MANIFEST_DIR")).join("tmp/place-staged/capture");std::fs::create_dir_all(&capture).unwrap();
+    let output=json!({"legacy":legacy,"phase_boundaries":boundaries,"id":id,"cohort":cohort_name,"kind":kind,"pid":std::process::id(),"load_order":letters,"mode":mode,"verdict":verdict,"raw_message_nbt_hex":raw,"uuid":crate::network::login::format_uuid(&player.uuid),"native_input_hex":hex(&input),"native_hand":hand,"event_hand_item_against_replaced":"UNSUPPORTED","before_stacks":before,"after_stacks":after,"before_cells":before_cells,"after_cells":after_cells,"reaction":reaction,"wire_hex":wire,"geometry":{"target_explicit_air":true,"actor_body_clear":[[2,64,4],[4,66,6]],"actor_support":[3,63,5],"actor_aabb":[[player.x-0.3,player.y,player.z-0.3],[player.x+0.3,player.y+1.8,player.z+0.3]],"target_aabb":[[3,64,3],[4,65,4]],"collision_free_asserted":true},"ready_java_view":true,"actual_worker":true,"sdk_canBuild_is_native_permission":false,"denial_claim":"commit prevention only"});
+    let capture=Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("tmp/{suite}/capture"));std::fs::create_dir_all(&capture).unwrap();
     let path=capture.join(format!("{}-{}.json",kind,name));assert!(!path.exists());std::fs::write(path,serde_json::to_vec_pretty(&output).unwrap()).unwrap();println!("PLACE_STAGED {output}");
     crate::plugins::shutdown();assert!(!crate::plugins::active());
     if native {
