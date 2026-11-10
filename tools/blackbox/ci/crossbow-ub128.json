@@ -1,0 +1,16 @@
+{
+  "schema": "crossbow-ub128-ci-v1",
+  "source_pin": "tools/blackbox/ci/protection-edges-777.json",
+  "criteria": "tools/blackbox/ci/crossbow-ub128-criteria.json",
+  "criteria_sha256": "2fa312fb5a41fb04e0b2e761566603f38b8cc71d5d076e8bb9b6db12070f4a02",
+  "primary_reference": "tools/blackbox/ci/crossbow-ub128-primary.json",
+  "primary_reference_sha256": "b7efa856d8c5cb7d94ebbe993ba1e4517054c3abd3ef79570516969abd10ff3b",
+  "primary_raw_sha256": "6730a4f77a258b57c9452f02ca7ef6f347576c5e914d9b9e01f41f800e4abc28",
+  "scenario_sha256": "522e848cf184e8b94bc733cb692dbacd03c8fcb82690d2dc23a45e4cafc85aad",
+  "criteria_before_sha256": "36fdfaa78fa4a8ea269de3b916a131903c3c6597561a6c98c5421cf966ad17ba",
+  "fixed_n_each": 128,
+  "fresh_controls_each": 4,
+  "future_experiment_rule": "A new fresh original/candidate paired validation, with unchanged two-side bounds. Historical primary S1 remains immutable and is never replaced by new official controls. Preserve every failed run. No RNG equality or pooled/chosen original sample.",
+  "prior_controls": "Run existing crossbow36 and armor_sources_sample once with the same candidate in the parent workflow. This entry claims only UB128+4.",
+  "scope": "Measured baseline: mainhand, survival, default count1/maxdamage, damage464, UBIII, three command-loaded plain arrows. Rocket/offhand/loading/custom/fullRNG not runtime-verified."
+}

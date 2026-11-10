@@ -1,0 +1,110 @@
+name: Crossbow Unbreaking bounded proof
+'on':
+  push:
+    branches: ['feature/crossbow-ub-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  CARGO_BUILD_JOBS: '4'
+defaults:
+  run:
+    shell: bash
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: Swatinem/rust-cache@v2
+      - run: mkdir -p ci-logs
+      - name: Check immutable probability criteria and original primary
+        run: |
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_crossbow_unbreaking_ci.py' -v 2>&1 | tee ci-logs/ub-python.log
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_record777.py' -v 2>&1 | tee ci-logs/recorder-python.log
+          python3 -B -m unittest discover -s tools/blackbox -p 'test_crossbow_nearbreak_ci.py' -v 2>&1 | tee ci-logs/crossbow36-python.log
+      - run: rustup target add wasm32-wasip2
+      - name: Build existing own WASM test fixtures
+        run: cargo build --release --target wasm32-wasip2 2>&1 | tee ../ci-logs/wasm-fixtures.log
+        working-directory: plugins-examples
+      - name: Compile all workspace targets
+        run: cargo check --release --all-targets --workspace 2>&1 | tee ci-logs/check.log
+      - name: Exercise injected wear and existing crossbow handler contracts
+        run: cargo test --release network::play::bow_tests -- --nocapture 2>&1 | tee ci-logs/bow-unit.log
+      - name: Strict workspace Clippy
+        run: cargo clippy --release --all-targets --workspace -- -D warnings 2>&1 | tee ci-logs/clippy.log
+      - name: Default workspace tests
+        run: cargo test --release --workspace 2>&1 | tee ci-logs/default-tests.log
+      - name: No-default tests
+        run: cargo test --release --no-default-features 2>&1 | tee ci-logs/no-default-tests.log
+      - name: Build the single candidate ELF used by every paired stage
+        run: |
+          cargo build --release 2>&1 | tee ci-logs/build.log
+          sha256sum target/release/mcsheriffanya > ci-logs/runtime-before.sha256
+      - name: Fresh original and candidate UB128 plus four fresh controls
+        run: |
+          python3 -B tools/blackbox/crossbow_unbreaking_ci.py --output ub128-evidence 2>&1 | tee ci-logs/ub128-replay.log
+          sha256sum --check ci-logs/runtime-before.sha256
+      - name: Previous frozen crossbow36 using the same ELF
+        run: |
+          python3 -B tools/blackbox/crossbow_nearbreak_ci.py --output crossbow36-evidence 2>&1 | tee ci-logs/crossbow36-replay.log
+          sha256sum --check ci-logs/runtime-before.sha256
+      - name: Previous armor, real sources, native bows and combat controls
+        run: |
+          python3 -B tools/blackbox/armor_sources_sample.py ci --output armor-evidence 2>&1 | tee ci-logs/armor-prior-replay.log
+          sha256sum --check ci-logs/runtime-before.sha256
+      - name: Require exact source and runtime identity across all paired proofs
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import hashlib,json,subprocess
+          source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          binary=Path('target/release/mcsheriffanya')
+          runtime=hashlib.sha256(binary.read_bytes()).hexdigest()
+          proofs={name:json.loads((Path(name)/'run.json').read_text()) for name in ['ub128-evidence','crossbow36-evidence','armor-evidence']}
+          assert all(value['status']=='strict-pass' and value['source']==source and value['runtime_sha256']==runtime for value in proofs.values())
+          Path('ci-logs/composite-proof.json').write_text(json.dumps({'status':'strict-pass','source':source,'runtime_sha256':runtime,'proofs':proofs,'scope':'Bounded crossbow UB128 and unchanged previous controls; not all RNG/gameplay'},indent=2)+'\n')
+          PY
+      - name: Preserve exact source, lock and actual job receipts
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: |
+          mkdir -p ci-logs
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os,shutil,subprocess,tarfile
+          out=Path('ci-logs')
+          sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+          source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          selected=['src/network/play/bow.rs','src/network/play/bow_tests.rs','tools/blackbox/record777.py','tools/blackbox/crossbow_unbreaking_probe.py','tools/blackbox/crossbow_unbreaking_ci.py','tools/blackbox/test_crossbow_unbreaking_ci.py','tools/blackbox/ci/crossbow-ub128.json','tools/blackbox/ci/crossbow-ub128-criteria.json','tools/blackbox/ci/crossbow-ub128-primary.json','.github/workflows/crossbow-ub-checks.yml']
+          with tarfile.open(out/'selected-source.tar.gz','w:gz') as archive:
+              for name in selected:archive.add(name,arcname=name)
+          rust=subprocess.check_output(['git','ls-files','*.rs'],text=True).splitlines()
+          locks={}
+          for name,target in [('Cargo.lock','Cargo.lock'),('plugins-examples/Cargo.lock','plugins-examples-Cargo.lock')]:
+              path=Path(name)
+              if path.exists():shutil.copy2(path,out/target);locks[name]=sha(path)
+          binary=Path('target/release/mcsheriffanya')
+          primary=Path('tools/blackbox/ci/crossbow-ub128-primary.json')
+          criteria=Path('tools/blackbox/ci/crossbow-ub128-criteria.json')
+          receipt={'source':source,'base':'a76b0d755a9e4830b0759e7d72563cc667efeda5','status':os.environ['MCSA_JOB_STATUS'],'runtime_sha256':sha(binary) if binary.exists() else None,'selected_source_sha256':sha(out/'selected-source.tar.gz'),'selected_sha256':{name:sha(Path(name)) for name in selected},'rust_source_sha256':{name:sha(Path(name)) for name in rust},'lock_sha256':locks,'criteria_sha256':sha(criteria),'historical_primary_sha256':sha(primary),'local_builds':False}
+          (out/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crossbow-ub-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ci-logs/
+            ub128-evidence/
+            crossbow36-evidence/
+            armor-evidence/
+          retention-days: 7
+          if-no-files-found: warn

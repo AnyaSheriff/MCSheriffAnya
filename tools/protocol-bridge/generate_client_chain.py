@@ -108,6 +108,38 @@ def preparation(docs):
     return result
 
 
+SIMPLE_SLOT_COMPONENTS = ('max_stack_size', 'max_damage', 'damage', 'repair_cost',
+                          'custom_name', 'item_name', 'lore', 'rarity')
+
+
+def generate_slot_tables(docs):
+    # Не псевдоним wire-версии: разрешены только равные payload выбранных имён.
+    tables = {n: registries(docs[n]) for n in (767, 768, 769)}
+    definitions = {n: docs[n]['protocol']['types']['SlotComponent'][1][1]['type'][1]['fields']
+                   for n in (767, 768, 769)}
+    for name in SIMPLE_SLOT_COMPONENTS:
+        assert definitions[767][name] == definitions[768][name] == definitions[769][name], name
+    text = '// Сгенерировано generate_client_chain.py из pinned client-chain-sources.json.\n'
+    text += '// Только Item/Component ID и явно равные простые payload767/768/769.\n'
+    text += 'use crate::ids::RegistryKind;\n'
+    text += "type Ranges = (u32, &'static [(u32,u32,i32)]);\n"
+    arrays, routes, simple = [], [], []
+    for source, target in ((767,768),(768,767),(768,769),(769,768)):
+        for kind in ('Item', 'Component'):
+            values = direct_mapping(tables[source][kind], tables[target][kind])
+            symbol = f'{kind.upper()}_{source}_{target}'
+            arrays.append(f'static {symbol}: &[(u32,u32,i32)] = &[\n' + ''.join(
+                f'    ({first},{last},{65535 if delta is None else delta}),\n'
+                for first,last,delta in compress_mapping(values)) + '];\n')
+            routes.append(f'        (RegistryKind::{kind},{source},{target}) => Some(({len(values)},{symbol})),\n')
+    for number in (767,768,769):
+        values = sorted(tables[number]['Component'][name] for name in SIMPLE_SLOT_COMPONENTS)
+        simple.append(f'        {number} => Some(&{values!r}),\n')
+    text += 'pub(super) fn ranges(kind: RegistryKind, from: u16, to: u16) -> Option<Ranges> {\n    match (kind,from,to) {\n' + ''.join(routes) + '        _ => None,\n    }\n}\n'
+    text += "pub(super) fn simple(protocol: u16) -> Option<&'static [u32]> {\n    match protocol {\n" + ''.join(simple) + '        _ => None,\n    }\n}\n'
+    return text + ''.join(arrays)
+
+
 def generate(docs):
     tables = {n: registries(d) for n, d in docs.items()}
     text = '// Сгенерировано generate_client_chain.py из client-chain-sources.json и step1-sources-774.json.\n'
@@ -163,8 +195,11 @@ def main():
     parser.add_argument('--fetch', action='store_true')
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
-    text, report = generate(load(args.cache, args.cache774, args.fetch))
-    for path, value in [(HERE / 'src/generated_client_chain.rs', text), (HERE / 'client-chain-report.json', report)]:
+    docs = load(args.cache, args.cache774, args.fetch)
+    text, report = generate(docs)
+    slots = generate_slot_tables(docs)
+    for path, value in [(HERE / 'src/generated_client_chain.rs', text), (HERE / 'client-chain-report.json', report),
+                        (HERE / 'src/generated_slot_adjacent.rs', slots)]:
         if args.check:
             assert path.read_text() == value, path
         else:
