@@ -1,0 +1,35 @@
+{
+  "schema": "original-health-layout-and-command-results-v1",
+  "protocol": 777,
+  "states": [
+    {
+      "id": "full",
+      "damage": null,
+      "health": 20.0
+    },
+    {
+      "id": "fractional",
+      "damage": "0.5",
+      "health": 19.5
+    },
+    {
+      "id": "lower",
+      "damage": "6.125",
+      "health": 13.375
+    }
+  ],
+  "queries_each": 12,
+  "total_queries": 36,
+  "max_seconds": 300,
+  "ports": [
+    26230,
+    26231
+  ],
+  "original_only": true,
+  "core_executed": false,
+  "no_Cargo": true,
+  "no_retry": true,
+  "expected_results": "DISCOVERY: do not infer numeric returns from RCON text; record real execute-store result/success then scoreboard readback",
+  "readiness": "actual creative Login+Abilities followed by explicit survival; owner actual update_health20/19.5/13.375 BEFORE each query group; unchanged through end; both client markers",
+  "scope": "three finite positive Health values only; no Inventory/new core parity/fullNBT claim"
+}

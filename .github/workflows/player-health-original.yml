@@ -1,0 +1,36 @@
+name: One original Health and command result observation
+on:
+  push:
+    branches: ['probe/player-health-20261111']
+permissions:
+  contents: read
+jobs:
+  original-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Offline transport and fresh CLI guards
+        run: |
+          python3 -B -m unittest discover -s tools/blackbox/player_data_layout -p 'test_[cst]*.py' -v
+          python3 -B -m unittest discover -s tools/blackbox/player_data_layout -p 'test_health.py' -v
+      - name: One original only finite layout capture
+        run: python3 -B tools/blackbox/player_data_layout/health.py --output health-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: player-health-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            health-evidence/*.json
+            health-evidence/*.txt
+            health-evidence/own-source.tar.gz
+            health-evidence/FIRST-ORIGINAL/
+            health-evidence/data/
+            health-evidence/original/server.log
+          retention-days: 7
