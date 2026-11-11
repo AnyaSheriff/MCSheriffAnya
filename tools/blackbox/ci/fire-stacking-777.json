@@ -1,0 +1,126 @@
+{
+  "official_jar": {
+    "url": "https://piston-data.mojang.com/v1/objects/33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c/server.jar",
+    "sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "sha256": "d052f14d7a173734fba553711e5b570162e2f2a313267ee31a21b975a679be64",
+    "bytes": 62294556
+  },
+  "json_files": [
+    {
+      "file": "protocol.json",
+      "bytes": 347504,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/protocol.json",
+      "sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727"
+    },
+    {
+      "file": "blocks.json",
+      "bytes": 976252,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/blocks.json",
+      "sha256": "776312e51207352734304a293d9300f6c69b4efa40f00ac574c99d1ca7889873"
+    },
+    {
+      "file": "items.json",
+      "bytes": 207286,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/items.json",
+      "sha256": "f0d0e447dd0311b7322f4548971d6ebf6074b5842fd4c7b4e3d8698e00b5edcb"
+    },
+    {
+      "file": "entities.json",
+      "bytes": 90138,
+      "url": "https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/entities.json",
+      "sha256": "33c2d7569e10cb98d86240e8135396702edb92c98e6ccb1c18bf6a481f22e3d5"
+    },
+    {
+      "file": "protocol-26.1.json",
+      "url": "https://raw.githubusercontent.com/PrismarineJS/minecraft-data/23303d2350177f2084f94cd38e5d7c8e54dfc8d3/data/pc/26.1/protocol.json",
+      "bytes": 337869,
+      "sha256": "0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3"
+    }
+  ],
+  "scenarios": [
+    "pvp-fire-stack-plain-777",
+    "pvp-fire-stack-chest4-777",
+    "pvp-fire-stack-boots4-777",
+    "pvp-fire-stack-chest4-boots4-777",
+    "pvp-fire-stack-chest1-boots3-777",
+    "pvp-fire-stack-all2-777"
+  ],
+  "criteria": {
+    "schema": "fire-stacking-discovery-777-v1",
+    "frozen_at": "2026-11-11T05:07:31.775975+00:00",
+    "positive": "Both actual pre-start HP20 receipts. Exactly one authored bot2 attack at20; exactly one causal player_attack on victim received by EACH observer; victim HP decreases, attacker stays20. Each worn item/count1/damage0/exact FireProtection level and FireAspectI diamond_sword observed from ACTUAL post-start inventory and observer equipment BEFORE authored attack. No deaths/effects/other damage. Four equal base armor pieces across six cases. No invented complete inventory seed.",
+    "burn": "Record130 ticks. Keep all actual victim fire flags both observers, fire damage kind/cause/direct and f32HP histories. Burning absence requires positively proven melee/gear/weapon, not empty capture. Any ignition must extinguish before recording ends and never reignite. No expected stacking formula or exact new duration/count/HP is asserted before original observation.",
+    "comparison": "Use original inherited random rules unchanged; raw HP/causal counts, wear, both flag cycles retained separately. Do not expand masks. Qualified mismatches are OPEN discovery evidence, never parity PASS. Reject record/decode/lifecycle/qualification failure.",
+    "scope": "Six fresh independent isolated trials, not all combat or gameplay; pinned26.3/protocol777 only."
+  },
+  "cases": [
+    {
+      "name": "pvp-fire-stack-plain-777",
+      "levels": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "scenario_sha256": "00ff5befc43357a45dbda127d99d867bfda69e7a5e4d1e0eadb334ff2ace4850"
+    },
+    {
+      "name": "pvp-fire-stack-chest4-777",
+      "levels": [
+        0,
+        4,
+        0,
+        0
+      ],
+      "scenario_sha256": "1184bcadc7b777ca858c8ffc94dcda4a0688d96928cccffbf177f1cc90c91358"
+    },
+    {
+      "name": "pvp-fire-stack-boots4-777",
+      "levels": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "scenario_sha256": "b8b404f6dadf3318ba4c32b0b6ab47415cbbf943f8b83bbb8b3e979dca05468e"
+    },
+    {
+      "name": "pvp-fire-stack-chest4-boots4-777",
+      "levels": [
+        0,
+        4,
+        0,
+        4
+      ],
+      "scenario_sha256": "8ee4effd80f88c2481675a5e889f2594f3689521ca69c85adf1ce0978384e447"
+    },
+    {
+      "name": "pvp-fire-stack-chest1-boots3-777",
+      "levels": [
+        0,
+        1,
+        0,
+        3
+      ],
+      "scenario_sha256": "e9ff46fc6fe9c53b047709e502beec7b573d2fa7c08c5dc6329d7dd5fc37c1ac"
+    },
+    {
+      "name": "pvp-fire-stack-all2-777",
+      "levels": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "scenario_sha256": "7ea628704056a6491e84875dfc4f11db46ca9b4d3422379e8e3414d2e34c12cf"
+    }
+  ],
+  "runtime": {
+    "source": "aacb8742e6e50bd2687ddfd16bee708aa3d2b9ab",
+    "tree": "4fbce6571072cfd2bbc587a9898d11834be44750",
+    "run_id": "42878839567",
+    "attempt": "1",
+    "artifact": "command-component-source-42878839567-1",
+    "sha256": "edd3b9105ad72bcdda6a46609e51e45518bf8ae7e93fe6f0ae347f74d08d210c"
+  }
+}

@@ -1,0 +1,57 @@
+name: Fire Protection stacking discovery 26.3 (six genuine hits)
+on:
+  push:
+    branches: ['probe/fire-stacking-20261111']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: fire-stacking-777
+  cancel-in-progress: false
+jobs:
+  observe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Pure guards without servers or compilation
+        run: |
+          python -B -m unittest discover -s tools/blackbox -p 'test_fire_stacking*.py' -v
+          python -B -m unittest discover -s tools/blackbox -p test_combat_ci.py -v
+          python -B -m unittest discover -s tools/blackbox -p test_record777.py -v
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 42878839567
+          name: command-component-source-42878839567-1
+          path: ${{ runner.temp }}/fire-stack-build
+      - name: Record original and exact verified runtime, retain all differences
+        run: |
+          python -B tools/blackbox/fire_stacking_ci.py \
+            --artifact "$RUNNER_TEMP/fire-stack-build" \
+            --work "$RUNNER_TEMP/fire-stack-work" \
+            --output "$RUNNER_TEMP/fire-stack-output" \
+            --java "$JAVA_HOME/bin/java"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fire-stacking-777-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fire-stack-output/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: warn
