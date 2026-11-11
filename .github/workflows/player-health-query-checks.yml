@@ -1,0 +1,133 @@
+name: Live player Health source and regression checks
+on:
+  push:
+    branches: ['feature/player-health-query-20261111']
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Freeze pinned checkout and exact dependency lock without prepare
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p player-query-evidence
+          cp .github/workflows/player-health-query-checks.yml player-query-evidence/workflow-source.yml
+          cp tools/blackbox/ci/simulation-distance-two-runtime.lock Cargo.lock
+          python3 -B - <<'PY'
+          import hashlib, sys
+          expected = '6c1f0a7abf94e252585096af69c54e1e757c5aa199859d9470de21843ec701b2'
+          digest = hashlib.sha256(open('Cargo.lock','rb').read()).hexdigest()
+          if digest != expected: sys.exit(f'unexpected dependency lock digest: {digest}')
+          print('dependency lock digest verified')
+          PY
+          git diff --exit-code
+          rustc -vV > player-query-evidence/rustc-version.log
+          cargo -vV > player-query-evidence/cargo-version.log
+      - name: Build six mandatory own guest WASM components with locked guest
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output player-query-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 --message-format=json-render-diagnostics 2>&1 | tee player-query-evidence/own-examples-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output player-query-evidence
+      - name: Strict default workspace Clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee player-query-evidence/default-clippy.log
+      - name: Focused ticket/actor/player data command tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics player_query -- --nocapture --test-threads=1 2>&1 | tee player-query-evidence/focused-runtime.log
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics data_query -- --nocapture --test-threads=1 2>&1 | tee player-query-evidence/button-default.log
+      - name: Assert filter matched with nonzero passed and zero failed
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B - <<'PY'
+          import re
+          from pathlib import Path
+          for name in ('focused-runtime.log','button-default.log'):
+              log = Path('player-query-evidence', name).read_text()
+              passed = sum(int(m) for m in re.findall(r'test result: \w+\. (\d+) passed', log))
+              failed = sum(int(m) for m in re.findall(r'test result: \w+\. \d+ passed; (\d+) failed', log))
+              assert passed > 0 and failed == 0, f'{name}: passed={passed} failed={failed}'
+              print(f'{name}: {passed} passed, {failed} failed')
+          PY
+      - name: Full default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --message-format=json-render-diagnostics 2>&1 | tee player-query-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features --message-format=json-render-diagnostics 2>&1 | tee player-query-evidence/no-default-tests.log
+      - name: Build one ordinary runtime without executing it
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee player-query-evidence/default-build.log
+          cp target/release/mcsheriffanya player-query-evidence/default-runtime-elf
+      - name: Confirm tracked source untouched after all checks
+        shell: bash
+        run: git diff --exit-code
+      - name: Always preserve compiled source, logs, actual ELFs and root lock
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/protocol-bridge/public_container_button_ci.py archive --output player-query-evidence
+      - name: Scope root receipt.json to this partial work only
+        if: always()
+        shell: bash
+        run: |
+          python3 -B - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          out = Path('player-query-evidence')
+          receipt = out / 'receipt.json'
+          assert receipt.is_file(), 'root receipt.json not found in player-query-evidence'
+          data = json.loads(receipt.read_text())
+          copied_bytes = (out / 'workflow-source.yml').read_bytes()
+          assert copied_bytes == Path('.github/workflows/player-health-query-checks.yml').read_bytes(), 'workflow-source.yml copy mismatch'
+          data['workflow_source'] = {
+              'path': '.github/workflows/player-health-query-checks.yml',
+              'artifact_path': 'workflow-source.yml',
+              'sha256': hashlib.sha256(copied_bytes).hexdigest(),
+          }
+          data['scope'] = 'partial: direct Java/console live Health owner query source+tests'
+          data['excludes'] = ['nested Health execute/function', 'full NBT/Inventory', 'Bedrock Health', 'general Java Float scientific format', 'paired client parity']
+          receipt.write_text(json.dumps(data, indent=2))
+          PY
+      - name: Remove only isolated job tmp after archive
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import shutil
+          temporary = Path('tmp')
+          if temporary.is_dir() and not temporary.is_symlink(): shutil.rmtree(temporary)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: player-health-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: player-query-evidence/
+          retention-days: 7
+          if-no-files-found: error

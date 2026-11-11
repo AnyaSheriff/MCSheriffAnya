@@ -76,3 +76,61 @@ fn zero_byte_is_success_and_execute_store_distinguishes_result_from_success() {
         assert_eq!(f.shared.scoreboard.lock().unwrap().score(holder,"probe").unwrap().value,expected);
     }
 }
+
+#[test]
+fn external_health_plan_is_not_a_completed_result_and_nested_evaluation_cannot_enqueue() {
+    let f=fixture(1);
+    let answer=run_external("data get entity Reader1 Health",&Source::Console,&f.shared);
+    assert!(answer.reply.is_empty());assert!(answer.result.is_none());
+    let Effect::PlayerQuery(plan)=answer.effect else {panic!("план чтения");};
+    assert_eq!(plan.uuid,[1;16]);assert_eq!(plan.entity_id,1);
+    assert!(f.shared.players.lock().unwrap().take_orders(&[1;16]).is_empty());
+    assert!(run_external("data get entity @s Health",&player(),&f.shared).result.is_none());
+    assert!(run("scoreboard objectives add live dummy",&Source::Console,&f.shared).result.is_some());
+    let nested=run_external("execute store success score rejected live run data get entity Reader1 Health",&Source::Console,&f.shared);
+    assert!(nested.result.is_none());assert!(matches!(nested.effect,Effect::None));
+    assert_eq!(f.shared.scoreboard.lock().unwrap().score("rejected","live").unwrap().value,0);
+    assert!(f.shared.players.lock().unwrap().take_orders(&[1;16]).is_empty());
+}
+
+#[test]
+fn measured_f32_health_text_and_floor_return_keep_type_and_failures() {
+    use crate::player_query::{Identity,Snapshot,Failure};
+    for (health,text,result) in [(20.,"20.0f",20),(19.5,"19.5f",19),(13.375,"13.375f",13)] {
+        let answer=player_health_answer("Reader",Ok(Snapshot {owner:Identity {uuid:[1;16],entity_id:1},health}));
+        assert_eq!(answer.reply,format!("Reader has the following entity data: {text}"));assert_eq!(answer.result,Some(result));assert!(answer.component.is_some());
+    }
+    for failure in [Failure::Full,Failure::Timeout,Failure::Disconnected,Failure::Invalid,Failure::Unsupported] {
+        let answer=player_health_answer("Reader",Err(failure));assert_eq!(answer.result,None);assert!(matches!(answer.effect,Effect::None));
+    }
+}
+
+#[test]
+fn unmeasured_scientific_health_text_is_an_explicit_failure() {
+    use crate::player_query::{Identity,Snapshot};
+    for health in [f32::MIN_POSITIVE,0.0001,10_000_000.,f32::MAX] {
+        let answer=player_health_answer("Reader",Ok(Snapshot {owner:Identity {uuid:[1;16],entity_id:1},health}));
+        assert!(answer.result.is_none());assert!(answer.reply.starts_with("Формат этого значения"));
+    }
+}
+
+#[test]
+fn player_health_formatter_matches_curated_actual_original_values_and_stored_results() {
+    let fixture:serde_json::Value=serde_json::from_str(include_str!("../../tools/protocol-bridge/testdata/player-health-original-777.json")).unwrap();
+    assert_eq!(fixture["run"],42986085540u64);
+    for case in fixture["cases"].as_array().unwrap() {
+        let health=case["health"].as_f64().unwrap() as f32;
+        let answer=player_health_answer("blackbox",Ok(crate::player_query::Snapshot {owner:crate::player_query::Identity {uuid:[1;16],entity_id:1},health}));
+        assert_eq!(answer.reply,case["queries"][0]["response"].as_str().unwrap());
+        let counter=case["queries"][3]["response"].as_str().unwrap();
+        assert_eq!(counter,format!("raw has {} [MCSAHealth]",answer.result.unwrap()));
+        let bytes=case["actual_health_packet"]["hex"].as_str().unwrap();
+        let bits=u32::from_str_radix(&bytes[..8],16).unwrap();assert_eq!(bits,health.to_bits());
+    }
+}
+
+#[test]
+fn zero_health_is_a_successful_typed_zero_not_a_failure() {
+    let answer=player_health_answer("Reader",Ok(crate::player_query::Snapshot {owner:crate::player_query::Identity {uuid:[1;16],entity_id:1},health:0.}));
+    assert_eq!(answer.result,Some(0));assert_eq!(answer.reply,"Reader has the following entity data: 0.0f");assert!(answer.component.is_some());
+}

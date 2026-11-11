@@ -1,0 +1,255 @@
+{
+  "source": "b5e84a4e081d321606756c15e8cc7b53c901fe8d",
+  "run": 42986085540,
+  "artifact_id": 13839597119,
+  "zip_sha256": "c266c9c70f5d43cc9ed998c5928112aa30a961b270e65d39042b684195deff2b",
+  "scope": "three observed positive f32 values; no arbitrary Float formatting/fullNBT/paired core parity",
+  "cases": [
+    {
+      "health": 20.0,
+      "actual_health_packet": {
+        "at": 49.838964897,
+        "name": "update_health",
+        "hex": "41a000001440a00000"
+      },
+      "queries": [
+        {
+          "command": "data get entity blackbox Health",
+          "issued": 50.062880756,
+          "response": "blackbox has the following entity data: 20.0f",
+          "completed": 50.075810499
+        },
+        {
+          "command": "data get entity blackbox Health 2",
+          "issued": 50.07581405,
+          "response": "Health on blackbox after scale factor of 2.00 is 40",
+          "completed": 50.100019227
+        },
+        {
+          "command": "execute store result score raw MCSAHealth run data get entity blackbox Health",
+          "issued": 50.100021744,
+          "response": "blackbox has the following entity data: 20.0f",
+          "completed": 50.10439089
+        },
+        {
+          "command": "scoreboard players get raw MCSAHealth",
+          "issued": 50.104392673,
+          "response": "raw has 20 [MCSAHealth]",
+          "completed": 50.105910506
+        },
+        {
+          "command": "execute store success score success MCSAHealth run data get entity blackbox Health",
+          "issued": 50.105911807,
+          "response": "blackbox has the following entity data: 20.0f",
+          "completed": 50.107758255
+        },
+        {
+          "command": "scoreboard players get success MCSAHealth",
+          "issued": 50.107759702,
+          "response": "success has 1 [MCSAHealth]",
+          "completed": 50.108827012
+        },
+        {
+          "command": "execute store result score scaled MCSAHealth run data get entity blackbox Health 2",
+          "issued": 50.108828209,
+          "response": "Health on blackbox after scale factor of 2.00 is 40",
+          "completed": 50.110574615
+        },
+        {
+          "command": "scoreboard players get scaled MCSAHealth",
+          "issued": 50.110575648,
+          "response": "scaled has 40 [MCSAHealth]",
+          "completed": 50.111774432
+        },
+        {
+          "command": "execute store result score missing_result MCSAHealth run data get entity blackbox MCSA_MISSING_HEALTH_FIELD",
+          "issued": 50.111775245,
+          "response": "Found no elements matching MCSA_MISSING_HEALTH_FIELD",
+          "completed": 50.113014654
+        },
+        {
+          "command": "scoreboard players get missing_result MCSAHealth",
+          "issued": 50.113016172,
+          "response": "missing_result has 0 [MCSAHealth]",
+          "completed": 50.114163214
+        },
+        {
+          "command": "execute store success score missing_success MCSAHealth run data get entity blackbox MCSA_MISSING_HEALTH_FIELD",
+          "issued": 50.114163982,
+          "response": "Found no elements matching MCSA_MISSING_HEALTH_FIELD",
+          "completed": 50.123613548
+        },
+        {
+          "command": "scoreboard players get missing_success MCSAHealth",
+          "issued": 50.12361543,
+          "response": "missing_success has 0 [MCSAHealth]",
+          "completed": 50.12553172
+        }
+      ]
+    },
+    {
+      "health": 19.5,
+      "actual_health_packet": {
+        "at": 51.266978407,
+        "name": "update_health",
+        "hex": "419c00001440a00000"
+      },
+      "queries": [
+        {
+          "command": "data get entity blackbox Health",
+          "issued": 51.27730249,
+          "response": "blackbox has the following entity data: 19.5f",
+          "completed": 51.279081193
+        },
+        {
+          "command": "data get entity blackbox Health 2",
+          "issued": 51.279082929,
+          "response": "Health on blackbox after scale factor of 2.00 is 39",
+          "completed": 51.280873476
+        },
+        {
+          "command": "execute store result score raw MCSAHealth run data get entity blackbox Health",
+          "issued": 51.280875066,
+          "response": "blackbox has the following entity data: 19.5f",
+          "completed": 51.282411666
+        },
+        {
+          "command": "scoreboard players get raw MCSAHealth",
+          "issued": 51.2824128,
+          "response": "raw has 19 [MCSAHealth]",
+          "completed": 51.283361516
+        },
+        {
+          "command": "execute store success score success MCSAHealth run data get entity blackbox Health",
+          "issued": 51.283363075,
+          "response": "blackbox has the following entity data: 19.5f",
+          "completed": 51.284602707
+        },
+        {
+          "command": "scoreboard players get success MCSAHealth",
+          "issued": 51.284604055,
+          "response": "success has 1 [MCSAHealth]",
+          "completed": 51.285809955
+        },
+        {
+          "command": "execute store result score scaled MCSAHealth run data get entity blackbox Health 2",
+          "issued": 51.2858111,
+          "response": "Health on blackbox after scale factor of 2.00 is 39",
+          "completed": 51.287175741
+        },
+        {
+          "command": "scoreboard players get scaled MCSAHealth",
+          "issued": 51.287176953,
+          "response": "scaled has 39 [MCSAHealth]",
+          "completed": 51.288129082
+        },
+        {
+          "command": "execute store result score missing_result MCSAHealth run data get entity blackbox MCSA_MISSING_HEALTH_FIELD",
+          "issued": 51.28813021,
+          "response": "Found no elements matching MCSA_MISSING_HEALTH_FIELD",
+          "completed": 51.28957359
+        },
+        {
+          "command": "scoreboard players get missing_result MCSAHealth",
+          "issued": 51.289574988,
+          "response": "missing_result has 0 [MCSAHealth]",
+          "completed": 51.290607148
+        },
+        {
+          "command": "execute store success score missing_success MCSAHealth run data get entity blackbox MCSA_MISSING_HEALTH_FIELD",
+          "issued": 51.290608031,
+          "response": "Found no elements matching MCSA_MISSING_HEALTH_FIELD",
+          "completed": 51.291962001
+        },
+        {
+          "command": "scoreboard players get missing_success MCSAHealth",
+          "issued": 51.29196305,
+          "response": "missing_success has 0 [MCSAHealth]",
+          "completed": 51.292885254
+        }
+      ]
+    },
+    {
+      "health": 13.375,
+      "actual_health_packet": {
+        "at": 52.416982928,
+        "name": "update_health",
+        "hex": "415600001440a00000"
+      },
+      "queries": [
+        {
+          "command": "data get entity blackbox Health",
+          "issued": 52.420405295,
+          "response": "blackbox has the following entity data: 13.375f",
+          "completed": 52.421998019
+        },
+        {
+          "command": "data get entity blackbox Health 2",
+          "issued": 52.422000139,
+          "response": "Health on blackbox after scale factor of 2.00 is 26",
+          "completed": 52.423677963
+        },
+        {
+          "command": "execute store result score raw MCSAHealth run data get entity blackbox Health",
+          "issued": 52.423679093,
+          "response": "blackbox has the following entity data: 13.375f",
+          "completed": 52.425502222
+        },
+        {
+          "command": "scoreboard players get raw MCSAHealth",
+          "issued": 52.425503408,
+          "response": "raw has 13 [MCSAHealth]",
+          "completed": 52.426895287
+        },
+        {
+          "command": "execute store success score success MCSAHealth run data get entity blackbox Health",
+          "issued": 52.42689656,
+          "response": "blackbox has the following entity data: 13.375f",
+          "completed": 52.428436656
+        },
+        {
+          "command": "scoreboard players get success MCSAHealth",
+          "issued": 52.428438003,
+          "response": "success has 1 [MCSAHealth]",
+          "completed": 52.429479304
+        },
+        {
+          "command": "execute store result score scaled MCSAHealth run data get entity blackbox Health 2",
+          "issued": 52.42948033,
+          "response": "Health on blackbox after scale factor of 2.00 is 26",
+          "completed": 52.431081581
+        },
+        {
+          "command": "scoreboard players get scaled MCSAHealth",
+          "issued": 52.4310834,
+          "response": "scaled has 26 [MCSAHealth]",
+          "completed": 52.432060841
+        },
+        {
+          "command": "execute store result score missing_result MCSAHealth run data get entity blackbox MCSA_MISSING_HEALTH_FIELD",
+          "issued": 52.432062132,
+          "response": "Found no elements matching MCSA_MISSING_HEALTH_FIELD",
+          "completed": 52.433534824
+        },
+        {
+          "command": "scoreboard players get missing_result MCSAHealth",
+          "issued": 52.433535949,
+          "response": "missing_result has 0 [MCSAHealth]",
+          "completed": 52.434480811
+        },
+        {
+          "command": "execute store success score missing_success MCSAHealth run data get entity blackbox MCSA_MISSING_HEALTH_FIELD",
+          "issued": 52.434482034,
+          "response": "Found no elements matching MCSA_MISSING_HEALTH_FIELD",
+          "completed": 52.435832631
+        },
+        {
+          "command": "scoreboard players get missing_success MCSAHealth",
+          "issued": 52.435833717,
+          "response": "missing_success has 0 [MCSAHealth]",
+          "completed": 52.437040361
+        }
+      ]
+    }
+  ]
+}

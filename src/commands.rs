@@ -69,12 +69,21 @@ pub(crate) fn looks_failed(reply: &str) -> bool {
 ///
 /// Разбор команды живёт отдельно от подключения игрока и от консоли, поэтому
 /// всё, что касается их лично, он не делает, а называет.
+pub struct PlayerQueryPlan {
+    pub uuid: [u8;16],
+    pub entity_id: i32,
+    pub name: String,
+}
+
 pub enum Effect {
     /// Ничего, кроме ответа.
     None,
 
     /// Сменить режим игры игроку.
     GameMode { uuid: [u8; 16], mode: i32 },
+
+    /// План чтения, обслуживаемый только внешним Java/console dispatcher.
+    PlayerQuery(Box<PlayerQueryPlan>),
 
     /// Остановить сервер.
     Stop,
@@ -207,6 +216,16 @@ pub(crate) fn stack_from_spec_for_catalog(catalog: crate::gameplay_catalog::Cata
 }
 
 pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
+    run_inner(command, source, shared, false)
+}
+
+/// Только реальные внешние dispatchers умеют завершать отложенное чтение.
+/// Рекурсивный execute/function вызывает обычный run и не наследует разрешение.
+pub(crate) fn run_external(command: &str, source: &Source, shared: &Shared) -> Answer {
+    run_inner(command, source, shared, true)
+}
+
+fn run_inner(command: &str, source: &Source, shared: &Shared, live_query: bool) -> Answer {
     if let Some(answer) = crate::auth::command(command, source, shared) { return answer; }
     // `/plugman` и команды плагинов (plugins/): раньше всего прочего, чтобы
     // права плагина проверял он сам, а не общая таблица уровней.
@@ -546,7 +565,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
             }
         }
         "summon" => summon(parts.collect::<Vec<&str>>().as_slice(), source, shared),
-        "data" => data_command(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "data" => data_command(parts.collect::<Vec<&str>>().as_slice(), source, shared, live_query),
         "tnt" => custom_tnt(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "kill" => kill(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "damage" => damage(parts.collect::<Vec<&str>>().as_slice(), source, shared),
@@ -1464,11 +1483,14 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
     Answer::saying(format!("Призвана сущность {}", kind.name()))
 }
 
-/// Только два публичных read-only поля онлайн-игрока, не полный NBT сущности.
-fn data_get_player(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+/// Публичные поля онлайн-игрока; Health требует владельца живого состояния.
+fn data_get_player(parts: &[&str], source: &Source, shared: &Shared, live_query: bool) -> Answer {
     use crate::commands_world::{fail, s, tr};
     let ["get", "entity", target, field] = parts else { return fail("command.unknown.argument", &[]); };
-    if !matches!(*field, "Pos" | "OnGround") { return fail("argument.nbtpath.nothing_found", &[s(*field)]); }
+    if !matches!(*field, "Pos" | "OnGround") && !(*field == "Health" && live_query) {
+        note_result(0);
+        return fail("argument.nbtpath.nothing_found", &[s(*field)]);
+    }
     if target.starts_with('@') {
         let (base, inner) = match target.split_once('[') {
             Some((base, rest)) => match rest.strip_suffix(']') { Some(inner) => (base, Some(inner)), None => return fail("command.unknown.argument", &[]) },
@@ -1515,8 +1537,12 @@ fn data_get_player(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let [(uuid, _)] = targets.as_slice() else {
         return fail(if targets.len() > 1 { "argument.entity.toomany" } else { "argument.entity.notfound.player" }, &[]);
     };
-    let snapshot = shared.players.lock().expect("список игроков").members().iter().find(|member| member.uuid == *uuid).map(|member| (member.name.clone(), member.position));
-    let Some((name, position)) = snapshot else { return fail("argument.entity.notfound.player", &[]); };
+    let snapshot = shared.players.lock().expect("список игроков").members().iter().find(|member| member.uuid == *uuid).map(|member| (member.name.clone(), member.position, member.entity_id));
+    let Some((name, position, entity_id)) = snapshot else { return fail("argument.entity.notfound.player", &[]); };
+    if *field == "Health" {
+        return Answer { reply: String::new(), component: None, rich: Vec::new(), result: None,
+            effect: Effect::PlayerQuery(Box::new(PlayerQueryPlan { uuid: *uuid, entity_id, name })) };
+    }
     if !position.x.is_finite() || !position.y.is_finite() || !position.z.is_finite() { return fail("command.unknown.argument", &[]); }
     let (value, result) = if *field == "Pos" {
         let number = |v: f64| {
@@ -1533,9 +1559,46 @@ fn data_get_player(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     answer
 }
 
+/// Ответ после настоящего owner-снимка. Три конечных значения и floor результата
+/// измерены original42986085540; это не поддержка полного NBT/execute continuation.
+pub(crate) fn player_health_answer(name: &str, result: Result<crate::player_query::Snapshot, crate::player_query::Failure>) -> Answer {
+    use crate::commands_world::{s, tr};
+    match result {
+        Ok(snapshot) if snapshot.health.is_finite() && snapshot.health >= 0.0
+            && (snapshot.health == 0.0 || (0.001..10_000_000.0).contains(&snapshot.health)) => {
+            let mut text = snapshot.health.to_string();
+            if !text.contains('.') && !text.contains('e') && !text.contains('E') { text.push_str(".0"); }
+            text.push('f');
+            let mut answer = tr("commands.data.entity.query", &[s(name), s(text)]);
+            answer.result = Some(snapshot.health.floor() as i32);
+            answer
+        }
+        Ok(_) => {
+            // [проверить] Java Float.toString у крайних значений: не выдаём
+            // наш иной scientific-формат за измеренный текст оригинала.
+            let mut answer = Answer::saying(format!("Формат этого значения здоровья пока не поддержан: {name}"));
+            answer.result = None;
+            answer
+        }
+        result => {
+            use crate::player_query::Failure;
+            let message = match result.err() {
+                Some(Failure::Full) => "Слишком много запросов данных игрока; повтори чуть позже",
+                Some(Failure::Timeout) => "Не удалось прочитать здоровье игрока за 2 секунды",
+                Some(Failure::Disconnected) => "Такого подключения игрока уже нет на сервере",
+                Some(Failure::Unsupported) => "Это чтение пока доступно для Java-игроков ядра26.3",
+                _ => "Не удалось прочитать корректное здоровье игрока",
+            };
+            let mut answer = Answer::saying(format!("{message}: {name}"));
+            answer.result = None;
+            answer
+        }
+    }
+}
+
 /// `data merge entity <кто> {NoAI:0b,…}` — правка данных мобов.
-fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
-    if parts.first() == Some(&"get") { return data_get_player(parts, source, shared); }
+fn data_command(parts: &[&str], source: &Source, shared: &Shared, live_query: bool) -> Answer {
+    if parts.first() == Some(&"get") { return data_get_player(parts, source, shared, live_query); }
     if let ["merge", "block", x, y, z, data @ ..] = parts {
         let Some((x, y, z)) = entity_place(&[x, y, z], origin_of(source, shared)) else {
             return Answer::saying("Не понял место блока".to_string());

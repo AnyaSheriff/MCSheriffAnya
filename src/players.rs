@@ -205,6 +205,8 @@ pub struct PluginChest {
 
 #[derive(Clone, Debug)]
 pub enum Order {
+    /// Только чтение: ответ после обычного применения урона в Java actor.
+    PlayerQuery(std::sync::Arc<crate::player_query::Request>),
     PluginSilent {owner: String, value: Option<bool>},
     PluginFire { ticks: i32 },
     PluginFlight { owner: String, field: u8, value: i8 },
@@ -748,6 +750,14 @@ impl Players {
         }
     }
 
+    /// Снятые/истёкшие чтения не копятся в почте молчащего подключения.
+    /// Остальные поручения и их FIFO порядок сохраняются.
+    pub(crate) fn prune_player_queries(&mut self, uuid: &[u8;16]) {
+        if let Some(orders) = self.orders.get_mut(uuid) {
+            orders.retain(|order| !matches!(order, Order::PlayerQuery(request) if !request.pending()));
+        }
+    }
+
     /// Поручает подключению игрока что-то сделать.
     ///
     /// Тому, кого нет на сервере, поручение не кладётся: его некому забрать,
@@ -771,7 +781,7 @@ impl Players {
             };
             if let Some(reason) = reason { connection.disconnect(reason); }
         }
-        let wake = matches!(order, Order::Teleport { .. } | Order::Kick { .. } | Order::KickText { .. } | Order::CommandHold { .. });
+        let wake = matches!(order, Order::Teleport { .. } | Order::Kick { .. } | Order::KickText { .. } | Order::CommandHold { .. } | Order::PlayerQuery(_));
 
         self.orders.entry(*uuid).or_default().push(order);
 

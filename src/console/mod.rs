@@ -231,7 +231,18 @@ fn handle_line(line: &str, shared: &Shared, shutdown: &watch::Sender<bool>) {
     if shared.properties.pause_when_empty_seconds > 0 {
         shared.players.lock().expect("игроки").note_console_command();
     }
-    let answer = commands::run(command, &Source::Console, shared);
+    let answer = commands::run_external(command, &Source::Console, shared);
+    if let Effect::PlayerQuery(plan) = &answer.effect {
+        let name = plan.name.clone();
+        match crate::player_query::enqueue(shared, crate::player_query::Identity { uuid: plan.uuid, entity_id: plan.entity_id }) {
+            Ok(response) => { tokio::spawn(async move {
+                let answer = crate::commands::player_health_answer(&name, response.wait().await);
+                log_info!("{}", answer.reply);
+            }); }
+            Err(error) => log_info!("{}", crate::commands::player_health_answer(&name, Err(error)).reply),
+        }
+        return;
+    }
 
     if !answer.reply.is_empty() {
         log_info!("{}", answer.reply);

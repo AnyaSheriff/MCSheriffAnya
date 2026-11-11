@@ -102,6 +102,7 @@ mod tick;
 mod chat;
 mod ops;
 mod players;
+mod player_query;
 mod presentation;
 mod shared;
 mod sessions;

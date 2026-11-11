@@ -1069,6 +1069,7 @@ impl BedrockWorld {
 
         for order in orders {
             match order {
+                crate::players::Order::PlayerQuery(_) => {},
                 // [Bedrock: потом] Общие настройки полёта пока доступны Java.
                 crate::players::Order::PluginFlight { .. } => {},
                 // Пользовательские сундуки доступны только подключениям Java со снимком UI.

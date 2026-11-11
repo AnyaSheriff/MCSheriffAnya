@@ -58,6 +58,7 @@ pub struct Shared {
 
     /// Кто сейчас на сервере.
     pub players: Mutex<Players>,
+    pub(crate) player_queries: crate::player_query::Broker,
     pub sessions: crate::sessions::Sessions,
 
     /// Лента сообщений в чат.
@@ -403,6 +404,7 @@ impl Shared {
             tick_starts: tokio::sync::watch::channel(0).0,
             waiting_for_tick: Arc::new([std::sync::atomic::AtomicUsize::new(0), std::sync::atomic::AtomicUsize::new(0)]),
             command_equipment: Mutex::new(Vec::new()),
+            player_queries: Default::default(),
             // Номера начинаются с единицы: ноль клиент понимает как «никого».
             entity_ids: AtomicI32::new(1),
             readers: AtomicU64::new(1),

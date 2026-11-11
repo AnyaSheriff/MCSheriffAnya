@@ -142,6 +142,7 @@ mod review_tests;
 mod custom_data_tests;
 #[cfg(test)]
 mod command_equipment_tests;
+mod data_query;
 #[cfg(test)]
 mod disconnect_tests;
 #[cfg(test)]
@@ -6812,6 +6813,7 @@ async fn read_and_log_play_packets(
     let mut finished_tick = false;
     let mut orders_woken = false;
     let mut pearl_orders = Vec::new();
+    let mut query_reads = Vec::new();
     let wake = shared.players.lock().expect("список игроков захвачен другим потоком").waker(&player.uuid);
 
     loop {
@@ -6819,6 +6821,7 @@ async fn read_and_log_play_packets(
         // прежде чем ждать клиента или конца такта.
         if control.reason().is_some() { return Ok(()); }
         if player.keep_alive.closed() { return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "читатель подключения остановлен")); }
+        data_query::send_ready(stream, player).await?;
         let light_center = player.chunk();
         stream.flush().await?;
         player.light_updates.step(stream, shared, player.dimension, light_center, player.view).await?;
@@ -6990,6 +6993,10 @@ async fn read_and_log_play_packets(
             let visual = matches!(order, Order::Give { .. });
 
             match order {
+                Order::PlayerQuery(request) => {
+                    query_reads.retain(|read: &Arc<crate::player_query::Request>| read.pending());
+                    if request.pending() && query_reads.len() < 64 { query_reads.push(request); }
+                }
                 Order::Respawn => {}
                 Order::PluginSpawn { point } => { player.respawn = point;player.save_with_catalog(&shared.playerdata, shared.catalog()); }
                 Order::WakeUp => player.wake_due = true,
@@ -7549,6 +7556,7 @@ async fn read_and_log_play_packets(
                 }
                 sleep::tick(shared, player);
                 vitals::tick(stream, shared, player).await?;
+                data_query::finish_reads(&mut query_reads, shared, player);
                 // Длительности эффектов сохраняем и у молчащего клиента.
                 if (*shared.ticks.borrow()).is_multiple_of(100) {
                     player.save_if_needed(&shared.playerdata, shared.catalog());
@@ -8742,7 +8750,11 @@ fn handle_client_packet_inner(
                     uuid: player.uuid,
                     name: player.name.clone(),
                 };
-                let answer = commands::run(&command, &source, shared);
+                let mut answer = commands::run_external(&command, &source, shared);
+                if let Effect::PlayerQuery(plan) = &answer.effect
+                    && let Err(failure) = data_query::accept(shared, player, crate::player_query::Identity { uuid: plan.uuid, entity_id: plan.entity_id }, plan.name.clone()) {
+                    answer = commands::player_health_answer(&plan.name, Err(failure));
+                }
 
                 if !answer.reply.is_empty() {
                     // Как у обычного сервера: «[Имя: что вышло]».
@@ -12412,6 +12424,7 @@ struct TrackingPublication {
 }
 
 struct PlayerState {
+    queries: Vec<data_query::Pending>,
     publication: Option<TrackingPublication>,
     shoulders: [Option<Vec<u8>>; 2],
     shoulder_since: u64,
@@ -12837,6 +12850,7 @@ impl PlayerState {
         }
 
         let mut player = Self {
+            queries: Vec::new(),
             spawn_point: spawn,
             respawn: saved.as_ref().and_then(|data| data.respawn),
             ender: saved.as_ref().map_or_else(playerdata::empty_ender, |data| data.ender.clone()),
