@@ -107,6 +107,14 @@ class RawGuards(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 sample.inspect(raw, CASE, ITEMS)
 
+    def test_non_player_item_metadata_not_sent_to_player_decoder(self):
+        raw = fixture()
+        raw['clients'][0]['events'].insert(0, packet('entity_metadata', bytes.fromhex('300807019a0801000d010a01ff'), 10.01))
+        sample.inspect(raw, CASE, ITEMS)
+        raw['clients'][0]['events'][0]['hex'] = '02' + raw['clients'][0]['events'][0]['hex'][2:]
+        with self.assertRaises(AssertionError):
+            sample.inspect(raw, CASE, ITEMS)
+
     def test_frozen_cases_equal_base_armor_and_no_new_masks(self):
         root = Path(__file__).resolve().parents[2]
         config = json.loads(driver.CONFIG.read_text())

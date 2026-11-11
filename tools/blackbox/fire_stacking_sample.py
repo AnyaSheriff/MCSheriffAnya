@@ -73,9 +73,13 @@ def inspect(raw, case, items):
             if event['name'] == 'entity_effect':
                 raise AssertionError('unexpected active effect during fire-only trial')
             if event['name'] == 'entity_metadata':
-                entity, fields = player_metadata(bytes.fromhex(event['hex']))
-                if entity == victim and 0 in fields:
-                    evidence['burning'][observer].append({'at': when, 'burning': bool(fields[0] & 1)})
+                payload = bytes.fromhex(event['hex'])
+                # /give даёт также метаданные предмета. Строгий player decoder
+                # применяем только к нашей цели, как в прежнем combat_wire.
+                if uint(io.BytesIO(payload)) == victim:
+                    entity, fields = player_metadata(payload)
+                    if 0 in fields:
+                        evidence['burning'][observer].append({'at': when, 'burning': bool(fields[0] & 1)})
             if event['name'] == 'entity_status':
                 source = io.BytesIO(bytes.fromhex(event['hex']))
                 entity = int.from_bytes(exact(source, 4), 'big', signed=True)
