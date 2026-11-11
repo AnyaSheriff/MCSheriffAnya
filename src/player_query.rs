@@ -194,7 +194,8 @@ pub(crate) fn enqueue(shared: &crate::shared::Shared, target: Identity) -> Resul
     if !players.has_java_waker(&target.uuid) { return Err(Failure::Unsupported); }
     players.prune_player_queries(&target.uuid);
     let (request, response) = shared.player_queries.request(target)?;
-    players.order(&target.uuid, crate::players::Order::PlayerQuery(request));
+    let uuid = request.target().uuid;
+    players.order(&uuid, crate::players::Order::PlayerQuery(request));
     Ok(response)
 }
 
