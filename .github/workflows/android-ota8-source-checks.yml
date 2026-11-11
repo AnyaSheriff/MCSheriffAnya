@@ -1,0 +1,133 @@
+name: Android OTA8 source checks with exact native dependencies
+on:
+  push:
+    branches: ['review/android-ota8-20261111']
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Freeze pinned checkout and exact dependency lock without prepare
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p ota8-source-evidence
+          cp .github/workflows/android-ota8-source-checks.yml ota8-source-evidence/workflow-source.yml
+          cp android/ota-pins/r8-native.lock Cargo.lock
+          python3 -B - <<'PY'
+          import hashlib, sys
+          expected = 'e24fe5fda7b58f4367573e46866c48bd532d0ef70dac0da02dbbaf5b9c6d04e0'
+          digest = hashlib.sha256(open('Cargo.lock','rb').read()).hexdigest()
+          if digest != expected: sys.exit(f'unexpected dependency lock digest: {digest}')
+          print('dependency lock digest verified')
+          PY
+          git diff --exit-code
+          rustc -vV > ota8-source-evidence/rustc-version.log
+          cargo -vV > ota8-source-evidence/cargo-version.log
+      - name: Build six mandatory own guest WASM components with locked guest
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output ota8-source-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 --message-format=json-render-diagnostics 2>&1 | tee ota8-source-evidence/own-examples-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output ota8-source-evidence
+      - name: Strict default workspace Clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee ota8-source-evidence/default-clippy.log
+      - name: Focused mcsheriffanya custom_data command and split_components tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics player_query -- --nocapture --test-threads=1 2>&1 | tee ota8-source-evidence/focused-runtime.log
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics data_get_tests -- --nocapture --test-threads=1 2>&1 | tee ota8-source-evidence/button-default.log
+      - name: Assert filter matched with nonzero passed and zero failed
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B - <<'PY'
+          import re
+          from pathlib import Path
+          for name in ('focused-runtime.log','button-default.log'):
+              log = Path('ota8-source-evidence', name).read_text()
+              passed = sum(int(m) for m in re.findall(r'test result: \w+\. (\d+) passed', log))
+              failed = sum(int(m) for m in re.findall(r'test result: \w+\. \d+ passed; (\d+) failed', log))
+              assert passed > 0 and failed == 0, f'{name}: passed={passed} failed={failed}'
+              print(f'{name}: {passed} passed, {failed} failed')
+          PY
+      - name: Full default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --message-format=json-render-diagnostics 2>&1 | tee ota8-source-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features --message-format=json-render-diagnostics 2>&1 | tee ota8-source-evidence/no-default-tests.log
+      - name: Build one ordinary runtime without executing it
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee ota8-source-evidence/default-build.log
+          cp target/release/mcsheriffanya ota8-source-evidence/default-runtime-elf
+      - name: Confirm tracked source untouched after all checks
+        shell: bash
+        run: git diff --exit-code
+      - name: Always preserve compiled source, logs, actual ELFs and root lock
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/protocol-bridge/public_container_button_ci.py archive --output ota8-source-evidence
+      - name: Scope root receipt.json to this partial work only
+        if: always()
+        shell: bash
+        run: |
+          python3 -B - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          out = Path('ota8-source-evidence')
+          receipt = out / 'receipt.json'
+          assert receipt.is_file(), 'root receipt.json not found in ota8-source-evidence'
+          data = json.loads(receipt.read_text())
+          copied_bytes = (out / 'workflow-source.yml').read_bytes()
+          assert copied_bytes == Path('.github/workflows/android-ota8-source-checks.yml').read_bytes(), 'workflow-source.yml copy mismatch'
+          data['workflow_source'] = {
+              'path': '.github/workflows/android-ota8-source-checks.yml',
+              'artifact_path': 'workflow-source.yml',
+              'sha256': hashlib.sha256(copied_bytes).hexdigest(),
+          }
+          data['scope'] = 'Android OTA8: exact game source632 and actual native lock e24; Linux full regression checks'
+          data['excludes'] = ['ARM physical execution', 'all gameplay parity', 'new APK release']
+          receipt.write_text(json.dumps(data, indent=2))
+          PY
+      - name: Remove only isolated job tmp after archive
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import shutil
+          temporary = Path('tmp')
+          if temporary.is_dir() and not temporary.is_symlink(): shutil.rmtree(temporary)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-ota8-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ota8-source-evidence/
+          retention-days: 7
+          if-no-files-found: error
