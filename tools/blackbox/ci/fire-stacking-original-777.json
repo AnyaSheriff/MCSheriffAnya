@@ -1,0 +1,238 @@
+{
+  "frozen_after_original_audit_at": "2026-11-11T05:26:00.679486+00:00",
+  "original_run": 42964539676,
+  "original_run_actual_conclusion": "failure",
+  "reason": "Original recordings complete; new metadata extractor initially failed on unrelated item metadata. Corrected target-only analysis independently audited. First failed result retained.",
+  "source": "4169fb07d8f8362471fd22eeae37722dea012b1b",
+  "artifact_id": 13830852852,
+  "artifact_zip_sha256": "232b1c65fac7bb99e1eb6166458abd12271b92cad9c4c1b7637dd7a66ead83c6",
+  "cases": [
+    {
+      "scenario": "pvp-fire-stack-plain-777",
+      "summary": {
+        "health": [
+          [
+            20.0,
+            18.110000610351562,
+            17.110000610351562,
+            16.110000610351562,
+            15.110000610351562
+          ],
+          [
+            20.0
+          ]
+        ],
+        "fire_hits": [
+          3,
+          3
+        ],
+        "burn_cycles": [
+          1,
+          1
+        ],
+        "burn_duration_ticks": [
+          79,
+          79
+        ],
+        "melee_hp": 1.8899993896484375,
+        "victim_final_hp": 15.110000610351562
+      },
+      "armor_wear": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "sword_wear": 1,
+      "original_raw_sha256": "997304776063383e4bd78c774473fb400190e0dcdbbcd6b9b5d95a5e68c4ac62"
+    },
+    {
+      "scenario": "pvp-fire-stack-chest4-777",
+      "summary": {
+        "health": [
+          [
+            20.0,
+            18.110000610351562,
+            17.43000030517578
+          ],
+          [
+            20.0
+          ]
+        ],
+        "fire_hits": [
+          1,
+          1
+        ],
+        "burn_cycles": [
+          1,
+          1
+        ],
+        "burn_duration_ticks": [
+          31,
+          31
+        ],
+        "melee_hp": 1.8899993896484375,
+        "victim_final_hp": 17.43000030517578
+      },
+      "armor_wear": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "sword_wear": 1,
+      "original_raw_sha256": "d1ca35092603e7799176a9868841c84e1e61826b9af9f0b149c57164f4898d9b"
+    },
+    {
+      "scenario": "pvp-fire-stack-boots4-777",
+      "summary": {
+        "health": [
+          [
+            20.0,
+            18.110000610351562,
+            17.43000030517578
+          ],
+          [
+            20.0
+          ]
+        ],
+        "fire_hits": [
+          1,
+          1
+        ],
+        "burn_cycles": [
+          1,
+          1
+        ],
+        "burn_duration_ticks": [
+          31,
+          31
+        ],
+        "melee_hp": 1.8899993896484375,
+        "victim_final_hp": 17.43000030517578
+      },
+      "armor_wear": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "sword_wear": 1,
+      "original_raw_sha256": "b0f73e9934b95c46e25ab86b8700b8846bc54f500c5d5f1d396cd212e7974b62"
+    },
+    {
+      "scenario": "pvp-fire-stack-chest4-boots4-777",
+      "summary": {
+        "health": [
+          [
+            20.0,
+            18.110000610351562
+          ],
+          [
+            20.0
+          ]
+        ],
+        "fire_hits": [
+          0,
+          0
+        ],
+        "burn_cycles": [
+          null,
+          null
+        ],
+        "burn_duration_ticks": [
+          null,
+          null
+        ],
+        "melee_hp": 1.8899993896484375,
+        "victim_final_hp": 18.110000610351562
+      },
+      "armor_wear": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "sword_wear": 1,
+      "original_raw_sha256": "6d07dc805bc8230e04e7f014a284ec99997d4d66e292c800a5b94b2cbc0621f0"
+    },
+    {
+      "scenario": "pvp-fire-stack-chest1-boots3-777",
+      "summary": {
+        "health": [
+          [
+            20.0,
+            18.110000610351562,
+            17.43000030517578
+          ],
+          [
+            20.0
+          ]
+        ],
+        "fire_hits": [
+          1,
+          1
+        ],
+        "burn_cycles": [
+          1,
+          1
+        ],
+        "burn_duration_ticks": [
+          31,
+          31
+        ],
+        "melee_hp": 1.8899993896484375,
+        "victim_final_hp": 17.43000030517578
+      },
+      "armor_wear": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "sword_wear": 1,
+      "original_raw_sha256": "03360cf4335f1a71fd9fad11ce77f3556a3a372f9035082a0667b0d7c888b220"
+    },
+    {
+      "scenario": "pvp-fire-stack-all2-777",
+      "summary": {
+        "health": [
+          [
+            20.0,
+            18.110000610351562
+          ],
+          [
+            20.0
+          ]
+        ],
+        "fire_hits": [
+          0,
+          0
+        ],
+        "burn_cycles": [
+          null,
+          null
+        ],
+        "burn_duration_ticks": [
+          null,
+          null
+        ],
+        "melee_hp": 1.8899993896484375,
+        "victim_final_hp": 18.110000610351562
+      },
+      "armor_wear": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "sword_wear": 1,
+      "original_raw_sha256": "5cc6c5976265aefcc29ce1119ae53eed4f99cc635b178417d235ddce0ae38fc9"
+    }
+  ],
+  "comparison_limits": "Both observer received intervals rounded to ticks, not server-internal ticks. Retain2attribute timing shifts percase OPEN; no full packet parity.",
+  "runtime_source": "aacb8742e6e50bd2687ddfd16bee708aa3d2b9ab",
+  "runtime_sha256": "edd3b9105ad72bcdda6a46609e51e45518bf8ae7e93fe6f0ae347f74d08d210c",
+  "independent_checks": 5450,
+  "correction_source": "b34bb7542f67168f77be0d05319dfe6cfa2b63bc"
+}

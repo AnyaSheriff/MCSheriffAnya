@@ -13,6 +13,7 @@ import tarfile
 
 import combat_ci as ci
 from fire_stacking_sample import analyze
+from fire_stacking_regression import validate
 
 CONFIG = ci.ROOT / 'tools/blackbox/ci/fire-stacking-777.json'
 # Это точный архив СВОЕГО исходника из уже проверенного sourceCI, не Mojang JAR.
@@ -69,6 +70,10 @@ def execute(artifact, work, output, java):
                                           ci.ROOT / 'tools/blackbox/fire_stacking_qualifier.py',
                                           ci.ROOT / 'tools/blackbox/test_fire_stacking_qualifier.py',
                                           ci.ROOT / 'tools/blackbox/test_fire_stacking_sample.py',
+                                          ci.ROOT / 'tools/blackbox/fire_stacking_regression.py',
+                                          ci.ROOT / 'tools/blackbox/test_fire_stacking_regression.py',
+                                          ci.ROOT / 'tools/blackbox/ci/fire-stacking-original-777.json',
+                                          ci.ROOT / 'docs/fire-stacking-26.3.md',
                                           ci.ROOT / '.github/workflows/fire-stacking-checks.yml'])
         runtime, receipt = verify_runtime(artifact, config['runtime'])
         ci.write_json(output / 'actual-source-build-receipt.json', receipt)
@@ -98,6 +103,8 @@ def execute(artifact, work, output, java):
         semantic = analyze(recordings, data, config)
         ci.write_json(output / 'fire-stacking-observations.json', semantic)
         if not result['record_exit'] and not result['analyze_exit'] and result['comparison']['status'] != 'infrastructure-failed' and not semantic['errors']:
+            validate(semantic, json.loads((CONFIG.parent / 'fire-stacking-original-777.json').read_text()))
+            result['regression_status'] = 'six-frozen-original-summaries-match'
             result['status'] = 'qualified-discovery'  # Даже при различиях это не parity PASS.
     except Exception as error:
         result['error'] = type(error).__name__ + ': ' + str(error)
