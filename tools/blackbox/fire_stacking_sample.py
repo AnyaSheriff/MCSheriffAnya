@@ -2,10 +2,12 @@
 """Шесть опытов с FireProtection: подлинные HP/экипировка/огонь обоим клиентам777."""
 import io
 import json
+import hashlib
 from combat_wire import health_packet, inventory_changes
 from defense_ci import exact, finished, player_metadata, uint, use_slot
 from thorns_natural_sample import damage
 from fire_stacking_qualifier import qualify
+from fire_stacking_phase import inspect_phase
 
 GEAR = [('diamond_helmet', 5, 5), ('diamond_chestplate', 6, 4),
         ('diamond_leggings', 7, 3), ('diamond_boots', 8, 2)]
@@ -37,7 +39,7 @@ def stack_matches(stack, item, enchantments, names):
     assert len(actual) == len(pairs) and actual == enchantments
 
 
-def inspect(raw, case, items):
+def inspect(raw, case, items, reference=None, reference_hash=None):
     assert raw['scenario'] == case['name'] and raw['protocol'] == 777
     assert raw['isolate_vitals'] is True and len(raw['clients']) == len(raw['initial']) == 2
     victim, attacker = [v['entity'] for v in raw['initial']]
@@ -108,8 +110,10 @@ def inspect(raw, case, items):
         inventories.append({'armor': armor, 'sword': sword})
         seen.append(proofs)
     summary = qualify(evidence)
+    phase = (inspect_phase(raw, case['attribute_phase_ids'], reference, reference_hash)
+             if case.get('require_attribute_phase') else None)
     return {'summary': summary, 'evidence': evidence, 'initial_gear': inventories,
-            'actual_pre_attack_receipts': seen}
+            'actual_pre_attack_receipts': seen, 'attribute_phase': phase}
 
 
 def analyze(recordings, data, config):
@@ -119,7 +123,11 @@ def analyze(recordings, data, config):
         for side in ('official', 'ours'):
             try:
                 raw = json.loads((recordings / (case['name'] + '-' + side + '.json')).read_text())
-                observed = inspect(raw, case, items)
+                reference_path = recordings / (case['name'] + '-official.json')
+                reference_bytes = reference_path.read_bytes() if side == 'ours' else None
+                reference = json.loads(reference_bytes) if reference_bytes is not None else None
+                reference_hash = hashlib.sha256(reference_bytes).hexdigest() if reference_bytes is not None else None
+                observed = inspect(raw, case, items, reference, reference_hash)
                 rows.append({'scenario': case['name'], 'side': side, 'status': 'qualified', 'observed': observed})
             except (AssertionError, ValueError, KeyError, OSError, TypeError, EOFError, StopIteration) as error:
                 message = case['name'] + '/' + side + ': ' + repr(error)

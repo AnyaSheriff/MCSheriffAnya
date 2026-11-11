@@ -1,7 +1,7 @@
-name: Fire Protection stacking discovery 26.3 (six genuine hits)
+name: Fire Protection stacking and attribute phase 26.3 (six genuine hits)
 on:
   push:
-    branches: ['probe/fire-stacking-20261111']
+    branches: ['probe/fire-stacking-20261111', 'probe/fire-attribute-phase-20261111']
 permissions:
   contents: read
   actions: read

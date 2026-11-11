@@ -72,6 +72,8 @@ def execute(artifact, work, output, java):
                                           ci.ROOT / 'tools/blackbox/test_fire_stacking_sample.py',
                                           ci.ROOT / 'tools/blackbox/fire_stacking_regression.py',
                                           ci.ROOT / 'tools/blackbox/test_fire_stacking_regression.py',
+                                          ci.ROOT / 'tools/blackbox/fire_stacking_phase.py',
+                                          ci.ROOT / 'tools/blackbox/test_fire_stacking_phase.py',
                                           ci.ROOT / 'tools/blackbox/ci/fire-stacking-original-777.json',
                                           ci.ROOT / 'docs/fire-stacking-26.3.md',
                                           ci.ROOT / '.github/workflows/fire-stacking-checks.yml'])
@@ -105,7 +107,10 @@ def execute(artifact, work, output, java):
         if not result['record_exit'] and not result['analyze_exit'] and result['comparison']['status'] != 'infrastructure-failed' and not semantic['errors']:
             validate(semantic, json.loads((CONFIG.parent / 'fire-stacking-original-777.json').read_text()))
             result['regression_status'] = 'six-frozen-original-summaries-match'
-            result['status'] = 'qualified-discovery'  # Даже при различиях это не parity PASS.
+            # Калиброванный опыт требует прежний строгий compare без сдвигов.
+            # Старые discovery-наборы сохраняют свою явную область результата.
+            result['status'] = (result['comparison']['status'] if config.get('require_packet_match')
+                                else 'qualified-discovery')
     except Exception as error:
         result['error'] = type(error).__name__ + ': ' + str(error)
     finally:
@@ -134,4 +139,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     observed = execute(args.artifact, args.work, args.output, args.java)
     print(json.dumps(observed))
-    raise SystemExit(0 if observed['status'] == 'qualified-discovery' else 1)
+    raise SystemExit(0 if observed['status'] in ('qualified-discovery', 'match') else 1)

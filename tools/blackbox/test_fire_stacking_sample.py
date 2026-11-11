@@ -118,14 +118,19 @@ class RawGuards(unittest.TestCase):
     def test_frozen_cases_equal_base_armor_and_no_new_masks(self):
         root = Path(__file__).resolve().parents[2]
         config = json.loads(driver.CONFIG.read_text())
+        self.assertIs(config['require_packet_match'], True)
         original = json.loads((root / 'tools/blackbox/scenarios/pvp-fire-protection-iv-777.json').read_text())
         self.assertEqual(len(config['cases']), 6)
         for row in config['cases']:
+            self.assertIs(row['require_attribute_phase'], True)
+            self.assertEqual(row['attribute_phase_ids'], [5, 35])
             path = root / 'tools/blackbox/scenarios' / (row['name'] + '.json')
             self.assertEqual(driver.ci.sha(path), row['scenario_sha256'])
             scenario = json.loads(path.read_text())
             self.assertEqual(scenario['random'], original['random'])
             self.assertEqual(scenario['actions'][-1], {'after': 20, 'attack': True, 'bot': 2})
+            self.assertEqual(scenario['actions'][0]['cmd'], 'give $(bot2) minecraft:diamond_sword[enchantments={fire_aspect:1}] 1')
+            self.assertEqual(scenario['setup'][-3:], ['!wait 8', 'clear $(bot2)', '!wait 8'])
             for item, _, _ in sample.GEAR:
                 self.assertEqual(sum(('with minecraft:' + item) in a.get('cmd', '') for a in scenario['actions']), 1)
 

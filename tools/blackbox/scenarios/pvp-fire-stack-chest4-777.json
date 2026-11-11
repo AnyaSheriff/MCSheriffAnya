@@ -1,6 +1,6 @@
 {
   "name": "pvp-fire-stack-chest4-777",
-  "about": "Discovery: одинаковая полная алмазная броня, FireAspectI; меняются только слоты/уровни FireProtection. Новые исходы заранее не угаданы.",
+  "about": "Discovery: одинаковая полная алмазная броня, FireAspectI; меняются только слоты/уровни FireProtection. Новые исходы заранее не угаданы. Перед записью измеряется фаза attack_speed; настоящий алмазный меч по-прежнему выдан внутри записи. Подготовительный меч снят до записи; исходная пустая рука и give на такте0 восстановлены.",
   "second": true,
   "track_self": true,
   "track_players": true,
@@ -22,7 +22,11 @@
     "!stopfly",
     "!wait 20",
     "!hotbar2 0",
-    "!hotbar 0"
+    "!hotbar 0",
+    "item replace entity $(bot2) weapon.mainhand with minecraft:wooden_sword",
+    "!wait 8",
+    "clear $(bot2)",
+    "!wait 8"
   ],
   "actions": [
     {

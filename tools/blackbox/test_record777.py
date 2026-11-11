@@ -12,6 +12,41 @@ from record777 import aim_at, dig_status, make_recorder, protocol_rotation, vali
 from smoke import read_varint
 from types import SimpleNamespace
 from record777 import run_scenario_sides, aligned_start, select_start_tick
+from record777 import Recorder
+
+
+class AttributeReceiptTests(unittest.TestCase):
+    def recorder(self, recording):
+        client = Recorder.__new__(Recorder)
+        client.entity = 2
+        client.speed_attribute = (5, 35)
+        client.attribute_samples = []
+        client.attribute_phase_receipts = []
+        client.observing_sounds = client.calibrating = False
+        client.recording = recording
+        client.events, client.preroll = [], []
+        return client
+
+    def test_pre_start_phase_keeps_payload_at_same_actual_sample_time(self):
+        payload = b'\2\1\5' + struct.pack('>d', 4.) + b'\0'
+        client = self.recorder(False)
+        with patch('record777.time.monotonic', return_value=12.5):
+            client.observe_packet('entity_update_attributes', payload)
+        self.assertEqual(client.attribute_samples, [12.5])
+        self.assertEqual(client.attribute_phase_receipts,
+                         [{'at': 12.5, 'name': 'entity_update_attributes', 'hex': payload.hex()}])
+        self.assertEqual(client.events, [])
+        self.assertEqual(client.preroll, [])
+
+    def test_post_start_receipt_links_real_event_but_other_entity_is_not_phase(self):
+        payload = b'\2\1\5' + struct.pack('>d', 4.) + b'\0'
+        client = self.recorder(True)
+        with patch('record777.time.monotonic', return_value=13.):
+            client.observe_packet('entity_update_attributes', payload)
+            client.observe_packet('entity_update_attributes', b'\3' + payload[1:])
+        self.assertEqual(len(client.attribute_phase_receipts), 1)
+        self.assertEqual(client.attribute_phase_receipts[0], client.events[0])
+        self.assertEqual(len(client.events), 2)
 
 
 class RecordingSequenceTests(unittest.TestCase):

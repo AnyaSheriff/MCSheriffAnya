@@ -101,6 +101,7 @@ class Recorder(Client):
         self.target_filter = None
         self.age_samples = []
         self.attribute_samples = []
+        self.attribute_phase_receipts = []
         self.speed_attribute = None
         self.calibration = []
         self.calibrating = False
@@ -178,7 +179,11 @@ class Recorder(Client):
     def observe_packet(self, name, payload):
         data = io.BytesIO(payload)
         if name == 'entity_update_attributes' and attribute_sample(payload,self.entity,self.speed_attribute):
-            self.attribute_samples.append(time.monotonic())
+            stamp = time.monotonic()
+            self.attribute_samples.append(stamp)
+            # Фазу до начала записи можно проверить по настоящему пакету,
+            # а не только по сохранённому числу из монотонных часов.
+            self.attribute_phase_receipts.append({'at': stamp, 'name': name, 'hex': payload.hex()})
         if name in ('set_slot','set_player_inventory') and self.observing_sounds:
             self.item_samples.append((name,payload))
         if name == 'open_window':
@@ -695,7 +700,7 @@ def record(port, protocol, s, rcon, output, version=777, sound_output=None, refe
                 c.send('block_dig',varint(dig_status(action.get('status',0),version))+pack_position(pos)+bytes([action.get('face',1)])+varint(c.sequence))
         time.sleep(max(0,start+(s['record_ticks']+13)*.05-time.monotonic()))
         for c in clients:c.recording=False;c.external_ticks=False
-        result={'scenario':s['name'],'protocol':version,'phase_alignment':phase_alignment,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure,'registry_names':c.registry_names} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}
+        result={'scenario':s['name'],'protocol':version,'phase_alignment':phase_alignment,'origin':origin,'port':port,'start':start,'clock':clock,'initial':initial,'attribute_phase_samples':[c.attribute_samples for c in clients],'attribute_phase_receipts':[c.attribute_phase_receipts for c in clients],'calibration_samples':[c.calibration for c in clients],'sent':sent,'clients':[{'events':c.events,'preroll':c.preroll,'outbound':c.outbound,'moves':c.moves,'failure':c.failure,'registry_names':c.registry_names} for c in clients],'commands':commands,'recorder_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'isolate_vitals':isolate_vitals,'scope':'raw flat stone physics; original bot.js comparison projection'}
         if causal_menu_readiness:
             result['causal_menu_readiness'] = True
             for value, client in zip(result['clients'], clients):value['wire_sent'] = client.wire_sent
