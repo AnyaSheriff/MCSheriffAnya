@@ -5,6 +5,7 @@ let mineflayer;
 try { mineflayer = require('../blackbox/node_modules/mineflayer'); }
 catch { mineflayer = require(path.join(process.env.MCSA_GUI_NODE_MODULES || path.join(process.env.HOME, 'node_modules'), 'mineflayer')); }
 const assert = require('node:assert/strict');
+const {slotUpdates,customName,assertObservedWindow}=require('./gui-packet-assertions.cjs');
 const port=Number(process.argv[2]||26210);assert(Number.isInteger(port)&&port>=26200&&port<=26299);
 const bot = mineflayer.createBot({host:'127.0.0.1',port,username:'JavaTester',version:'26.1',auth:'offline'});
 const messages=[];
@@ -12,8 +13,7 @@ const checkpoints=[],guiPackets=[];
 let phase='login';
 const saveOutcome=(status,error)=>{if(!process.env.MCSA_GUI_RAW_OUT)return;fs.writeFileSync(process.env.MCSA_GUI_RAW_OUT,JSON.stringify({status,phase,clientVersion:'26.1',port,restart:process.argv.includes('--restart'),checkpoints,messages,guiPackets,window:bot.currentWindow?{id:bot.currentWindow.id,slots:bot.currentWindow.slots.map(item=>item?{name:item.name,count:item.count}:null)}:null,error:error?{name:error.name,message:error.message,code:error.code,actual:error.actual,expected:error.expected,stack:error.stack}:null},(_,value)=>typeof value==='bigint'?value.toString():value,2));};
 let actionBar=false,positionCorrections=0;bot._client.on('position',()=>positionCorrections++);
-const guiSlotPackets=[];bot._client.on('set_slot',packet=>guiSlotPackets.push(packet));
-for(const name of ['set_slot','window_items'])bot._client.on(name,packet=>guiPackets.push({name,packet}));
+for(const name of ['open_window','set_slot','window_items'])bot._client.on(name,packet=>guiPackets.push({name,packet}));
 const teams=[];bot._client.on("teams",packet=>teams.push(packet));
 bot._client.on('action_bar',()=>{actionBar=true;});
 bot.on('messagestr',message=>{messages.push(message);console.log(message);});
@@ -39,9 +39,10 @@ bot.once('spawn',async()=>{
   bot.chat('/javahello gui-free');for(let i=0;i<100&&!bot.currentWindow;i++)await sleep(100);assert(bot.currentWindow);await bot.clickWindow(13,0,0);await waitFor('GUI allowed click');await sleep(300);assert.equal(bot.currentWindow.slots[13],null);assert.equal(bot.currentWindow.selectedItem?.name,'diamond');bot.closeWindow(bot.currentWindow);await sleep(500);assert(bot.inventory.items().some(item=>item.name==='diamond'),'Cursor item lost on close');
   console.log('PASS: client GUI, holder, cancelled/allowed clicks, cursor return, close and scoreboard teams');
   checkpoints.push('existing-gui');phase='gui-items-observe';
-  const guiPacketStart=guiSlotPackets.length;bot.chat('/javahello gui-items');await waitFor('GUI set item observation ready');await sleep(300);assert(bot.currentWindow,'Observed GUI did not open');assert.equal(bot.currentWindow.slots[13]?.count,2,'GUI_ITEM_OBSERVATION_AMOUNT');assert.equal(bot.currentWindow.slots[14]?.name,'emerald');assert.equal(bot.currentWindow.slots[14]?.count,3);
-  assert(guiSlotPackets.slice(guiPacketStart).some(packet=>packet.slot===13&&JSON.stringify(packet).includes('Set item observed')),'Set item metadata slot update missing');assert(!guiSlotPackets.slice(guiPacketStart).some(packet=>JSON.stringify(packet).includes('Stale item rejected')),'Stale reference sent a slot update');
-  phase='gui-items-decoded';const decodedPacketStart=guiSlotPackets.length;bot.chat('/javahello gui-items-mutate');await waitFor('GUI decoded item observation ready');await sleep(300);assert.equal(bot.currentWindow.slots[13]?.count,3);assert.equal(bot.currentWindow.slots[15]?.count,4);assert(guiSlotPackets.slice(decodedPacketStart).some(packet=>packet.slot===13&&JSON.stringify(packet).includes('Decoded item observed')),'Decoded item metadata slot update missing');
+  const guiPacketStart=guiPackets.length;bot.chat('/javahello gui-items');await waitFor('GUI set item observation ready');await sleep(300);assert(bot.currentWindow,'Observed GUI did not open');assert.equal(bot.currentWindow.slots[13]?.count,2,'GUI_ITEM_OBSERVATION_AMOUNT');assert.equal(bot.currentWindow.slots[13]?.name,'diamond');assert.equal(bot.currentWindow.slots[15]?.name,'stone');assert.equal(bot.currentWindow.slots[15]?.count,1);assert.equal(bot.currentWindow.slots[14]?.name,'emerald');assert.equal(bot.currentWindow.slots[14]?.count,3);
+  const observedWindow=bot.currentWindow.id;assertObservedWindow(guiPackets.slice(guiPacketStart),observedWindow);
+  const observedUpdates=slotUpdates(guiPackets.slice(guiPacketStart),observedWindow);assert(observedUpdates.some(({slot,item})=>slot===13&&item.itemId===bot.registry.itemsByName.diamond.id&&item.itemCount===2&&customName(item)==='Set item observed'),'Set item metadata slot update missing');assert(!observedUpdates.some(({item})=>customName(item)==='Stale item rejected'),'Stale reference sent a slot update');
+  phase='gui-items-decoded';const decodedPacketStart=guiPackets.length;bot.chat('/javahello gui-items-mutate');await waitFor('GUI decoded item observation ready');await sleep(300);assert.equal(bot.currentWindow.id,observedWindow);assert.equal(bot.currentWindow.slots[13]?.name,'diamond');assert.equal(bot.currentWindow.slots[13]?.count,3);assert.equal(bot.currentWindow.slots[14]?.name,'emerald');assert.equal(bot.currentWindow.slots[14]?.count,3);assert.equal(bot.currentWindow.slots[15]?.name,'stone');assert.equal(bot.currentWindow.slots[15]?.count,4);const decodedUpdates=slotUpdates(guiPackets.slice(decodedPacketStart),observedWindow);assert(decodedUpdates.some(({slot,item})=>slot===13&&item.itemId===bot.registry.itemsByName.diamond.id&&item.itemCount===3&&customName(item)==='Decoded item observed'),'Decoded item metadata slot update missing');assert(decodedUpdates.some(({slot,item})=>slot===15&&item.itemId===bot.registry.itemsByName.stone.id&&item.itemCount===4),'Array item quantity slot update missing');assert(!decodedUpdates.some(({item})=>customName(item)==='Stale item rejected'),'Stale reference sent a slot update');
   bot.chat('/javahello gui-items-check');await waitFor('GUI observed items survived next callback');bot.chat('/javahello gui-close');await sleep(300);assert.equal(bot.currentWindow,null);
   console.log('PASS: live GUI item quantity/meta slot packets, decoded/array item updates, detached clone/source and stale replacement references');
   checkpoints.push('gui-items');phase='remaining-regressions';

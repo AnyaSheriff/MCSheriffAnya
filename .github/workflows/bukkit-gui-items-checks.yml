@@ -1,5 +1,7 @@
 name: "Bukkit GUI: translated SDK and same-host old control"
 on:
+  push:
+    branches: ['fix/gameplay-interactions-20261113']
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,6 +35,8 @@ jobs:
           key: bukkit-gui-tools-v1-${{ runner.os }}-${{ hashFiles('tools/plugin-translator/pom.xml', 'tools/plugin-translator/translate.py') }}
       - name: Freeze exact compiled source and tested host dependency lock
         run: python3 -B tools/plugin-translator/bukkit_gui_items_ci.py prepare
+      - name: Check own finite GUI packet assertions without client dependencies
+        run: node tools/plugin-translator/test-gui-packet-assertions.cjs
       - name: Install locked opaque client test dependencies without lifecycle scripts
         shell: bash
         run: |

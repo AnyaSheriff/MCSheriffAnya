@@ -2,6 +2,20 @@ name: "Gameplay interactions: complete source checks"
 on:
   push:
     branches: ['fix/gameplay-interactions-20261113']
+    paths:
+      - '**/*.rs'
+      - 'src/**'
+      - 'testdata/**'
+      - 'tools/protocol-bridge/testdata/**'
+      - 'data/**'
+      - 'assets/**'
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - 'wit/**'
+      - 'plugins-examples/**'
+      - 'android/ota-pins/r8-native.lock'
+      - 'tools/blackbox/ci/simulation-distance-two-runtime.lock'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
