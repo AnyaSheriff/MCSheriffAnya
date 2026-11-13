@@ -160,8 +160,13 @@ fn cow_baby_golden_dandelion_still_locks_growth() {
     s.items_in(p.dimension).lock().unwrap().mobs_mut()[0].age= -1000;
     held(&mut p,"golden_dandelion",2); cow_interact(&s,&mut p,id);
     assert_eq!(p.inventory.held().unwrap().count,1);
-    assert!(s.items_in(p.dimension).lock().unwrap().mobs()[0].age_locked);
+    let locked_age={
+        let items=s.items_in(p.dimension).lock().unwrap();
+        assert!(items.mobs()[0].age_locked);
+        items.mobs()[0].age
+    };
+    assert!(locked_age<0);
     held(&mut p,"wheat",1); let before=p.inventory.clone(); cow_interact(&s,&mut p,id);
     assert_eq!(p.inventory,before);
-    assert_eq!(s.items_in(p.dimension).lock().unwrap().mobs()[0].age,-1000);
+    assert_eq!(s.items_in(p.dimension).lock().unwrap().mobs()[0].age,locked_age);
 }
