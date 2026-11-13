@@ -1149,7 +1149,8 @@ impl Admin {
             enforce: property("enforce-whitelist").is_some_and(|value| value == "true"),
             idle_minutes: property("player-idle-timeout").and_then(|value| value.parse().ok()).unwrap_or(0),
             saving: true,
-            // Как и прежде у ядра: новый игрок входит в творческом режиме.
+            // Низкоуровневые fixture без bootstrap сохраняют прежний default.
+            // Обычный запуск заменяет его значением server.properties до приёма игроков.
             default_mode: crate::commands::GAME_MODE_CREATIVE,
             world_spawn_angle: (0.0, 0.0),
         }
@@ -1187,6 +1188,12 @@ pub(crate) fn idling() -> Vec<u8> {
 /// Режим игры для вошедшего впервые (`defaultgamemode`).
 pub(crate) fn default_game_mode() -> i32 {
     admin().default_mode
+}
+
+/// Один раз на каждый запуск, до #load/плагинов/консоли. Последующая команда
+/// defaultgamemode меняет это же состояние и не затирается новыми подключениями.
+pub(crate) fn configure_startup_game_mode(mode: crate::config::server_properties::GameMode) {
+    admin().default_mode = mode.java_id();
 }
 
 /// Включено ли автосохранение (`save-on` / `save-off`).

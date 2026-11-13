@@ -421,8 +421,8 @@ impl BedrockWorld {
     pub fn enter(shared: Arc<Shared>, connection: &Connection, identity: Identity, control: crate::sessions::Control) -> Option<BedrockWorld> {
         // Что осталось от прошлого захода — тот же файл игрока, что у Java:
         // измерение, место, поворот, режим игры, инвентарь. Впервые зашедший
-        // появляется в точке появления обычного мира в творческом режиме,
-        // как игрок Java.
+        // появляется в точке появления обычного мира с текущим начальным
+        // режимом сервера, как игрок Java.
         let saved = match crate::playerdata::load_checked_for_catalog(&shared.playerdata, &identity.uuid, shared.catalog()) {
             Ok(saved) => saved,
             Err(error) => { log_warn!("Вход Bedrock остановлен: {}", error); return None; }
@@ -431,7 +431,7 @@ impl BedrockWorld {
         let world_spawn = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").spawn_position();
         let spawn = saved.as_ref().map_or(world_spawn, |data| (data.x, data.y, data.z));
         let rotation = saved.as_ref().map_or((0.0, 0.0), |data| (data.yaw, data.pitch));
-        let game_mode = saved.as_ref().map_or(crate::commands::GAME_MODE_CREATIVE, |data| data.game_mode);
+        let game_mode = saved.as_ref().map_or_else(crate::commands_admin::default_game_mode, |data| data.game_mode);
         let bag = Bag::new(saved.as_ref().map(|data| data.inventory.clone()).unwrap_or_else(crate::inventory::Inventory::new));
 
         let health = health::Health::new_with_effects(saved.as_ref().map(|data| &data.vitals), &saved.as_ref().map(|data| data.effects.clone()).unwrap_or_default());

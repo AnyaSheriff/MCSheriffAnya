@@ -259,6 +259,7 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
 
     // Загружаем настройки сервера (файл создаётся с дефолтами, если его нет).
     let mut properties = load_server_properties(SERVER_PROPERTIES_PATH)?;
+    commands_admin::configure_startup_game_mode(properties.game_mode);
     log_debug!(
         "Конфигурация загружена: motd=\"{}\", max-players={}, server-port={}, \
          view-distance={}, simulation-distance={}",

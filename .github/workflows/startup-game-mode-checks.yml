@@ -1,0 +1,198 @@
+name: "Startup game mode: source and ordinary Java777 entrypoint"
+on:
+  push:
+    branches: ['fix/startup-game-mode-20261113']
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Freeze pinned checkout and exact dependency lock without prepare
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p startup-mode-evidence
+          cp .github/workflows/startup-game-mode-checks.yml startup-mode-evidence/workflow-source.yml
+          cp android/ota-pins/r8-native.lock Cargo.lock
+          python3 -B - <<'PY'
+          import hashlib, json, shutil
+          from pathlib import Path
+          paths = [
+              'tools/protocol-bridge/probe_startup_game_mode_777.py',
+              'tools/protocol-bridge/test_startup_game_mode_probe.py',
+              'tools/protocol-bridge/testdata/startup-game-mode-original-777.json',
+              'tools/protocol-bridge/observations-startup-game-mode-26.3.md',
+              'tools/protocol-bridge/probe_gameplay.py',
+              'tools/protocol-bridge/smoke.py',
+              'tools/protocol-bridge/observe.py',
+              'tools/measure/pregen.py',
+          ]
+          out = Path('startup-mode-evidence/probe-inputs')
+          ledger = {}
+          for name in paths:
+              source = Path(name)
+              target = out / name
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(source, target)
+              assert source.read_bytes() == target.read_bytes()
+              ledger[name] = hashlib.sha256(target.read_bytes()).hexdigest()
+          Path('startup-mode-evidence/probe-inputs.json').write_text(json.dumps(ledger, indent=2))
+          PY
+          python3 -B - <<'PY'
+          import hashlib, sys
+          expected = 'e24fe5fda7b58f4367573e46866c48bd532d0ef70dac0da02dbbaf5b9c6d04e0'
+          digest = hashlib.sha256(open('Cargo.lock','rb').read()).hexdigest()
+          if digest != expected: sys.exit(f'unexpected dependency lock digest: {digest}')
+          print('dependency lock digest verified')
+          PY
+          git diff --exit-code
+          rustc -vV > startup-mode-evidence/rustc-version.log
+          cargo -vV > startup-mode-evidence/cargo-version.log
+      - name: Check own probe and download only pinned allowed protocol JSON
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B -m unittest discover -s tools/protocol-bridge -p test_startup_game_mode_probe.py -v 2>&1 | tee startup-mode-evidence/python-tests.log
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 'https://raw.githubusercontent.com/DallasCarraher/minecraft-data/924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2/data/pc/26.3/protocol.json' -o startup-mode-evidence/protocol.json
+      - name: Build six mandatory own guest WASM components with locked guest
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output startup-mode-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 --message-format=json-render-diagnostics 2>&1 | tee startup-mode-evidence/own-examples-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output startup-mode-evidence
+      - name: Strict default workspace Clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee startup-mode-evidence/default-clippy.log
+      - name: Focused startup mode and properties loader tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics startup_game_mode -- --nocapture --test-threads=1 2>&1 | tee startup-mode-evidence/focused-runtime.log
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics config::server_properties::tests -- --nocapture --test-threads=1 2>&1 | tee startup-mode-evidence/button-default.log
+      - name: Assert filter matched with nonzero passed and zero failed
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B - <<'PY'
+          import re
+          from pathlib import Path
+          for name in ('focused-runtime.log','button-default.log'):
+              log = Path('startup-mode-evidence', name).read_text()
+              passed = sum(int(m) for m in re.findall(r'test result: \w+\. (\d+) passed', log))
+              failed = sum(int(m) for m in re.findall(r'test result: \w+\. \d+ passed; (\d+) failed', log))
+              assert passed > 0 and failed == 0, f'{name}: passed={passed} failed={failed}'
+              print(f'{name}: {passed} passed, {failed} failed')
+          PY
+      - name: Full default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --message-format=json-render-diagnostics 2>&1 | tee startup-mode-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features --message-format=json-render-diagnostics 2>&1 | tee startup-mode-evidence/no-default-tests.log
+      - name: Build ordinary desktop runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee startup-mode-evidence/default-build.log
+          cp target/release/mcsheriffanya startup-mode-evidence/default-runtime-elf
+      - name: Actual ordinary entrypoint modes, saved player and runtime override
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/probe_startup_game_mode_777.py --binary "$PWD/target/release/mcsheriffanya" --protocol startup-mode-evidence/protocol.json --reference tools/protocol-bridge/testdata/startup-game-mode-original-777.json --output startup-mode-evidence/wire --port 26240 2>&1 | tee startup-mode-evidence/wire.log
+          python3 -B - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          p=Path('startup-mode-evidence/wire/result.json')
+          data=json.loads(p.read_text())
+          assert data['status']=='recorded' and data['official'] is False
+          assert len(data['cases'])==14 and len(data['compared'])==17
+          assert data['target_digest']==hashlib.sha256(Path('target/release/mcsheriffanya').read_bytes()).hexdigest()
+          print('14 settings / 17 original wire observations matched')
+          PY
+      - name: Preserve wire logs and retire only disposable CI test worlds
+        if: always()
+        shell: bash
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import shutil, sys
+          sys.path.insert(0,'tools/protocol-bridge')
+          from probe_startup_game_mode_777 import CASES
+          root=Path('startup-mode-evidence/wire')
+          logs=Path('startup-mode-evidence/wire-logs')
+          logs.mkdir(exist_ok=True)
+          for name,_ in CASES:
+              case=root/name
+              if not case.exists():continue
+              assert case.is_dir() and not case.is_symlink()
+              for log in case.glob('process-*.log'):
+                  shutil.copyfile(log, logs/(name+'-'+log.name))
+              shutil.rmtree(case)
+          PY
+      - name: Confirm tracked source untouched after all checks
+        shell: bash
+        run: git diff --exit-code
+      - name: Always preserve compiled source, logs, actual ELFs and root lock
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/protocol-bridge/public_container_button_ci.py archive --output startup-mode-evidence
+      - name: Scope root receipt.json to this partial work only
+        if: always()
+        shell: bash
+        run: |
+          python3 -B - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          out = Path('startup-mode-evidence')
+          receipt = out / 'receipt.json'
+          assert receipt.is_file(), 'root receipt.json not found in startup-mode-evidence'
+          data = json.loads(receipt.read_text())
+          copied_bytes = (out / 'workflow-source.yml').read_bytes()
+          assert copied_bytes == Path('.github/workflows/startup-game-mode-checks.yml').read_bytes(), 'workflow-source.yml copy mismatch'
+          data['workflow_source'] = {
+              'path': '.github/workflows/startup-game-mode-checks.yml',
+              'artifact_path': 'workflow-source.yml',
+              'sha256': hashlib.sha256(copied_bytes).hexdigest(),
+          }
+          data['scope'] = 'Startup gamemode: exact locked source tests and real ordinary Java777 login/saved/runtime comparisons against frozen original packets'
+          data['excludes'] = ['Bedrock physical/client runtime', 'force-gamemode', 'all gameplay parity', 'new APK/OTA release']
+          receipt.write_text(json.dumps(data, indent=2))
+          PY
+      - name: Remove only isolated job tmp after archive
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import shutil
+          temporary = Path('tmp')
+          if temporary.is_dir() and not temporary.is_symlink(): shutil.rmtree(temporary)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: startup-game-mode-${{ github.run_id }}-${{ github.run_attempt }}
+          path: startup-mode-evidence/
+          retention-days: 7
+          if-no-files-found: error

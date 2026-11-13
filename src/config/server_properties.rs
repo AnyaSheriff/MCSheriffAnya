@@ -22,6 +22,9 @@ pub struct ServerProperties {
     /// Передавать адрес клиента при проверке сессии (вики, server.properties).
     pub prevent_proxy_connections: bool,
 
+    /// Начальный режим для нового игрока; сохранённый режим имеет приоритет.
+    pub game_mode: GameMode,
+
     /// Сколько чанков вокруг себя видит игрок. Считается в каждую сторону:
     /// при десяти игроку уходит квадрат 21×21.
     pub view_distance: i32,
@@ -53,6 +56,40 @@ pub struct ServerProperties {
 /// Обычная сложность: с неё молния зажигает огонь (вики, Lightning).
 pub const DIFFICULTY_NORMAL: u8 = 2;
 
+/// Четыре режима Java; недопустимое значение не попадает в bootstrap.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(i32)]
+pub enum GameMode {
+    Survival = 0,
+    Creative = 1,
+    Adventure = 2,
+    Spectator = 3,
+}
+
+impl GameMode {
+    pub(crate) fn java_id(self) -> i32 { self as i32 }
+
+    fn from_property(value: &str) -> Option<Self> {
+        // Внешняя проба оригинала26.3: legacy ID0–3 тоже выбирают режим.
+        if let Ok(id) = value.parse::<i32>() {
+            return match id {
+                0 => Some(Self::Survival),
+                1 => Some(Self::Creative),
+                2 => Some(Self::Adventure),
+                3 => Some(Self::Spectator),
+                _ => None,
+            };
+        }
+        match value {
+            "survival" => Some(Self::Survival),
+            "creative" => Some(Self::Creative),
+            "adventure" => Some(Self::Adventure),
+            "spectator" => Some(Self::Spectator),
+            _ => None,
+        }
+    }
+}
+
 /// Сложность из настройки: словом, как у оригинала, или числом.
 fn difficulty_of(value: &str) -> Option<u8> {
     match value.trim() {
@@ -73,6 +110,7 @@ impl Default for ServerProperties {
             server_ip: "0.0.0.0".into(),
             online_mode: true,
             prevent_proxy_connections: false,
+            game_mode: GameMode::Survival,
             // Значения по умолчанию — те же, что у оригинала.
             view_distance: 10,
             simulation_distance: 10,
@@ -136,6 +174,7 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         server_port,
         online_mode: boolean(&values, "online-mode", defaults.online_mode),
         prevent_proxy_connections: boolean(&values, "prevent-proxy-connections", defaults.prevent_proxy_connections),
+        game_mode: values.get("gamemode").and_then(|value| GameMode::from_property(value)).unwrap_or(defaults.game_mode),
         view_distance,
         simulation_distance,
         level_seed,
@@ -340,6 +379,7 @@ const DEFAULT_PROPERTIES: &[(&str, &str)] = &[
 /// настоящие, но поведение за ними пока не стоит.
 const HONOURED: &[&str] = &[
     "motd",
+    "gamemode",
     "max-players",
     "server-port",
     "server-ip",
@@ -517,6 +557,37 @@ fn boolean(values: &HashMap<String, String>, key: &str, default: bool) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn startup_game_mode_loader_applies_property_without_rewriting_it() {
+        let directory = std::env::temp_dir().join(format!("mcsa-startup-mode-{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("server.properties");
+        assert_eq!(load_server_properties(path.to_str().unwrap()).unwrap().game_mode, GameMode::Survival);
+        for (setting, expected) in [
+            ("gamemode=survival\n", GameMode::Survival),
+            ("gamemode=creative\n", GameMode::Creative),
+            ("gamemode=adventure\n", GameMode::Adventure),
+            ("gamemode=spectator\n", GameMode::Spectator),
+            ("gamemode=0\n", GameMode::Survival),
+            ("gamemode=1\n", GameMode::Creative),
+            ("gamemode=2\n", GameMode::Adventure),
+            ("gamemode=3\n", GameMode::Spectator),
+            ("gamemode=4\n", GameMode::Survival),
+            ("gamemode=-1\n", GameMode::Survival),
+            ("", GameMode::Survival),
+            ("gamemode=Creative\n", GameMode::Survival),
+            ("gamemode=invalid\n", GameMode::Survival),
+            ("gamemode=\n", GameMode::Survival),
+        ] {
+            fs::write(&path, setting).unwrap();
+            let properties = load_server_properties(path.to_str().unwrap()).unwrap();
+            assert_eq!(properties.game_mode, expected, "{setting:?}");
+            assert!(fs::read_to_string(&path).unwrap().ends_with(setting));
+        }
+        assert_eq!([GameMode::Survival, GameMode::Creative, GameMode::Adventure, GameMode::Spectator].map(GameMode::java_id), [0, 1, 2, 3]);
+        fs::remove_dir_all(directory).unwrap();
+    }
 
     #[test]
     fn empty_pause_default_existing_and_disabled_values() {

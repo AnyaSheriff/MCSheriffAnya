@@ -1,0 +1,406 @@
+{
+  "status": "recorded",
+  "official": true,
+  "target_digest": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "protocol_sha256": "13a10695aa1ed3604ed674ce8fdc8a759f48118714eab98644e685a3d1960727",
+  "scope": "Java777 startup modes/saved/runtime override",
+  "cases": [
+    {
+      "label": "survival",
+      "setting": "survival",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 0,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657214020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c000000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      },
+      "saved_after_restart": {
+        "username": "ModeProbe",
+        "mode": 2,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657214020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c020100010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      },
+      "fresh_after_restart": {
+        "username": "ModeFresh",
+        "mode": 1,
+        "abilities": {
+          "flags": 13,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000020003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657214020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c010000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "0d3d4ccccd3dcccccd"
+          }
+        ]
+      },
+      "fresh_after_runtime_override": {
+        "username": "ModeLater",
+        "mode": 3,
+        "abilities": {
+          "flags": 7,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000030003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657214020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c030000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "073d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "creative",
+      "setting": "creative",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 1,
+        "abilities": {
+          "flags": 13,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657214020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c010000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "0d3d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "adventure",
+      "setting": "adventure",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 2,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c020000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "spectator",
+      "setting": "spectator",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 3,
+        "abilities": {
+          "flags": 7,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c030000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "073d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "missing",
+      "setting": null,
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 0,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c000000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "number",
+      "setting": "1",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 1,
+        "abilities": {
+          "flags": 13,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c010000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "0d3d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "uppercase",
+      "setting": "Creative",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 0,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64116d696e6563726166743a7468655f656e64146d696e6563726166743a7468655f6e657468657214020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c000000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "unknown",
+      "setting": "invalid",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 0,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c000000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "empty",
+      "setting": "",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 0,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c000000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "zero",
+      "setting": "0",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 0,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c000000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "two",
+      "setting": "2",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 2,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c020000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "three",
+      "setting": "3",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 3,
+        "abilities": {
+          "flags": 7,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c030000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "073d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "out-of-range",
+      "setting": "4",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 0,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c000000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      }
+    },
+    {
+      "label": "negative",
+      "setting": "-1",
+      "fresh": {
+        "username": "ModeProbe",
+        "mode": 0,
+        "abilities": {
+          "flags": 0,
+          "fly": 0.05000000074505806,
+          "walk": 0.10000000149011612
+        },
+        "packets": [
+          {
+            "packet": "login",
+            "hex": "000000010003136d696e6563726166743a6f766572776f726c64146d696e6563726166743a7468655f6e6574686572116d696e6563726166743a7468655f656e6414020200010000136d696e6563726166743a6f766572776f726c64a63f41d436a19f7c000000010000c1ffffff0f0000"
+          },
+          {
+            "packet": "abilities",
+            "hex": "003d4ccccd3dcccccd"
+          }
+        ]
+      }
+    }
+  ],
+  "captures": [
+    {
+      "result_sha256": "4c02a85e73d8d553d2d7d125d0301fcdca989d1d1d1ce7f28907854889e2966a",
+      "runner_sha256": "7a25e4d122432ea04489ae3ef505507cfca470061e2ffaa2fd985c644fb1f0fa"
+    },
+    {
+      "result_sha256": "572ab95f800369b5c2995707b4246558917eb9c71f9939b4e09ef968677dcb83",
+      "runner_sha256": "a354d595d7ff1a6aa110385c2919b805c4a29d431fc1cc4ccc248c4b84c0084b"
+    }
+  ]
+}
