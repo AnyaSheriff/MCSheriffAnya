@@ -44,6 +44,10 @@ jobs:
           import hashlib, json, shutil
           from pathlib import Path
           paths = [
+              'src/players.rs',
+              'src/plugins/inventory.rs',
+              'src/network/play.rs',
+              'src/bedrock/world.rs',
               'src/network/play/land.rs',
               'src/network/play/land_tests.rs',
               'src/network/play/legacy_action_tests.rs',
@@ -92,12 +96,13 @@ jobs:
         run: |
           set -o pipefail
           cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics cow_ -- --nocapture --test-threads=1 2>&1 | tee interactions-evidence/cow-tests.log
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics plugin_chest_refresh_ -- --nocapture --test-threads=1 2>&1 | tee interactions-evidence/plugin-chest-refresh-tests.log
           cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics legacy_entity_first_use_and_use_at_feed_cow_through_session -- --nocapture --test-threads=1 2>&1 | tee interactions-evidence/legacy-host-tests.log
           cargo test --release --locked -p mcsa-protocol --message-format=json-render-diagnostics legacy_play::tests -- --nocapture --test-threads=1 2>&1 | tee interactions-evidence/legacy-session-tests.log
           python3 -B - <<'PYTEST'
           import re
           from pathlib import Path
-          for name,minimum in [('cow-tests.log',5),('legacy-host-tests.log',1),('legacy-session-tests.log',3)]:
+          for name,minimum in [('cow-tests.log',5),('plugin-chest-refresh-tests.log',3),('legacy-host-tests.log',1),('legacy-session-tests.log',3)]:
               log=Path('interactions-evidence',name).read_text()
               passed=sum(map(int,re.findall(r'test result: \w+\. (\d+) passed',log)))
               failed=sum(map(int,re.findall(r'test result: \w+\. \d+ passed; (\d+) failed',log)))
@@ -133,6 +138,11 @@ jobs:
             tools/plugin-translator/target/lib
             tools/plugin-translator/.toolchain
           key: bukkit-gui-tools-v1-${{ runner.os }}-${{ hashFiles('tools/plugin-translator/pom.xml', 'tools/plugin-translator/translate.py') }}
+      - name: Verify own GUI packet assertions without client dependencies
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/plugin-translator/test-gui-packet-assertions.cjs 2>&1 | tee bukkit-gui-items-evidence/node-packet-assertions.log
       - name: Install locked opaque client test tools without lifecycle scripts
         shell: bash
         run: |
@@ -175,7 +185,7 @@ jobs:
               'artifact_path': 'workflow-source.yml',
               'sha256': hashlib.sha256(copied_bytes).hexdigest(),
           }
-          data['scope'] = 'Cow mainhand milking, legacy340 codec/host unit integration, translated SDK actual GUI controls; full source checks'
+          data['scope'] = 'Cow mainhand milking, legacy340 codec/host unit integration, targeted plugin-window refresh and translated SDK actual GUI controls; full source checks'
           data['excludes'] = ['Legacy340 public admission/full compatibility', 'Cow offhand/full sound-order parity', 'all gameplay parity', 'new APK/OTA release']
           receipt.write_text(json.dumps(data, indent=2))
           PY

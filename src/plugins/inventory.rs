@@ -172,8 +172,18 @@ impl inventory::Host for PluginCtx {
     fn chest_set(&mut self, handle: u32, slot: u32, item: Option<inventory::Item>) -> Result<(), String> {
         let stack = self.inventory_stack(item)?;
         let chest = self.chests.entries.get(&handle).ok_or("Чужой или закрытый сундук")?;
-        let mut chest = chest.lock().expect("сундук");
-        *chest.slots.get_mut(slot as usize).ok_or("Ячейка вне сундука")? = stack;
+        {
+            let mut chest = chest.lock().expect("сундук");
+            let current = chest.slots.get_mut(slot as usize).ok_or("Ячейка вне сундука")?;
+            if *current == stack { return Ok(()); }
+            *current = stack;
+        }
+        // Не держим сундук при захвате игроков. Actor сверит тот же Arc,
+        // поэтому запоздавшая правка не вернёт закрытое или заменённое окно.
+        let mut players = self.shared.players.lock().expect("игроки");
+        for (uuid, current) in &self.chests.viewers {
+            if *current == handle { players.order(uuid, Order::PluginRefresh { chest: chest.clone() }); }
+        }
         Ok(())
     }
     fn chest_snapshot(&mut self, handle: u32) -> Result<Vec<Option<inventory::Item>>, String> {
@@ -226,6 +236,98 @@ impl inventory::Host for PluginCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn chest_context() -> PluginCtx {
+        use std::{path::{Path, PathBuf}, sync::Arc};
+        let shared = Arc::new(crate::shared::Shared::new(
+            crate::world::World::in_memory(), crate::world::World::in_memory(),
+            PathBuf::new(), PathBuf::new(), Default::default(),
+            crate::ops::Ops::open(Path::new("tmp/plugin-chest-refresh-unused-ops.json")),
+            crate::skins::Settings::default(),
+        ));
+        {
+            let mut players = shared.players.lock().unwrap();
+            for byte in 1..=4 {
+                players.join(crate::players::Member {
+                    uuid: [byte; 16], name: format!("Chest{byte}"), game_mode: 0,
+                    entity_id: i32::from(byte), skin: None, skin_parts: 0x7f, main_hand: 1, held: None,
+                    position: crate::players::Position { x: 0.0, y: 70.0, z: 0.0, yaw: 0.0, pitch: 0.0, on_ground: true },
+                    dimension: Default::default(), sneaking: false, swings: 0,
+                    shoved: ((0.0, 0.0, 0.0), 0), unsettled: 0,
+                }, i32::from(byte)).unwrap();
+                players.ui.info.insert([byte; 16], Default::default());
+            }
+        }
+        PluginCtx {
+            native_wait: Default::default(), test_storage_latency: std::time::Duration::ZERO,
+            pending_mobs: Default::default(), network: super::super::network::Access::new(&[], &[]),
+            chests: Default::default(), native_items: Default::default(),
+            name: "chest-refresh-test".into(), trusted: false, shared,
+            folder: PathBuf::new(), wasi: wasmtime_wasi::WasiCtxBuilder::new().build(),
+            table: wasmtime::component::ResourceTable::new(), limits: wasmtime::StoreLimitsBuilder::new().build(),
+            tick: 0, tasks: Vec::new(), next_handle: 0, commands: Vec::new(),
+            registry: Default::default(), loaded: Default::default(),
+        }
+    }
+
+    #[test]
+    fn plugin_chest_refresh_targets_current_viewers_and_keeps_native_contents() {
+        use inventory::Host as _;
+        let mut ctx = chest_context();
+        let handle = ctx.chest_create(9, r#"{"text":"First"}"#.into()).unwrap();
+        let other = ctx.chest_create(9, r#"{"text":"Other"}"#.into()).unwrap();
+        for byte in 1..=3 {
+            ctx.chest_open(crate::network::login::format_uuid(&[byte; 16]), if byte == 3 { other } else { handle }).unwrap();
+            ctx.shared.players.lock().unwrap().take_orders(&[byte; 16]);
+        }
+        // Старый зритель уже ушёл; новый приказ не должен копиться для него.
+        ctx.chests.viewers.insert([5; 16], handle);
+        let item = inventory::Item { kind: "diamond".into(), count: 3, metadata: r#"{"name":{"text":"Updated"}}"#.into() };
+        ctx.chest_set(handle, 2, Some(item)).unwrap();
+        let chest = ctx.chests.entries[&handle].clone();
+        let stored = chest.lock().unwrap().slots[2].unwrap();
+        assert_eq!(stored.count, 3);
+        assert_eq!(stored.extras().name.as_deref(), Some("Updated"));
+        assert_eq!(ctx.chest_snapshot(handle).unwrap()[2].as_ref().unwrap().count, 3);
+        {
+            let mut players = ctx.shared.players.lock().unwrap();
+            for byte in 1..=5 {
+                let orders = players.take_orders(&[byte; 16]);
+                if byte <= 2 {
+                    assert!(matches!(orders.as_slice(), [Order::PluginRefresh { chest: target }] if std::sync::Arc::ptr_eq(target, &chest)));
+                } else { assert!(orders.is_empty(), "чужое или закрытое окно: {byte}"); }
+            }
+        }
+        ctx.chest_open(crate::network::login::format_uuid(&[1; 16]), other).unwrap();
+        ctx.shared.players.lock().unwrap().take_orders(&[1; 16]);
+        ctx.chest_set(handle, 2, None).unwrap();
+        assert_eq!(chest.lock().unwrap().slots[2], None);
+        let mut players = ctx.shared.players.lock().unwrap();
+        assert!(players.take_orders(&[1; 16]).is_empty(), "сменивший окно не зритель старого сундука");
+        assert!(matches!(players.take_orders(&[2; 16]).as_slice(), [Order::PluginRefresh { chest: target }] if std::sync::Arc::ptr_eq(target, &chest)));
+    }
+
+    #[test]
+    fn plugin_chest_refresh_skips_unchanged_invalid_and_unopened_writes() {
+        use inventory::Host as _;
+        let mut ctx = chest_context();
+        let handle = ctx.chest_create(9, r#"{"text":"First"}"#.into()).unwrap();
+        let item = inventory::Item { kind: "diamond".into(), count: 2, metadata: String::new() };
+        ctx.chest_set(handle, 1, Some(item.clone())).unwrap();
+        assert!(ctx.shared.players.lock().unwrap().take_orders(&[1; 16]).is_empty());
+        ctx.chest_open(crate::network::login::format_uuid(&[1; 16]), handle).unwrap();
+        ctx.shared.players.lock().unwrap().take_orders(&[1; 16]);
+        ctx.chest_set(handle, 1, Some(item.clone())).unwrap();
+        ctx.chest_set(handle, 0, None).unwrap();
+        assert!(ctx.chest_set(handle, 9, Some(item.clone())).is_err());
+        assert!(ctx.chest_set(handle + 1, 0, Some(item.clone())).is_err());
+        let mut invalid = item;
+        invalid.count = 65;
+        assert!(ctx.chest_set(handle, 1, Some(invalid)).is_err());
+        assert_eq!(ctx.chest_snapshot(handle).unwrap()[1].as_ref().unwrap().count, 2);
+        assert!(ctx.shared.players.lock().unwrap().take_orders(&[1; 16]).is_empty());
+    }
+
     #[test]
     fn item_metadata_is_checked_and_survives_the_file() {
         let mut data = crate::stackdata::Data::default();

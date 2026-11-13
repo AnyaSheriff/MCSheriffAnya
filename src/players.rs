@@ -212,6 +212,8 @@ pub enum Order {
     PluginFlight { owner: String, field: u8, value: i8 },
     PluginVelocity { value: (f64, f64, f64) },
     PluginOpen { chest: std::sync::Arc<std::sync::Mutex<PluginChest>> },
+    /// Обновить только уже открытый экземпляр: закрытое окно не открывается заново.
+    PluginRefresh { chest: std::sync::Arc<std::sync::Mutex<PluginChest>> },
     PluginClose { owner: String },
     /// Выгнать с сервера, показав причину.
     Kick { reason: String },
@@ -767,6 +769,14 @@ impl Players {
             return;
         }
 
+        // Снимок берётся при выполнении: несколько правок одного сундука
+        // до разбора почты требуют только одной сверки содержимого.
+        if let Order::PluginRefresh { chest } = &order
+            && self.orders.get(uuid).is_some_and(|orders| orders.iter().any(|pending| {
+                matches!(pending, Order::PluginRefresh { chest: old } if std::sync::Arc::ptr_eq(old, chest))
+            }))
+        { return; }
+
         // Kick прерывает и запись в сокет. Перенос будит чтение; смена
         // измерения остаётся в такте (чёрный ящик, end-portal-enter: Respawn на +1).
         if let Some(connection) = self.connections.get(uuid) {
@@ -889,6 +899,32 @@ mod tests {
         players
             .join(member(name, uuid_byte), entity_id)
             .expect("ник должен быть свободен")
+    }
+
+    #[test]
+    fn plugin_chest_refresh_coalesces_by_instance_and_player_without_reordering_others() {
+        use std::sync::{Arc, Mutex};
+        let mut players = Players::new();
+        joined(&mut players, "Первый", 1);
+        joined(&mut players, "Второй", 2);
+        let make = || Arc::new(Mutex::new(PluginChest {
+            owner: "same-owner".into(), handle: 1, title: String::new(), slots: vec![None; 9], active: true,
+        }));
+        let chest = make();
+        let replacement = make();
+        players.order(&[1; 16], Order::PluginRefresh { chest: chest.clone() });
+        players.order(&[1; 16], Order::PluginClose { owner: "same-owner".into() });
+        for _ in 0..54 {
+            players.order(&[1; 16], Order::PluginRefresh { chest: chest.clone() });
+            players.order(&[2; 16], Order::PluginRefresh { chest: chest.clone() });
+        }
+        players.order(&[1; 16], Order::PluginRefresh { chest: replacement.clone() });
+        let orders = players.take_orders(&[1; 16]);
+        assert!(matches!(orders.as_slice(), [Order::PluginRefresh { chest: first }, Order::PluginClose { .. }, Order::PluginRefresh { chest: last }]
+            if Arc::ptr_eq(first, &chest) && Arc::ptr_eq(last, &replacement)));
+        assert!(matches!(players.take_orders(&[2; 16]).as_slice(), [Order::PluginRefresh { chest: target }] if Arc::ptr_eq(target, &chest)));
+        players.order(&[1; 16], Order::PluginRefresh { chest: chest.clone() });
+        assert!(matches!(players.take_orders(&[1; 16]).as_slice(), [Order::PluginRefresh { chest: target }] if Arc::ptr_eq(target, &chest)));
     }
 
     /// Толчки поршнем копятся, пока подключение их не заберёт: место в

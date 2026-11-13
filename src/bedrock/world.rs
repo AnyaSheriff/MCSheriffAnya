@@ -1073,7 +1073,7 @@ impl BedrockWorld {
                 // [Bedrock: потом] Общие настройки полёта пока доступны Java.
                 crate::players::Order::PluginFlight { .. } => {},
                 // Пользовательские сундуки доступны только подключениям Java со снимком UI.
-                crate::players::Order::PluginOpen { .. } | crate::players::Order::PluginClose { .. } => {}
+                crate::players::Order::PluginOpen { .. } | crate::players::Order::PluginRefresh { .. } | crate::players::Order::PluginClose { .. } => {}
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
                 // API set-health допускает только игроков со снимком Java UI.
                 crate::players::Order::Health { .. } | crate::players::Order::PluginSpawn { .. } | crate::players::Order::PluginFire { .. } | crate::players::Order::PluginVelocity { .. } | crate::players::Order::PluginSilent { .. } => {}

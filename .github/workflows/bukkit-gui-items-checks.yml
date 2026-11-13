@@ -2,6 +2,8 @@ name: "Bukkit GUI: translated SDK and same-host old control"
 on:
   push:
     branches: ['fix/gameplay-interactions-20261113']
+    paths:
+      - 'tools/plugin-translator/**'
   workflow_dispatch:
 permissions:
   contents: read

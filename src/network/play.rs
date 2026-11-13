@@ -7416,6 +7416,11 @@ async fn read_and_log_play_packets(
                     player.window = Some(OpenWindow { id, halves: Vec::new(), cart: None, shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false, plugin_chest: Some(chest) });
                     send_window_content(stream, player, shared.catalog()).await?;
                 }
+                Order::PluginRefresh { chest } => {
+                    if player.window.as_ref().and_then(|open| open.plugin_chest.as_ref()).is_some_and(|current| std::sync::Arc::ptr_eq(current, &chest)) {
+                        send_window_changes(stream, shared, player).await?;
+                    }
+                }
                 Order::PluginClose { owner } => {
                     if let Some(open) = player.window.as_ref().filter(|open| open.plugin_chest.as_ref().is_none_or(|chest| chest.lock().expect("сундук").owner == owner)) {
                         let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
