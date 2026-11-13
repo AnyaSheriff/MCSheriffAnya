@@ -1,0 +1,79 @@
+name: "Bukkit GUI: translated SDK and same-host old control"
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            tools/plugin-translator/target/lib
+            tools/plugin-translator/.toolchain
+          key: bukkit-gui-tools-v1-${{ runner.os }}-${{ hashFiles('tools/plugin-translator/pom.xml', 'tools/plugin-translator/translate.py') }}
+      - name: Freeze exact compiled source and tested host dependency lock
+        run: python3 -B tools/plugin-translator/bukkit_gui_items_ci.py prepare
+      - name: Install locked opaque client test dependencies without lifecycle scripts
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci --prefix tools/blackbox/ci/attr-phase --ignore-scripts --no-audit --no-fund 2>&1 | tee bukkit-gui-items-evidence/node-install.log
+          node --version > bukkit-gui-items-evidence/node-version.log
+          npm --version > bukkit-gui-items-evidence/npm-version.log
+          java -version > bukkit-gui-items-evidence/java-version.log 2>&1
+          mvn --version > bukkit-gui-items-evidence/maven-version.log
+      - name: Build ordinary plugin-enabled host with exact tested lock
+        shell: bash
+        run: |
+          set -o pipefail
+          rustc -vV > bukkit-gui-items-evidence/rustc-version.log
+          cargo -vV > bukkit-gui-items-evidence/cargo-version.log
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee bukkit-gui-items-evidence/ordinary-build.log
+      - name: Actual new SDK translations, live GUI, restart and specific old control failure
+        run: python3 -B tools/plugin-translator/bukkit_gui_items_ci.py checks
+      - name: Confirm tracked source untouched after all checks
+        run: git diff --exit-code
+      - name: Always preserve source, same host ELF, own components, raw bot results and logs
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/bukkit_gui_items_ci.py finish
+      - name: Remove only disposable job test directories after evidence collection
+        if: always()
+        shell: bash
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import shutil
+          temporary = Path('tmp')
+          if temporary.is_dir() and not temporary.is_symlink():
+              shutil.rmtree(temporary)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bukkit-gui-items-${{ github.run_id }}-${{ github.run_attempt }}
+          path: bukkit-gui-items-evidence/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error

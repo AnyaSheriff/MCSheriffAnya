@@ -10,6 +10,8 @@ pub struct Session {
     pub entity: Option<i32>,
     pub difficulty: u8,
     player_flags: u8,
+    /// Только принятый клиентский Entity Action; серверный pose не заменяет intent.
+    sneaking: bool,
     clock: Option<(i64, i64)>,
     modifiers: crate::legacy_attributes::Modifiers,
     pending_teleport: Option<i32>,
@@ -78,9 +80,12 @@ pub fn block_position(packed: u64, window: HeightWindow) -> Result<u64, Error> {
 }
 
 impl Session {
+    /// Новое соединение: src/main.rs создаёт Session перед LoginStart;
+    /// src/network/play.rs/PlayerState::new_for_catalog начинает с sneaking=false
+    /// даже при загрузке сохранённого игрока. Далее intent меняет только Input.
     pub fn new(window: HeightWindow, difficulty: u8) -> Result<Self, Error> {
         if difficulty > 3 { return Err(Error::Invalid); }
-        Ok(Self { window, pose: None, dimension: None, entity: None, difficulty, player_flags: 0, clock: None, modifiers: Default::default(), pending_teleport: None, recipes: Default::default(), items: Default::default() })
+        Ok(Self { window, pose: None, dimension: None, entity: None, difficulty, player_flags: 0, sneaking: false, clock: None, modifiers: Default::default(), pending_teleport: None, recipes: Default::default(), items: Default::default() })
     }
 
     /// Только подтверждённые поля игрока. Для моба тот же индекс может
@@ -263,10 +268,15 @@ impl Session {
         let mut head = Cursor::new(body); let id = head.uint()?;
         if matches!(id, 0x12 | 0x17) { return self.recipes.serverbound(id,head.rest); }
         let pose = self.pose.ok_or(Error::PayloadUnavailable("legacy player pose"))?;
-        let out = crate::legacy_actions::translate(body, crate::legacy_actions::Context { window: self.window, pose })?;
+        let out = crate::legacy_actions::translate(body, crate::legacy_actions::Context { window: self.window, pose, sneaking: self.sneaking })?;
         let mut input = Cursor::new(&out);
         let id = input.uint()?;
         let mut next = pose;
+        if id == 0x2b {
+            // В340 действие содержит ID игрока;775 Input относится к отправителю.
+            if self.entity != Some(head.uint()? as i32) { return Err(Error::Invalid); }
+            self.sneaking = input.take(1)?[0] & 0x20 != 0;
+        }
         if id == 0 {
             let ack = input.varint()?;
             if self.pending_teleport == Some(ack) { self.pending_teleport = None; }
@@ -350,6 +360,89 @@ impl Session {
 mod tests {
     use super::*;
     fn session() -> Session { Session::new(HeightWindow::new(-64).unwrap(), 2).unwrap() }
+    fn interaction_session() -> Session {
+        let mut state = session();
+        state.entity = Some(7);
+        state.dimension = Some(0);
+        state.control(&teleport(Pose { x: 1.0, y: 64.0, z: 2.0, yaw: 30.0, pitch: 4.0 },0)).unwrap();
+        state.serverbound(&[0,7]).unwrap();
+        state
+    }
+    fn interaction(action: u8, hand: u8) -> Vec<u8> {
+        let mut body = vec![0x0a,42,action];
+        if action == 2 { for value in [1f32,-1.0,0.0] { body.extend(value.to_be_bytes()); } }
+        body.push(hand);
+        body
+    }
+    fn expected_interaction(action: u8, hand: u8, sneaking: bool) -> Vec<u8> {
+        let mut out = vec![0x1a,42,hand];
+        // Точка (1,-1,0): scale1, три15битных значения32766/0/16383.
+        if action == 2 { out.extend([0xf1,0xff,0x7f,0xfe,0,3]); } else { out.push(0); }
+        out.push(u8::from(sneaking));
+        out
+    }
+    #[test]
+    fn first_entity_interactions_keep_both_hands_without_requiring_a_sneak_action() {
+        let mut state = interaction_session();
+        assert!(!state.sneaking);
+        for action in [0,2] { for hand in [0,1] {
+            assert_eq!(state.serverbound(&interaction(action,hand)).unwrap(),expected_interaction(action,hand,false));
+        } }
+        assert_eq!(state.serverbound(&[0x0a,42,1]).unwrap(),[1,42]);
+    }
+    #[test]
+    fn complete_self_sneak_actions_change_interactions_even_while_teleport_is_pending() {
+        let mut state = interaction_session();
+        state.control(&teleport(state.pose.unwrap(),0)).unwrap();
+        for (action, sneaking) in [(0,true),(1,false),(0,true)] {
+            assert_eq!(state.serverbound(&[0x15,7,action,0]).unwrap(),[0x2b,if sneaking {0x20} else {0}]);
+            assert_eq!(state.pending_teleport,Some(7));
+            for kind in [0,2] { for hand in [0,1] {
+                assert_eq!(state.serverbound(&interaction(kind,hand)).unwrap(),expected_interaction(kind,hand,sneaking));
+            } }
+        }
+        // Серверная поза не заменяет последнюю принятую клиентскую кнопку.
+        state.player_metadata(&[7,0,0,0,255]).unwrap();
+        assert!(state.sneaking);
+        // Respawn ядра не меняет PlayerState.sneaking; сохраняем intent и здесь.
+        let mut respawn = vec![0x52,0];
+        string(&mut respawn,"minecraft:overworld"); respawn.extend([0;8]);
+        respawn.extend([0,255,0,0,0,0,63,0]);
+        state.control(&respawn).unwrap();
+        assert!(state.sneaking);
+        assert!(state.pose.is_none());
+        state.control(&teleport(Pose { x: 0.0, y: 64.0, z: 0.0, yaw: 0.0, pitch: 0.0 },0)).unwrap();
+        state.serverbound(&[0,7]).unwrap();
+        assert_eq!(state.serverbound(&interaction(0,0)).unwrap(),expected_interaction(0,0,true));
+    }
+    #[test]
+    fn rejected_entity_actions_and_interactions_do_not_change_session_state() {
+        let mut state = interaction_session();
+        state.serverbound(&[0x15,7,0,0]).unwrap();
+        let pose = state.pose;
+        let mut invalid = vec![vec![0x15,7,1,0,0],vec![0x15,7,1,1],vec![0x15,8,1,0],
+            vec![0x15,7,9,0],vec![0x15,7,5,101],vec![0x0a,42,3],interaction(0,2),interaction(2,2)];
+        let stop = [0x15,7,1,0];
+        for end in 0..stop.len() { invalid.push(stop[..end].to_vec()); }
+        for action in [0,2] {
+            let body = interaction(action,0);
+            for end in 0..body.len() { invalid.push(body[..end].to_vec()); }
+            let mut extra = body; extra.push(0); invalid.push(extra);
+        }
+        for axis in 0..3 { for value in [f32::NAN,f32::INFINITY,f32::NEG_INFINITY,64.01,-64.01] {
+            let mut body = interaction(2,0);
+            body[3+4*axis..7+4*axis].copy_from_slice(&value.to_be_bytes()); invalid.push(body);
+        } }
+        for body in invalid {
+            assert!(state.serverbound(&body).is_err(),"unexpected accepted body {body:?}");
+            assert!(state.sneaking);
+            assert_eq!(state.pose,pose);
+            assert_eq!(state.pending_teleport,None);
+        }
+        assert_eq!(state.serverbound(&interaction(0,1)).unwrap(),expected_interaction(0,1,true));
+        state.serverbound(&[0x15,7,1,0]).unwrap();
+        assert_eq!(state.serverbound(&interaction(2,0)).unwrap(),expected_interaction(2,0,false));
+    }
     #[test]
     fn movement_before_matching_teleport_ack_does_not_change_relative_base() {
         let mut state = session();

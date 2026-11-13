@@ -18,17 +18,24 @@ pub(crate) fn interact(input: &mut Cursor<'_>, out: &mut Vec<u8>) -> Result<(), 
     if action==2 {for v in &mut at { *v=f32::from_be_bytes(input.take(4)?.try_into().map_err(|_|Error::Invalid)?) as f64; if !v.is_finite() || v.abs()>64.0{return Err(Error::Invalid);} }}
     let hand=if action==1 {0} else {input.count(1)? as u32};
     let sneaking=input.boolean()?;
-    out.clear(); uint(out,if action==1{1}else{0x1a});uint(out,entity);
-    if action!=1 {
-        uint(out,hand);
-        let largest=at.into_iter().map(f64::abs).fold(0.0,f64::max);
-        if largest<1.0/32766.0 {out.push(0);}else{
-            let scale=largest.ceil() as u32;let mut packed=u64::from(scale&3)|if scale>3{4}else{0};
-            for (i,v) in at.into_iter().enumerate(){packed|=((((v/f64::from(scale)*0.5+0.5)*32766.0).round() as u64)&0x7fff)<<(3+15*i);}
-            out.push(packed as u8);out.push((packed>>8) as u8);out.extend(((packed>>16) as u32).to_be_bytes());if scale>3{uint(out,scale>>2);}
-        }
-        out.push(u8::from(sneaking));
+    if action==1 {out.clear();uint(out,1);uint(out,entity);} else {
+        interaction(out,entity,hand,at,sneaking)?;
     }
+    Ok(())
+}
+
+/// Общий775 формат: рука, упакованная точка попадания, приседание.
+/// Старый340 передаёт приседание отдельным Entity Action, не Use Entity.
+pub(crate) fn interaction(out: &mut Vec<u8>, entity: u32, hand: u32, at: [f64;3], sneaking: bool) -> Result<(), Error> {
+    if hand>1 || at.into_iter().any(|v|!v.is_finite() || v.abs()>64.0) {return Err(Error::Invalid);}
+    out.clear();uint(out,0x1a);uint(out,entity);uint(out,hand);
+    let largest=at.into_iter().map(f64::abs).fold(0.0,f64::max);
+    if largest<1.0/32766.0 {out.push(0);}else{
+        let scale=largest.ceil() as u32;let mut packed=u64::from(scale&3)|if scale>3{4}else{0};
+        for (i,v) in at.into_iter().enumerate(){packed|=((((v/f64::from(scale)*0.5+0.5)*32766.0).round() as u64)&0x7fff)<<(3+15*i);}
+        out.push(packed as u8);out.push((packed>>8) as u8);out.extend(((packed>>16) as u32).to_be_bytes());if scale>3{uint(out,scale>>2);}
+    }
+    out.push(u8::from(sneaking));
     Ok(())
 }
 

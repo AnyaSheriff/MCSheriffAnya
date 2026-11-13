@@ -63,6 +63,12 @@ public final class SdkContracts {
   org.bukkit.Location origin=new org.bukkit.Location(new ru.mcsa.bukkit.RemoteWorld(0),-0.5,1,0),destination=origin.clone().add(new org.bukkit.util.Vector(3,4,0));check(origin.distanceSquared(destination)==25&&origin.getBlockX()==-1);
   boolean wrongWorld=false;try{origin.distance(new org.bukkit.Location(new ru.mcsa.bukkit.RemoteWorld(1),0,0,0));}catch(IllegalArgumentException expected){wrongWorld=true;}check(wrongWorld);
   final org.bukkit.inventory.Inventory[] held=new org.bukkit.inventory.Inventory[1];org.bukkit.inventory.InventoryHolder holder=()->held[0];held[0]=new ru.mcsa.bukkit.ChestInventory(holder,27,Component.text("Race"));held[0].setItem(13,item);check(held[0].getHolder()==holder&&held[0].getItem(13).equals(item));held[0].getItem(13).setAmount(0);check(item.getAmount()==1);
+  org.bukkit.inventory.ItemStack chestSource=new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND,2);held[0].setItem(12,chestSource);chestSource.setAmount(9);check(held[0].getItem(12).getAmount()==2);
+  org.bukkit.inventory.ItemStack chestLive=held[0].getItem(12);chestLive.setAmount(3);check(held[0].getItem(12)==chestLive&&held[0].getItem(12).getAmount()==3);
+  chestLive.editMeta(m->m.displayName(Component.text("Live chest")));check(held[0].getItem(12).getItemMeta().displayName().equals(Component.text("Live chest")));
+  org.bukkit.inventory.ItemStack chestClone=chestLive.clone();chestClone.setAmount(8);check(held[0].getItem(12).getAmount()==3);
+  held[0].setItem(12,new org.bukkit.inventory.ItemStack(org.bukkit.Material.EMERALD,4));chestLive.setAmount(7);check(held[0].getItem(12).getType()==org.bukkit.Material.EMERALD&&held[0].getItem(12).getAmount()==4);
+  org.bukkit.inventory.ItemStack chestArray=held[0].getContents()[12];chestArray.setAmount(5);check(held[0].getItem(12).getAmount()==5);held[0].setItem(12,null);chestArray.setAmount(6);check(held[0].getItem(12)==null);
   boolean wrongSize=false;try{new ru.mcsa.bukkit.ChestInventory(null,10,Component.empty());}catch(IllegalArgumentException expected){wrongSize=true;}check(wrongSize);
   ru.mcsa.bukkit.Permissions.declare("test.public","true");ru.mcsa.bukkit.Permissions.child("test.public","test.child",true);ru.mcsa.bukkit.Permissions.declare("test.child","false");
   ru.mcsa.bukkit.Permissions.declare("test.admin","op");ru.mcsa.bukkit.Permissions.child("test.admin","test.admin.edit",true);ru.mcsa.bukkit.Permissions.declare("test.admin.edit","false");ru.mcsa.bukkit.Permissions.declare("test.bypass","false");

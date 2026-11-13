@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import signal
@@ -19,7 +20,37 @@ root = Path(__file__).resolve().parent
 repo = root.parent.parent
 parser = argparse.ArgumentParser()
 parser.add_argument('--port', type=int, default=26210)
+parser.add_argument('--evidence', type=Path, help='Сохранить журналы и сырые результаты бота вне временного мира')
 args = parser.parse_args()
+evidence = args.evidence.resolve() if args.evidence else None
+if evidence:
+    evidence.mkdir(parents=True, exist_ok=False)
+processes = []
+
+def node_check(restart=False):
+    command = ['nice', '-n', '19', 'node', str(root / 'blackbox.cjs'), str(port)]
+    if restart:
+        command.append('--restart')
+    if evidence is None:
+        return guarded_run(command, check=True, timeout=30 if restart else 120)
+    label = 'restart' if restart else 'initial'
+    env = dict(os.environ, MCSA_GUI_RAW_OUT=str(evidence / (label + '-node.json')))
+    with (evidence / (label + '-node.log')).open('w') as log:
+        return guarded_run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=30 if restart else 120)
+
+def stop_server(server):
+    killed = False
+    if server.poll() is None:
+        server.send_signal(signal.SIGINT)
+    try:
+        server.wait(timeout=20)
+    except subprocess.TimeoutExpired:
+        killed = True
+        server.kill()
+        server.wait(timeout=10)
+    processes.append({'pid': server.pid, 'returncode': server.returncode, 'forced_kill': killed})
+    if evidence:
+        (evidence / 'stopped-processes.json').write_text(json.dumps(processes, indent=2) + '\n')
 if not 26200 <= args.port <= 26299:
     raise SystemExit('Тестовый порт: 26200..26299')
 port = args.port
@@ -65,7 +96,7 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
     # Проверяем восстановление config.yml из встроенного ресурса saveDefaultConfig.
     config = work / 'plugins/java-scheduler/data/config.yml'
     config.unlink()
-    log_path = root / 'target/blackbox-core.log'
+    log_path = evidence / 'blackbox-core.log' if evidence else root / 'target/blackbox-core.log'
     wait_for_idle()
     with log_path.open('w') as log:
         server = subprocess.Popen(['nice', '-n', '19', str(binary)], cwd=work, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
@@ -78,17 +109,12 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
                 time.sleep(0.1)
             else:
                 raise RuntimeError('Таймаут запуска ядра')
-            guarded_run(['nice', '-n', '19', 'node', str(root / 'blackbox.cjs'), str(port)], check=True, timeout=120)
+            node_check()
             player_pdc=list((work/'plugins/java-command/data').glob('entity-*.pdc.json'));assert len(player_pdc)==1 and 'java-command:probe' in player_pdc[0].read_text(), 'PDC сущности не сохранён в data/'
             assert (config.parent / 'queue.yml').read_text() == 'order: [first, second]', 'очередь не сохранила файл через хозяина'
             assert config.read_text() == (root / 'fixtures/scheduler/config.yml').read_text(), 'config.yml не восстановлен из JAR'
         finally:
-            server.send_signal(signal.SIGINT)
-            try:
-                server.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                server.kill()
-                server.wait()
+            stop_server(server)
     # Новый процесс ядра читает те же данные, сохранённые щелчком в GUI.
     wait_for_idle()
     with log_path.open('a') as log:
@@ -102,12 +128,7 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
                 time.sleep(0.1)
             else:
                 raise RuntimeError('Таймаут перезапуска ядра')
-            guarded_run(['nice', '-n', '19', 'node', str(root / 'blackbox.cjs'), str(port), '--restart'], check=True, timeout=30)
+            node_check(restart=True)
         finally:
-            server.send_signal(signal.SIGINT)
-            try:
-                server.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                server.kill()
-                server.wait()
-print('PASS: изолированное ядро завершено; журнал tools/plugin-translator/target/blackbox-core.log')
+            stop_server(server)
+print('PASS: изолированное ядро завершено; журнал ' + str(log_path))

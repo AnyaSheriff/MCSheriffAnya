@@ -1,0 +1,191 @@
+name: "Gameplay interactions: complete source checks"
+on:
+  push:
+    branches: ['fix/gameplay-interactions-20261113']
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Freeze pinned checkout and exact dependency lock without prepare
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p interactions-evidence
+          cp .github/workflows/gameplay-interactions-checks.yml interactions-evidence/workflow-source.yml
+          cp android/ota-pins/r8-native.lock Cargo.lock
+          python3 -B - <<'PY'
+          import hashlib, json, shutil
+          from pathlib import Path
+          paths = [
+              'src/network/play/land.rs',
+              'src/network/play/land_tests.rs',
+              'src/network/play/legacy_action_tests.rs',
+              'tools/protocol-bridge/src/client_774.rs',
+              'tools/protocol-bridge/src/legacy_actions.rs',
+              'tools/protocol-bridge/src/legacy_play.rs',
+          ]
+          out = Path('interactions-evidence/probe-inputs')
+          ledger = {}
+          for name in paths:
+              source = Path(name)
+              target = out / name
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(source, target)
+              assert source.read_bytes() == target.read_bytes()
+              ledger[name] = hashlib.sha256(target.read_bytes()).hexdigest()
+          Path('interactions-evidence/probe-inputs.json').write_text(json.dumps(ledger, indent=2))
+          PY
+          python3 -B - <<'PY'
+          import hashlib, sys
+          expected = 'e24fe5fda7b58f4367573e46866c48bd532d0ef70dac0da02dbbaf5b9c6d04e0'
+          digest = hashlib.sha256(open('Cargo.lock','rb').read()).hexdigest()
+          if digest != expected: sys.exit(f'unexpected dependency lock digest: {digest}')
+          print('dependency lock digest verified')
+          PY
+          git diff --exit-code
+          rustc -vV > interactions-evidence/rustc-version.log
+          cargo -vV > interactions-evidence/cargo-version.log
+      - name: Freeze own translated SDK source and exact host lock
+        run: python3 -B tools/plugin-translator/bukkit_gui_items_ci.py prepare
+      - name: Build six mandatory own guest WASM components with locked guest
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output interactions-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 --message-format=json-render-diagnostics 2>&1 | tee interactions-evidence/own-examples-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output interactions-evidence
+      - name: Strict default workspace Clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee interactions-evidence/default-clippy.log
+      - name: Focused real host and protocol interaction tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics cow_ -- --nocapture --test-threads=1 2>&1 | tee interactions-evidence/cow-tests.log
+          cargo test --release --locked --bin mcsheriffanya --message-format=json-render-diagnostics legacy_entity_first_use_and_use_at_feed_cow_through_session -- --nocapture --test-threads=1 2>&1 | tee interactions-evidence/legacy-host-tests.log
+          cargo test --release --locked -p mcsa-protocol --message-format=json-render-diagnostics legacy_play::tests -- --nocapture --test-threads=1 2>&1 | tee interactions-evidence/legacy-session-tests.log
+          python3 -B - <<'PYTEST'
+          import re
+          from pathlib import Path
+          for name,minimum in [('cow-tests.log',5),('legacy-host-tests.log',1),('legacy-session-tests.log',3)]:
+              log=Path('interactions-evidence',name).read_text()
+              passed=sum(map(int,re.findall(r'test result: \w+\. (\d+) passed',log)))
+              failed=sum(map(int,re.findall(r'test result: \w+\. \d+ passed; (\d+) failed',log)))
+              assert passed>=minimum and failed==0,(name,passed,failed)
+              print(name,passed,'passed',failed,'failed')
+          PYTEST
+      - name: Full default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --message-format=json-render-diagnostics 2>&1 | tee interactions-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features --message-format=json-render-diagnostics 2>&1 | tee interactions-evidence/no-default-tests.log
+      - name: Build ordinary desktop runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee interactions-evidence/default-build.log
+          cp target/release/mcsheriffanya interactions-evidence/default-runtime-elf
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            tools/plugin-translator/target/lib
+            tools/plugin-translator/.toolchain
+          key: bukkit-gui-tools-v1-${{ runner.os }}-${{ hashFiles('tools/plugin-translator/pom.xml', 'tools/plugin-translator/translate.py') }}
+      - name: Install locked opaque client test tools without lifecycle scripts
+        shell: bash
+        run: |
+          set -o pipefail
+          npm ci --prefix tools/blackbox/ci/attr-phase --ignore-scripts --no-audit --no-fund 2>&1 | tee bukkit-gui-items-evidence/node-install.log
+          node --version > bukkit-gui-items-evidence/node-version.log
+          npm --version > bukkit-gui-items-evidence/npm-version.log
+          java -version > bukkit-gui-items-evidence/java-version.log 2>&1
+          mvn --version > bukkit-gui-items-evidence/maven-version.log
+      - name: Actual translated SDK GUI and restart with specific old SDK control
+        run: python3 -B tools/plugin-translator/bukkit_gui_items_ci.py checks
+      - name: Confirm tracked source untouched after all checks
+        shell: bash
+        run: git diff --exit-code
+      - name: Always preserve compiled source, logs, actual ELFs and root lock
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/protocol-bridge/public_container_button_ci.py archive --output interactions-evidence
+      - name: Always preserve translated SDK components, same ELF and actual GUI outcomes
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: python3 -B tools/plugin-translator/bukkit_gui_items_ci.py finish
+      - name: Scope root receipt.json to this partial work only
+        if: always()
+        shell: bash
+        run: |
+          python3 -B - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          out = Path('interactions-evidence')
+          receipt = out / 'receipt.json'
+          assert receipt.is_file(), 'root receipt.json not found in interactions-evidence'
+          data = json.loads(receipt.read_text())
+          copied_bytes = (out / 'workflow-source.yml').read_bytes()
+          assert copied_bytes == Path('.github/workflows/gameplay-interactions-checks.yml').read_bytes(), 'workflow-source.yml copy mismatch'
+          data['workflow_source'] = {
+              'path': '.github/workflows/gameplay-interactions-checks.yml',
+              'artifact_path': 'workflow-source.yml',
+              'sha256': hashlib.sha256(copied_bytes).hexdigest(),
+          }
+          data['scope'] = 'Cow mainhand milking, legacy340 codec/host unit integration, translated SDK actual GUI controls; full source checks'
+          data['excludes'] = ['Legacy340 public admission/full compatibility', 'Cow offhand/full sound-order parity', 'all gameplay parity', 'new APK/OTA release']
+          receipt.write_text(json.dumps(data, indent=2))
+          PY
+      - name: Remove only isolated job tmp after archive
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import shutil
+          temporary = Path('tmp')
+          if temporary.is_dir() and not temporary.is_symlink(): shutil.rmtree(temporary)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gameplay-interactions-${{ github.run_id }}-${{ github.run_attempt }}
+          path: interactions-evidence/
+          retention-days: 7
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bukkit-gui-items-${{ github.run_id }}-${{ github.run_attempt }}
+          path: bukkit-gui-items-evidence/
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error

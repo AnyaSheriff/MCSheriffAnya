@@ -85,3 +85,83 @@ fn milking_replaces_the_selected_bucket_and_creative_does_not_duplicate() {
     assert_eq!(blocks::item_name(p.inventory.held().unwrap().item),Some("bucket"));
     assert_eq!(p.inventory.slots().iter().flatten().filter(|s| blocks::item_name(s.item)==Some("milk_bucket")).count(),1);
 }
+
+
+// Настоящий обработчик входящего Use Entity; нулевой lpVec3 и sneaking=false.
+fn cow_interact(s:&Shared,p:&mut PlayerState,id:i32)->Reaction {
+    let mut body=encode_varint(USE_ENTITY);
+    body.extend(encode_varint(id)); body.extend(encode_varint(0)); body.extend([0,0]);
+    handle_client_packet(&PacketInfo {id:USE_ENTITY,length:body.len() as i32,body,teleport:None,
+        punch:false,foreign_inventory:false,legacy_inventory:None},p,s)
+}
+
+#[test]
+fn cow_survival_packet_replaces_selected_bucket_once() {
+    let s=shared(); let mut p=player(1000); let id=add(&s,Kind::Cow);
+    p.inventory.select(5); held(&mut p,"bucket",1);
+    let slot=p.inventory.selected_slot();
+    let r=cow_interact(&s,&mut p,id);
+    assert!(r.slots.contains(&slot));
+    assert_eq!(p.inventory.held(),Some(Stack::new(blocks::item_named("milk_bucket").unwrap(),1)));
+    assert_eq!(s.items_in(p.dimension).lock().unwrap().mobs()[0].kind,Kind::Cow);
+    let after=p.inventory.clone();
+    for _ in 0..3 { assert!(cow_interact(&s,&mut p,id).slots.is_empty()); }
+    assert_eq!(p.inventory,after);
+    assert!(s.items_in(p.dimension).lock().unwrap().items().is_empty());
+}
+
+#[test]
+fn cow_baby_bucket_is_untouched_and_wheat_still_grows_or_breeds() {
+    let s=shared(); let mut p=player(1000); let id=add(&s,Kind::Cow);
+    s.items_in(p.dimension).lock().unwrap().mobs_mut()[0].age= -1000;
+    held(&mut p,"bucket",1); let before=p.inventory.clone();
+    assert!(cow_interact(&s,&mut p,id).slots.is_empty()); assert_eq!(p.inventory,before);
+    assert_eq!(s.items_in(p.dimension).lock().unwrap().mobs()[0].age,-1000);
+    held(&mut p,"wheat",2); cow_interact(&s,&mut p,id);
+    assert_eq!(p.inventory.held().unwrap().count,1);
+    assert_eq!(s.items_in(p.dimension).lock().unwrap().mobs()[0].age,-900);
+    s.items_in(p.dimension).lock().unwrap().mobs_mut()[0].age=0;
+    cow_interact(&s,&mut p,id); assert!(p.inventory.held().is_none());
+    let items=s.items_in(p.dimension).lock().unwrap();
+    assert_eq!(items.mobs()[0].love,crate::mob::LOVE_TICKS);
+    assert_eq!(items.mobs()[0].love_player,Some(p.uuid));
+}
+
+#[test]
+fn cow_bucket_keeps_existing_gates_and_rejects_dead_sender() {
+    for gate in 0..5 {
+        let s=shared(); let mut p=player(1000); let id=add(&s,Kind::Cow); held(&mut p,"bucket",1);
+        match gate {
+            0=>p.game_mode=GAME_MODE_SPECTATOR,
+            1=>p.game_mode=GAME_MODE_ADVENTURE,
+            2=>s.items_in(p.dimension).lock().unwrap().mobs_mut()[0].vitals.dead=true,
+            3=>p.z=9.0, // 5,5 блока: внутри общего радиуса 6, вне радиуса land 4,5.
+            _=>p.vit.dead=true,
+        }
+        let before=p.inventory.clone();
+        assert!(cow_interact(&s,&mut p,id).slots.is_empty()); assert_eq!(p.inventory,before);
+        assert!(s.items_in(p.dimension).lock().unwrap().items().is_empty());
+    }
+}
+
+#[test]
+fn cow_non_bucket_land_path_does_not_take_an_entity_id_for_rng() {
+    let s=shared(); let mut p=player(1000); add(&s,Kind::Cow); held(&mut p,"wheat",1);
+    let before=s.next_entity_id();
+    let world=s.world_in(p.dimension).lock().unwrap(); let mut items=s.items_in(p.dimension).lock().unwrap();
+    assert!(!land::use_on(&mut items,0,&world,&mut p,&s,&mut Reaction::default()));
+    assert_eq!(s.next_entity_id(),before+1);
+}
+
+
+#[test]
+fn cow_baby_golden_dandelion_still_locks_growth() {
+    let s=shared(); let mut p=player(1000); let id=add(&s,Kind::Cow);
+    s.items_in(p.dimension).lock().unwrap().mobs_mut()[0].age= -1000;
+    held(&mut p,"golden_dandelion",2); cow_interact(&s,&mut p,id);
+    assert_eq!(p.inventory.held().unwrap().count,1);
+    assert!(s.items_in(p.dimension).lock().unwrap().mobs()[0].age_locked);
+    held(&mut p,"wheat",1); let before=p.inventory.clone(); cow_interact(&s,&mut p,id);
+    assert_eq!(p.inventory,before);
+    assert_eq!(s.items_in(p.dimension).lock().unwrap().mobs()[0].age,-1000);
+}

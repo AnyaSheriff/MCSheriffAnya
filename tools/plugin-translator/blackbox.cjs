@@ -1,34 +1,50 @@
 // Запуск только с отдельным тестовым ядром на 26200..26299.
 const path = require('path');
+const fs = require('node:fs');
 let mineflayer;
 try { mineflayer = require('../blackbox/node_modules/mineflayer'); }
-catch { mineflayer = require(path.join(process.env.HOME, 'node_modules/mineflayer')); }
+catch { mineflayer = require(path.join(process.env.MCSA_GUI_NODE_MODULES || path.join(process.env.HOME, 'node_modules'), 'mineflayer')); }
 const assert = require('node:assert/strict');
 const port=Number(process.argv[2]||26210);assert(Number.isInteger(port)&&port>=26200&&port<=26299);
 const bot = mineflayer.createBot({host:'127.0.0.1',port,username:'JavaTester',version:'26.1',auth:'offline'});
 const messages=[];
+const checkpoints=[],guiPackets=[];
+let phase='login';
+const saveOutcome=(status,error)=>{if(!process.env.MCSA_GUI_RAW_OUT)return;fs.writeFileSync(process.env.MCSA_GUI_RAW_OUT,JSON.stringify({status,phase,clientVersion:'26.1',port,restart:process.argv.includes('--restart'),checkpoints,messages,guiPackets,window:bot.currentWindow?{id:bot.currentWindow.id,slots:bot.currentWindow.slots.map(item=>item?{name:item.name,count:item.count}:null)}:null,error:error?{name:error.name,message:error.message,code:error.code,actual:error.actual,expected:error.expected,stack:error.stack}:null},(_,value)=>typeof value==='bigint'?value.toString():value,2));};
 let actionBar=false,positionCorrections=0;bot._client.on('position',()=>positionCorrections++);
+const guiSlotPackets=[];bot._client.on('set_slot',packet=>guiSlotPackets.push(packet));
+for(const name of ['set_slot','window_items'])bot._client.on(name,packet=>guiPackets.push({name,packet}));
 const teams=[];bot._client.on("teams",packet=>teams.push(packet));
 bot._client.on('action_bar',()=>{actionBar=true;});
 bot.on('messagestr',message=>{messages.push(message);console.log(message);});
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const waitFor=async(text)=>{for(let i=0;i<100;i++){if(messages.some(m=>m.includes(text)))return;await sleep(100);}throw Error('Нет сообщения: '+text);};
 const waitHealth=async(value)=>{for(let i=0;i<100;i++){if(bot.health===value)return;await sleep(100);}assert.equal(bot.health,value);};
-const timer=setTimeout(()=>{console.error('Таймаут');bot.end();process.exit(1);},95000);
-bot.on('error',error=>{console.error(error);clearTimeout(timer);process.exit(1);});
+const timer=setTimeout(()=>{const error=Error('Таймаут');console.error(error);saveOutcome('failed',error);bot.end();process.exit(1);},95000);
+bot.on('error',error=>{console.error(error);saveOutcome('failed',error);clearTimeout(timer);process.exit(1);});
 bot.once('spawn',async()=>{
  try {
   await waitFor('Вход из Java работает');
   bot.chat('/javahello');await waitFor('Команда из Java работает');
   const hints=await bot.tabComplete('/javahello java-tab');assert(hints.some(h=>h.match==='java-tab-ok'));
   console.log('PASS: Tab java-tab-ok');
-  if(process.argv.includes('--restart')){bot.chat('/javahello gui-persistent');await waitFor('GUI persisted across restart');bot.chat('/javahello zero');await waitFor('Respawn delivered; bed=true; anchor=false');console.log('PASS: GUI plugin data and personal bed spawn survived core restart');clearTimeout(timer);bot.end();setTimeout(()=>process.exit(0),300);return;}
+  if(process.argv.includes('--restart')){phase='restart';bot.chat('/javahello gui-persistent');await waitFor('GUI persisted across restart');bot.chat('/javahello zero');await waitFor('Respawn delivered; bed=true; anchor=false');checkpoints.push('restart-persistence');console.log('PASS: GUI plugin data and personal bed spawn survived core restart');saveOutcome('passed');clearTimeout(timer);bot.end();setTimeout(()=>process.exit(0),300);return;}
+  // Проверки API ниже требуют творческий режим независимо от стартового gamemode.
+  bot.chat('/gamemode creative');for(let i=0;i<100&&bot.game.gameMode!=='creative';i++)await sleep(100);assert.equal(bot.game.gameMode,'creative','Fixture creative mode was not applied');
+  phase='existing-gui';
   bot.chat('/javahello team');await sleep(600);assert(teams.some(packet=>JSON.stringify(packet).includes('[Elves]')),'Team prefix packet missing');assert(teams.some(packet=>JSON.stringify(packet).includes('JavaTester')),'Team entry packet missing');
   bot.chat('/javahello gui');for(let i=0;i<100&&!bot.currentWindow;i++)await sleep(100);assert(bot.currentWindow,'GUI did not open');assert.equal(bot.currentWindow.slots[13]?.name,'diamond');
   await bot.clickWindow(13,0,0);await waitFor('GUI cancelled with holder and item');await sleep(300);assert.equal(bot.currentWindow.slots[13]?.name,'diamond');assert.equal(bot.currentWindow.selectedItem,null);assert(!bot.inventory.items().some(item=>item.name==='diamond'));
   bot.chat('/javahello gui-close');await waitFor('GUI close delivered');await sleep(300);assert.equal(bot.currentWindow,null);
   bot.chat('/javahello gui-free');for(let i=0;i<100&&!bot.currentWindow;i++)await sleep(100);assert(bot.currentWindow);await bot.clickWindow(13,0,0);await waitFor('GUI allowed click');await sleep(300);assert.equal(bot.currentWindow.slots[13],null);assert.equal(bot.currentWindow.selectedItem?.name,'diamond');bot.closeWindow(bot.currentWindow);await sleep(500);assert(bot.inventory.items().some(item=>item.name==='diamond'),'Cursor item lost on close');
   console.log('PASS: client GUI, holder, cancelled/allowed clicks, cursor return, close and scoreboard teams');
+  checkpoints.push('existing-gui');phase='gui-items-observe';
+  const guiPacketStart=guiSlotPackets.length;bot.chat('/javahello gui-items');await waitFor('GUI set item observation ready');await sleep(300);assert(bot.currentWindow,'Observed GUI did not open');assert.equal(bot.currentWindow.slots[13]?.count,2,'GUI_ITEM_OBSERVATION_AMOUNT');assert.equal(bot.currentWindow.slots[14]?.name,'emerald');assert.equal(bot.currentWindow.slots[14]?.count,3);
+  assert(guiSlotPackets.slice(guiPacketStart).some(packet=>packet.slot===13&&JSON.stringify(packet).includes('Set item observed')),'Set item metadata slot update missing');assert(!guiSlotPackets.slice(guiPacketStart).some(packet=>JSON.stringify(packet).includes('Stale item rejected')),'Stale reference sent a slot update');
+  phase='gui-items-decoded';const decodedPacketStart=guiSlotPackets.length;bot.chat('/javahello gui-items-mutate');await waitFor('GUI decoded item observation ready');await sleep(300);assert.equal(bot.currentWindow.slots[13]?.count,3);assert.equal(bot.currentWindow.slots[15]?.count,4);assert(guiSlotPackets.slice(decodedPacketStart).some(packet=>packet.slot===13&&JSON.stringify(packet).includes('Decoded item observed')),'Decoded item metadata slot update missing');
+  bot.chat('/javahello gui-items-check');await waitFor('GUI observed items survived next callback');bot.chat('/javahello gui-close');await sleep(300);assert.equal(bot.currentWindow,null);
+  console.log('PASS: live GUI item quantity/meta slot packets, decoded/array item updates, detached clone/source and stale replacement references');
+  checkpoints.push('gui-items');phase='remaining-regressions';
   bot.chat('/gamerule natural_health_regeneration false');await waitFor('Правило natural_health_regeneration: false');
   bot.chat('/javahello api');await waitFor('Компонент из Java работает');await sleep(600);
   await waitHealth(18);
@@ -90,6 +106,6 @@ bot.once('spawn',async()=>{
   bot.chat('/eventprobe bed');await waitFor('Event probe armed: bed');await bot.activateBlock(bot.blockAt(new Vec3(1,63,0)));await waitFor('Bed cancelled with real spawn rules');await sleep(300);bot.chat('/javahello zero');await waitFor('Respawn delivered; bed=true; anchor=false');await sleep(700);assert(Math.abs(bot.entity.position.x-2.5)<4&&Math.abs(bot.entity.position.z-0.5)<4,'Bed respawn destination was not applied');
   console.log('PASS: movement/jump/interaction cancellation, armor, bed, respawn, rendered chat, permission inheritance and command alias');
   console.log('PASS: команда, вход, отмена чата/команды/блока, repeating + config.yml');
-  clearTimeout(timer);bot.end();setTimeout(()=>process.exit(0),300);
- }catch(error){console.error(error);clearTimeout(timer);bot.end();process.exit(1);}
+  checkpoints.push('remaining-regressions');phase='complete';saveOutcome('passed');clearTimeout(timer);bot.end();setTimeout(()=>process.exit(0),300);
+ }catch(error){console.error(error);saveOutcome('failed',error);clearTimeout(timer);bot.end();process.exit(1);}
 });

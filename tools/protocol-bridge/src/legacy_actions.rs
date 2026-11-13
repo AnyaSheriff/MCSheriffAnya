@@ -8,6 +8,9 @@ pub struct Context {
     pub window: HeightWindow,
     /// Последняя согласованная поза в координатах сервера.
     pub pose: Pose,
+    /// Последний полностью разобранный start/stop sneaking этого соединения.
+    /// В Use Entity340 такого поля нет; состояние передаёт Session.
+    pub sneaking: bool,
 }
 
 fn string(out: &mut Vec<u8>, value: &str) { uint(out, value.len() as u32); out.extend(value.as_bytes()); }
@@ -133,9 +136,17 @@ pub fn translate(body: &[u8], context: Context) -> Result<Vec<u8>, Error> {
             }
         }
         0x0a => {
+            // Закреплённый protocol.json340/packet_use_entity: mouse0/2
+            // содержат hand; только mouse2 содержит x/y/z. Sneaking нет.
             let entity = input.uint()?;
-            if input.uint()? != 1 { return Err(Error::PayloadUnavailable("legacy interact requires hit position")); }
-            out.push(0x01); uint(&mut out, entity);
+            let action = bounded(&mut input, 2)?;
+            if action == 1 { out.push(0x01); uint(&mut out, entity); }
+            else {
+                let mut at = [0.0; 3];
+                if action == 2 { for value in &mut at { *value = f64::from(angle(&mut input)?); } }
+                let hand = bounded(&mut input, 1)?;
+                crate::client_774::interaction(&mut out, entity, hand, at, context.sneaking)?;
+            }
         }
         0x02 => {
             let message = input.string()?;
@@ -163,7 +174,7 @@ pub fn translate(body: &[u8], context: Context) -> Result<Vec<u8>, Error> {
 mod tests {
     use super::*;
     fn context() -> Context {
-        Context { window: HeightWindow::new(-64).unwrap(), pose: Pose { x: 0.0, y: -1.0, z: 0.0, yaw: 32.0, pitch: -12.0 } }
+        Context { window: HeightWindow::new(-64).unwrap(), pose: Pose { x: 0.0, y: -1.0, z: 0.0, yaw: 32.0, pitch: -12.0 }, sneaking: false }
     }
     #[test]
     fn old_entity_actions_have_explicit_native_numbers() {

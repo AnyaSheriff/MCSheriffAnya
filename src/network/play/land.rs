@@ -5,10 +5,12 @@ use crate::mob::{land, Event, Kind};
 
 pub(super) fn use_on(items: &mut items::Items, index: usize, world: &World, player: &mut PlayerState, shared: &Shared, reaction: &mut Reaction) -> bool {
     let mob = &mut items.mobs_mut()[index];
-    if !land::animal(mob.kind) { return false; }
+    let held = player.inventory.held().and_then(|s| blocks::item_name(s.item));
+    // Корова здесь только ради ведра: кормление и рост остаются в общем обработчике.
+    let cow_milk = mob.kind == Kind::Cow && !player.vit.dead && !mob.is_baby() && held == Some("bucket");
+    if !land::animal(mob.kind) && !cow_milk { return false; }
     let reach: f64=if player.game_mode==GAME_MODE_CREATIVE { 6.0 } else { 4.5 };
     if (mob.x-player.x).powi(2)+(mob.y-player.y).powi(2)+(mob.z-player.z).powi(2)>reach*reach { return true; }
-    let held = player.inventory.held().and_then(|s| blocks::item_name(s.item));
     let mut rng = crate::mob::Rng::new(shared.next_entity_id() as u64 ^ mob.ticks);
     let mut spend = false;
     let mut output = None;
@@ -19,7 +21,7 @@ pub(super) fn use_on(items: &mut items::Items, index: usize, world: &World, play
     if land::llama(mob.kind) && mob.land.tamed && player.sneaking && !mob.is_baby() {
         reaction.open_cart=Some(mob.entity_id); return true;
     }
-    if held == Some("bucket") && !mob.is_baby() && matches!(mob.kind, Kind::Goat | Kind::Mooshroom) {
+    if held == Some("bucket") && !mob.is_baby() && matches!(mob.kind, Kind::Cow | Kind::Goat | Kind::Mooshroom) {
         output = blocks::item_named("milk_bucket"); spend = true;
         mob.events.push(Event::Sound { name: if mob.kind == Kind::Goat { "minecraft:entity.goat.milk" } else { "minecraft:entity.cow.milk" }, volume: 1.0, pitch: 1.0 });
     } else if mob.kind == Kind::Mooshroom && !mob.is_baby() && held == Some("bowl") {

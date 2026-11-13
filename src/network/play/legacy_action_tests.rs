@@ -15,11 +15,48 @@ fn setup(mode: i32) -> (Shared, PlayerState) {
 
 fn apply(body: &[u8], player: &mut PlayerState, shared: &Shared) -> Reaction {
     let context = legacy_actions::Context { window: HeightWindow::new(-64).unwrap(),
-        pose: Pose { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch } };
+        pose: Pose { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch },
+        sneaking: player.sneaking };
     let body = legacy_actions::translate(body, context).unwrap();
     let (id, _) = decode_varint(&body).unwrap();
     let packet = PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false, foreign_inventory: false, legacy_inventory: None };
     handle_client_packet(&packet, player, shared)
+}
+
+/// Только отдельная проба: публичный вход340 остаётся закрытым.
+/// Проверяем не только байты: настоящий обработчик расходует еду и меняет моба.
+#[test]
+fn legacy_entity_first_use_and_use_at_feed_cow_through_session() {
+    for action in [0, 2] {
+        let (shared, mut player) = setup(GAME_MODE_SURVIVAL);
+        assert!(!player.sneaking);
+        let slot = player.inventory.selected_slot();
+        let wheat = blocks::item_named("wheat").unwrap();
+        player.inventory.set(slot, Some(Stack::new(wheat, 2)));
+        let mut cow = crate::mob::Mob::new(90, crate::mob::Kind::Cow, (0.5, 64.0, 2.5));
+        cow.no_ai = true;
+        shared.items_in(player.dimension).lock().unwrap().add_mob(cow);
+
+        let mut session = mcsa_protocol::legacy_play::Session::new(HeightWindow::new(-64).unwrap(), 2).unwrap();
+        session.entity = Some(player.entity_id);
+        session.pose = Some(Pose { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch });
+        // Закреплённый340 packet_use_entity: target, mouse, [xyz], hand.
+        // Первый use без предварительного start/stop sneaking.
+        let mut body = vec![0x0a, 90, action];
+        if action == 2 { for value in [0.0f32, 1.0, 0.0] { body.extend(value.to_be_bytes()); } }
+        body.push(0);
+        let body = session.serverbound(&body).unwrap();
+        let (id, _) = decode_varint(&body).unwrap();
+        let packet = PacketInfo { id, length: body.len() as i32, body, teleport: None, punch: false,
+            foreign_inventory: false, legacy_inventory: None };
+        let reaction = handle_client_packet(&packet, &mut player, &shared);
+        assert_eq!(player.inventory.slot(slot), Some(Stack::new(wheat, 1)));
+        assert!(reaction.slots.contains(&slot));
+        let items = shared.items_in(player.dimension).lock().unwrap();
+        let cow = items.mobs().iter().find(|mob| mob.entity_id == 90).unwrap();
+        assert_eq!(cow.love, crate::mob::LOVE_TICKS);
+        assert_eq!(cow.love_player, Some(player.uuid));
+    }
 }
 
 fn position(x: i32, y: u8, z: i32) -> [u8; 8] {
