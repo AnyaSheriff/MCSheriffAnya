@@ -10,7 +10,7 @@ from unittest.mock import patch
 from probe_white_concrete_slab import Probe, changes, inputs, item_metadata, pack_position, slot, prepare_output, terminate_signal, cleanup_evidence, server_properties, diagnostic_commands, FINISH_STATUS_777
 from smoke import varint
 
-CACHE = Path(os.environ.get('MCSA_777_DATA', '~/.local/share/mcsa-java-26.3-probe/candidate-json')).expanduser()
+CACHE = Path(os.environ.get('MCSA_777_DATA', '~/.local/share/mcsa-handoff/local/probe/candidate-json')).expanduser()
 
 
 class SlabTests(unittest.TestCase):

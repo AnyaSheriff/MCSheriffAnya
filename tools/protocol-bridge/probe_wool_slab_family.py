@@ -6,8 +6,8 @@ sys.dont_write_bytecode=True
 
 def main():
  p=argparse.ArgumentParser(description=__doc__)
- p.add_argument('--run',action='store_true');p.add_argument('--repo',type=Path,default=Path('/home/lenox/.local/share/mcsa-java-26.3'))
- p.add_argument('--data',type=Path,default=Path('/home/lenox/.local/share/mcsa-java-26.3-probe/candidate-json'))
+ p.add_argument('--run',action='store_true');p.add_argument('--repo',type=Path,default=Path('/home/lenox/mcsa/project'))
+ p.add_argument('--data',type=Path,default=Path('/home/lenox/.local/share/mcsa-handoff/local/probe/candidate-json'))
  target=p.add_mutually_exclusive_group(required=True);target.add_argument('--jar',type=Path);target.add_argument('--test-binary',type=Path)
  p.add_argument('--binary-sha256');p.add_argument('--output',type=Path,required=True);p.add_argument('--port',type=int)
  p.add_argument('--phase',choices=['recipes','tools','both'],default='both');p.add_argument('--colors',default='white,orange,magenta,light_blue,yellow,lime,pink,gray,light_gray,cyan,purple,blue,brown,green,red,black')

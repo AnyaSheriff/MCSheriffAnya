@@ -121,7 +121,7 @@ def main():
     output = Path(sys.argv[1]); output.mkdir(parents=True, exist_ok=True)
     binary = Path(sys.argv[4]).resolve() if len(sys.argv) > 4 else None
     port = 26231 if binary else 26131
-    source = Path('/home/lenox/.local/share/mcsa-java-26.3-probe')
+    source = Path('/home/lenox/.local/share/mcsa-handoff/local/probe')
     version = int(sys.argv[2]) if len(sys.argv) > 2 else 777
     jar = source / ('server.jar' if version == 777 else 'server-26.1.2.jar')
     assert binary or hashlib.sha1(jar.read_bytes()).hexdigest() == {777:'33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c',775:'97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51'}[version]

@@ -35,7 +35,7 @@ fn ids_are_appended_after_minerals_and_match_the_pinned_777_tables() {
         assert_eq!(blocks::state_by_name(row.name), Some(row.default_state));
         assert_eq!(row.default_state - row.first_state, blocks::state_by_name(row.input_name).unwrap() - first, "{}", row.name);
     }
-    let candidate = std::path::Path::new(env!("HOME")).join(".local/share/mcsa-java-26.3-probe/candidate-json");
+    let candidate = std::path::Path::new(env!("HOME")).join(".local/share/mcsa-handoff/local/probe/candidate-json");
     let (Ok(blocks_json), Ok(items_json)) = (std::fs::read_to_string(candidate.join("blocks.json")), std::fs::read_to_string(candidate.join("items.json"))) else { return; };
     let blocks_json: Vec<serde_json::Value> = serde_json::from_str(&blocks_json).unwrap();
     let items_json: Vec<serde_json::Value> = serde_json::from_str(&items_json).unwrap();

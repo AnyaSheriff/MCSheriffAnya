@@ -34,8 +34,8 @@ def state_name(case):
  name=case['block']
  return name if 'half' not in case else name+'[type='+case['half']+',waterlogged='+str(case['wet']).lower()+']'
 def main():
- ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--run',action='store_true');target=ap.add_mutually_exclusive_group();target.add_argument('--jar',type=Path);target.add_argument('--test-binary',type=Path);ap.add_argument('--binary-sha256');ap.add_argument('--data',type=Path,default=Path('/home/lenox/.local/share/mcsa-java-26.3-probe/candidate-json'));ap.add_argument('--output',type=Path);a=ap.parse_args()
- if not a.jar and not a.test_binary:a.jar=Path('/home/lenox/.local/share/mcsa-java-26.3-probe/server.jar')
+ ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--run',action='store_true');target=ap.add_mutually_exclusive_group();target.add_argument('--jar',type=Path);target.add_argument('--test-binary',type=Path);ap.add_argument('--binary-sha256');ap.add_argument('--data',type=Path,default=Path('/home/lenox/.local/share/mcsa-handoff/local/probe/candidate-json'));ap.add_argument('--output',type=Path);a=ap.parse_args()
+ if not a.jar and not a.test_binary:a.jar=Path('/home/lenox/.local/share/mcsa-handoff/local/probe/server.jar')
  port=PORT if a.jar else 26026
  report=dict(scope='white wool selected emission16/occlusion20; discovery not calibration/fire/fullfamily',port=port,jar_sha1=JAR_SHA1 if a.jar else None,binary_sha256=a.binary_sha256,pins=HASHES,emission_types=TYPES,lines=LINES,cases=[],commands=[],limits=['no fire observation','normal sculk_sensor has no facing; no calibrated sensor','center-ray geometry is fixture design, actual event origin not independently measured','absence needs working controls; no exact timing parity','wet double placement records actual merge state, does not assume water retained'])
  if a.jar:assert hashlib.sha1(a.jar.read_bytes()).hexdigest()==JAR_SHA1

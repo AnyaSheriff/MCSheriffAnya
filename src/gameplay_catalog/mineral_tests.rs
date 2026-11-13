@@ -9,7 +9,7 @@ fn row(name: &str) -> &'static SlabDescriptor { MINERALS.iter().find(|row| row.n
 
 #[test]
 fn ids_are_appended_without_gaps_and_match_the_pinned_777_tables() {
-    let candidate = std::path::Path::new(env!("HOME")).join(".local/share/mcsa-java-26.3-probe/candidate-json");
+    let candidate = std::path::Path::new(env!("HOME")).join(".local/share/mcsa-handoff/local/probe/candidate-json");
     assert_eq!(MINERALS.len(), 28);
     assert_eq!(MINERALS[0].item, WOOL_STAIRS[15].item + 1);
     assert_eq!(MINERALS[0].block, WOOL_STAIRS[15].block + 1);

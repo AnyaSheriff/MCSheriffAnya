@@ -204,7 +204,7 @@ def main():
             observation = out / 'streaming'
             subprocess.run(['python3', str(ROOT / 'tools/protocol-bridge/probe_gameplay.py'),
                 '--review-streaming', '--binary', str(args.binary.resolve()), '--jar', str(args.jar.resolve()),
-                '--data', '/home/lenox/.local/share/mcsa-java-26.3-probe/candidate-json',
+                '--data', '/home/lenox/.local/share/mcsa-handoff/local/probe/candidate-json',
                 '--output', str(observation), '--official-port', str(args.port),
                 '--ours-port', str(args.ours_port), '--attach'], cwd=ROOT, check=False)
         for repeat in range(args.repeat):

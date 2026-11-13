@@ -12,7 +12,7 @@ import probe_actual_777_dig as p
 from probe_white_concrete_slab import inputs, pack_position
 from smoke import varint
 
-CACHE=Path(os.environ.get('MCSA_777_DATA', '~/.local/share/mcsa-java-26.3-probe/candidate-json')).expanduser()
+CACHE=Path(os.environ.get('MCSA_777_DATA', '~/.local/share/mcsa-handoff/local/probe/candidate-json')).expanduser()
 
 
 class Tests(unittest.TestCase):

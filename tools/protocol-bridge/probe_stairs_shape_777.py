@@ -23,7 +23,7 @@ for fa,pb,fb,pc,fc in itertools.product(F,F,F,F,F):
     if pb==pc:continue
     clear();sb(A,st('white_wool_stairs',fa,'bottom'));sb((D[pb][0],70,D[pb][1]),st('white_wool_stairs',fb,'bottom'));sb((D[pc][0],70,D[pc][1]),st('white_wool_stairs',fc,'bottom'));query(f'T,{fa},{pb},{fb},{pc},{fc}')
 cmds.append('stop')
-p=subprocess.Popen(['/usr/lib/jvm/java-25-openjdk/bin/java','-Xmx1G','-jar','/home/lenox/.local/share/mcsa-java-26.3-probe/server.jar','nogui'],cwd=W,stdin=subprocess.PIPE,stdout=open('server.log','w'),stderr=subprocess.STDOUT,text=True,start_new_session=True)
+p=subprocess.Popen(['/usr/lib/jvm/java-25-openjdk/bin/java','-Xmx1G','-jar','/home/lenox/.local/share/mcsa-handoff/local/probe/server.jar','nogui'],cwd=W,stdin=subprocess.PIPE,stdout=open('server.log','w'),stderr=subprocess.STDOUT,text=True,start_new_session=True)
 while 'Done (' not in open('server.log').read():time.sleep(.3)
 p.stdin.write('forceload add -2 -2 2 2\n');p.stdin.flush();time.sleep(4);p.stdin.write('fill -2 69 -2 2 69 2 stone\n')
 for c in cmds:p.stdin.write(c+'\n')
