@@ -50,6 +50,21 @@ final class LauncherSelfTest {
         entry(root, "./mcsheriffanya", "", '0', binary);
         root.write(new byte[1024]);
         check(Arrays.equals(unpack(gzip(root.toByteArray())), binary), "бинарник в корне");
+        for (String path : List.of("mcsa", "./mcsa", "release/mcsa")) {
+            ByteArrayOutputStream shortTar = new ByteArrayOutputStream();
+            entry(shortTar, path, "", '0', binary);
+            shortTar.write(new byte[1024]);
+            check(Arrays.equals(unpack(gzip(shortTar.toByteArray())), binary), "короткое имя " + path);
+        }
+        ByteArrayOutputStream mixed = new ByteArrayOutputStream();
+        entry(mixed, "release/mcsa", "", '0', binary);
+        entry(mixed, "release/mcsheriffanya", "", '0', binary);
+        mixed.write(new byte[1024]);
+        rejects(() -> unpack(gzip(mixed.toByteArray())), "два имени одного бинарника");
+        ByteArrayOutputStream unsafeShort = new ByteArrayOutputStream();
+        entry(unsafeShort, "../mcsa", "", '0', binary);
+        unsafeShort.write(new byte[1024]);
+        rejects(() -> unpack(gzip(unsafeShort.toByteArray())), "короткий путь вне каталога");
         byte[] corrupt = tar.toByteArray();
         corrupt[0] ^= 1;
         rejects(() -> unpack(gzip(corrupt)), "checksum заголовка");
@@ -274,6 +289,14 @@ final class LauncherSelfTest {
                 + "\"browser_download_url\":\"https:\\/\\/github.com/a.tar.gz\"}]}";
         Launcher.Asset asset = Launcher.selectAsset(json, null);
         check(asset.name().equals(name) && asset.size() == 123, "JSON, escape и выбор архива");
+        String shortName = "mcsa-linux-x64.tar.gz";
+        String shortJson = json.replace(name, shortName);
+        check(Launcher.selectAsset(shortJson, null).name().equals(shortName), "новое имя архива");
+        String both = json.substring(0, json.length() - 2)
+                + ",{\"name\":\"" + shortName + "\",\"size\":456,"
+                + "\"browser_download_url\":\"https://github.com/new.tar.gz\"}]}";
+        check(Launcher.selectAsset(both, null).size() == 456, "короткий архив предпочтительнее старого");
+        check(Launcher.selectAsset(json, null).name().equals(name), "старый архив остаётся совместимым");
         rejects(() -> Launcher.selectAsset(json, "v0.2.4-alpha"), "другая версия");
         rejects(() -> Launcher.selectAsset(json.replace(name, "missing"), null), "нет нужного архива");
         rejects(() -> new Launcher.Json("{\"x\":1,}").parse(), "плохой JSON");

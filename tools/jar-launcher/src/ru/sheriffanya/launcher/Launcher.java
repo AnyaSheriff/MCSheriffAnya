@@ -255,16 +255,18 @@ public final class Launcher {
                 || !(release.get("assets") instanceof List<?> assets)) {
             throw failure("GitHub вернул непонятное описание выпуска.");
         }
-        String name = "mcsheriffanya-" + tag + "-x86_64-unknown-linux-musl.tar.gz";
-        for (Object item : assets) {
-            if (item instanceof Map<?, ?> asset && name.equals(asset.get("name"))
-                    && asset.get("browser_download_url") instanceof String url
-                    && asset.get("size") instanceof Long size && size > 0 && size <= ARCHIVE_LIMIT) {
-                URI uri;
-                try { uri = URI.create(url); }
-                catch (IllegalArgumentException e) { throw failure("GitHub вернул неверный адрес архива."); }
-                validateUrl(uri, false);
-                return new Asset(tag, name, uri, size);
+        for (String name : List.of("mcsa-linux-x64.tar.gz",
+                "mcsheriffanya-" + tag + "-x86_64-unknown-linux-musl.tar.gz")) {
+            for (Object item : assets) {
+                if (item instanceof Map<?, ?> asset && name.equals(asset.get("name"))
+                        && asset.get("browser_download_url") instanceof String url
+                        && asset.get("size") instanceof Long size && size > 0 && size <= ARCHIVE_LIMIT) {
+                    URI uri;
+                    try { uri = URI.create(url); }
+                    catch (IllegalArgumentException e) { throw failure("GitHub вернул неверный адрес архива."); }
+                    validateUrl(uri, false);
+                    return new Asset(tag, name, uri, size);
+                }
             }
         }
         throw failure("В выпуске нет архива Linux musl x86_64. Укажите MCSA_VERSION с готовым выпуском "
@@ -365,7 +367,8 @@ public final class Launcher {
             long padding = (512 - size % 512) % 512;
             if (size > TAR_LIMIT - total - padding) throw failure("Архив tar слишком большой.");
             total += size + padding;
-            boolean wanted = name.equals("mcsheriffanya") || name.equals(directory + "/mcsheriffanya");
+            boolean wanted = name.equals("mcsa") || name.equals(directory + "/mcsa")
+                    || name.equals("mcsheriffanya") || name.equals(directory + "/mcsheriffanya");
             if (wanted) {
                 if (found || (header[156] != 0 && header[156] != '0') || size == 0 || size > BINARY_LIMIT) {
                     throw failure("Неверный или повторный файл mcsheriffanya в архиве.");

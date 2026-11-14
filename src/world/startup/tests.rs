@@ -36,7 +36,7 @@ fn missing_and_empty_worlds_are_not_created_or_marked() {
     {
         let guard = prepare(&world).unwrap();
         assert_eq!(guard.check, StartupCheck::LegacyUnidentified);
-        assert_eq!(guard.has_exclusive_lock(), cfg!(unix));
+        assert_eq!(guard.has_exclusive_lock(), cfg!(any(unix, windows)));
         assert!(!world.exists());
     }
     fs::create_dir(&world).unwrap();
@@ -127,7 +127,7 @@ fn links_and_special_lock_files_fail_without_touching_their_targets() {
     assert!(!world.exists());
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 fn child(root: &Path, expected: &str) {
     let output = std::process::Command::new(std::env::current_exe().unwrap())
         .args(["--exact", "world::startup::tests::child_probe", "--nocapture"])
@@ -138,7 +138,7 @@ fn child(root: &Path, expected: &str) {
         String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 #[test]
 fn child_probe() {
     let Some(root) = std::env::var_os("MCSA_STARTUP_TEST_ROOT") else { return; };
@@ -509,4 +509,68 @@ fn frozen_layout_twelve_player_survives_verified_upgrade_save_and_restart() {
     assert_eq!(crate::playerdata::load_checked(&players, &uuid).unwrap().unwrap(), before);
     assert_eq!(fs::read(&backup_player).unwrap(), frozen);
     assert_eq!(fs::read_dir(fixture.0.join("backups/world")).unwrap().count(), 1);
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_lock_excludes_process_preserves_file_and_releases_after_drop() {
+    let fixture = Fixture::new();
+    let lock = fixture.0.join(".mcsa-world.lock");
+    fs::write(&lock, b"persistent-lock-marker").unwrap();
+    let guard = prepare(&fixture.world()).unwrap();
+    assert!(guard.has_exclusive_lock());
+    child(&fixture.0, "busy");
+    assert!(fs::remove_file(&lock).is_err());
+    assert!(fs::rename(&lock, fixture.0.join("replacement")).is_err());
+    // Явный unlock при Drop освобождает замок даже при копии handle.
+    let inherited = guard.lock.as_ref().unwrap().try_clone().unwrap();
+    drop(guard);
+    child(&fixture.0, "free");
+    drop(inherited);
+    assert_eq!(fs::read(&lock).unwrap(), b"persistent-lock-marker");
+    assert!(!fixture.world().exists());
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_unicode_fresh_world_and_reopen_keep_manifest_and_data() {
+    let fixture = Fixture::new();
+    let world = fixture.0.join("Мир Ани 世界");
+    let version = mcsa_protocol::JavaVersion::V26_3;
+    let guard = prepare_for_version(&world, version).unwrap();
+    assert!(guard.has_exclusive_lock());
+    let manifest = fs::read(world.join(profile::MANIFEST_NAME)).unwrap();
+    assert_eq!(prepare_for_version(&world, version).err().unwrap().kind(), io::ErrorKind::WouldBlock);
+    fs::write(world.join("данные"), b"preserve").unwrap();
+    drop(guard);
+    drop(prepare_for_version(&world, version).unwrap());
+    assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), manifest);
+    assert_eq!(fs::read(world.join("данные")).unwrap(), b"preserve");
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_directory_and_junction_lock_targets_are_rejected() {
+    let fixture = Fixture::new();
+    let lock = fixture.0.join(".mcsa-world.lock");
+    fs::create_dir(&lock).unwrap();
+    assert!(prepare(&fixture.world()).is_err());
+    fs::remove_dir(&lock).unwrap();
+    let target = fixture.0.join("target");
+    fs::create_dir(&target).unwrap();
+    fs::write(target.join("marker"), b"preserve").unwrap();
+    // Junction не требует права создания symlink в обычной Windows CI.
+    let output = std::process::Command::new("cmd").args(["/D", "/C", "mklink", "/J"])
+        .arg(&lock).arg(&target).output().unwrap();
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert!(prepare(&fixture.world()).is_err());
+    fs::remove_dir(&lock).unwrap();
+    let world = fixture.world();
+    let output = std::process::Command::new("cmd").args(["/D", "/C", "mklink", "/J"])
+        .arg(&world).arg(&target).output().unwrap();
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert!(prepare_for_version(&world, mcsa_protocol::JavaVersion::V26_3).is_err());
+    fs::remove_dir(&world).unwrap();
+    assert_eq!(fs::read(target.join("marker")).unwrap(), b"preserve");
+    assert_eq!(fs::read_dir(&target).unwrap().count(), 1);
 }

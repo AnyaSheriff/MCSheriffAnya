@@ -19,13 +19,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, archive: tar.gz }
-          - { os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, archive: tar.gz }
-          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, archive: tar.gz }
-          - { os: windows-latest, target: x86_64-pc-windows-msvc, archive: zip }
-          - { os: macos-latest, target: aarch64-apple-darwin, archive: tar.gz }
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, name: mcsa-linux-x64-gnu, archive: tar.gz }
+          - { os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu, name: mcsa-linux-arm64, archive: tar.gz }
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, name: mcsa-linux-x64, archive: tar.gz }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc, name: mcsa-windows-x64, archive: zip }
+          - { os: macos-latest, target: aarch64-apple-darwin, name: mcsa-macos-arm64, archive: tar.gz }
           # Отдельного Intel-раннера нет: собираем кросс-сборкой на arm64.
-          - { os: macos-latest, target: x86_64-apple-darwin, archive: tar.gz }
+          - { os: macos-latest, target: x86_64-apple-darwin, name: mcsa-macos-x64, archive: tar.gz }
     steps:
       - uses: actions/checkout@v4
 
@@ -62,17 +62,32 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          [ "${GITHUB_REF_TYPE}" = "tag" ] || TAG="dev-${GITHUB_SHA::7}"
-          NAME="mcsheriffanya-${TAG}-${{ matrix.target }}"
+          NAME="${{ matrix.name }}"
           mkdir "$NAME"
           BIN=mcsheriffanya
           [ "${{ runner.os }}" = "Windows" ] && BIN=mcsheriffanya.exe
-          cp "target/${{ matrix.target }}/release/$BIN" "$NAME/"
+          LOCAL_BIN=mcsa
+          [ "${{ runner.os }}" = "Windows" ] && LOCAL_BIN=mcsa.exe
+          cp "target/${{ matrix.target }}/release/$BIN" "$NAME/$LOCAL_BIN"
           RAW="$NAME.bin"
           [ "${{ runner.os }}" = "Windows" ] && RAW="$NAME.exe"
           cp "target/${{ matrix.target }}/release/$BIN" "$RAW"
           cp README.md README_ru.md LICENSE "$NAME/"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            python - "$NAME/start.cmd" <<'PYWINDOWS'
+          import pathlib, sys
+          lines = [
+              '@echo off', 'setlocal', 'cd /d "%~dp0"',
+              'if not exist "mcsa.exe" (',
+              '  echo mcsa.exe was not found. Extract the complete ZIP first.',
+              '  pause', '  exit /b 1', ')',
+              '"%~dp0mcsa.exe" %*', 'set "MCSA_EXIT=%ERRORLEVEL%"',
+              'echo.', 'echo MCSA exited with code %MCSA_EXIT%.',
+              'pause', 'exit /b %MCSA_EXIT%',
+          ]
+          pathlib.Path(sys.argv[1]).write_bytes(('\r\n'.join(lines) + '\r\n').encode('ascii'))
+          PYWINDOWS
+          fi
           if [ "${{ matrix.archive }}" = "zip" ]; then
             7z a "$NAME.zip" "$NAME" > /dev/null
           else
@@ -80,7 +95,7 @@ jobs:
           fi
           echo "ASSET=$NAME.${{ matrix.archive }}" >> "$GITHUB_ENV"
           echo "RAW_ASSET=$RAW" >> "$GITHUB_ENV"
-          python - "$RAW" "$NAME.${{ matrix.archive }}" "SHA256SUMS-${{ matrix.target }}.txt" <<'PY'
+          python - "$RAW" "$NAME.${{ matrix.archive }}" "checksums-${{ matrix.name }}.txt" <<'PY'
           import hashlib, pathlib, sys
           pathlib.Path(sys.argv[3]).write_text(''.join(hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()+'  '+p+'\n' for p in sys.argv[1:3]))
           PY
@@ -91,7 +106,7 @@ jobs:
           path: |
             ${{ env.ASSET }}
             ${{ env.RAW_ASSET }}
-            SHA256SUMS-${{ matrix.target }}.txt
+            checksums-${{ matrix.name }}.txt
 
   release:
     name: Publish GitHub Release

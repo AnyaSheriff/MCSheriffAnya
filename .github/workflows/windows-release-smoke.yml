@@ -1,0 +1,226 @@
+name: Windows release regression smoke
+
+on:
+  push:
+    branches: [chore/short-release-names-20261114]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-other:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare evidence and pinned lock
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'windows-release-smoke-evidence'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          Copy-Item android/ota-pins/r8-native.lock Cargo.lock
+          $sha = (Get-FileHash Cargo.lock -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne 'e24fe5fda7b58f4367573e46866c48bd532d0ef70dac0da02dbbaf5b9c6d04e0') { throw 'Pinned Cargo.lock mismatch' }
+          Copy-Item Cargo.lock $out
+          @{ source = (git rev-parse HEAD); lockSha256 = $sha; runnerOs = [Environment]::OSVersion.VersionString; scope = 'Hosted Windows with preinstalled VC runtime; clean physical Win10 not proven' } | ConvertTo-Json | Set-Content "$out/source.json"
+      - name: Install NASM
+        run: choco install nasm -y --no-progress
+      - uses: Swatinem/rust-cache@v2
+      - name: Prepare bounded raw protocol smoke script
+        shell: pwsh
+        run: |
+          @'
+          param([string]$ExePath, [string]$Label, [switch]$Baseline, [string]$WorkPath)
+          $ErrorActionPreference = 'Stop'
+          $evidence = Join-Path $env:RUNNER_TEMP ('windows-release-smoke-evidence/' + $Label)
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          $work = $WorkPath
+          New-Item -ItemType Directory -Path $work -Force | Out-Null
+          $exe = $ExePath
+          $report = [ordered]@{
+            url = 'https://github.com/AnyaSheriff/MCSheriffAnya/releases/download/v0.2.10-alpha/mcsheriffanya-v0.2.10-alpha-x86_64-pc-windows-msvc.exe'
+            expectedSha256 = 'f1909f127b1c85bb01c4d61766d2824d5b7b050400bae2529de420b52e2746fd'
+            expectedBytes = 50246656
+            scope = 'Existing public EXE on hosted windows-latest with its preinstalled runtime; does not prove a clean physical Windows 10 installation. No DLL installation performed.'
+            workingDirectory = $work
+            os = [System.Environment]::OSVersion.VersionString
+            before = @(Get-ChildItem -LiteralPath $work -Force | Select-Object Name, Mode, Length)
+            passed = $false
+          }
+          $started = $false
+          $process = $null
+          $stdout = $null
+          $stderr = $null
+          function VarInt([int]$value) {
+            $bytes = [System.Collections.Generic.List[byte]]::new()
+            do {
+              $b = $value -band 127
+              $value = $value -shr 7
+              if ($value -ne 0) { $b = $b -bor 128 }
+              $bytes.Add([byte]$b)
+            } while ($value -ne 0)
+            return ,$bytes.ToArray()
+          }
+          function ReadVarInt($stream) {
+            $result = 0
+            for ($i = 0; $i -lt 5; $i++) {
+              $b = $stream.ReadByte()
+              if ($b -lt 0) { throw 'Unexpected EOF' }
+              $result = $result -bor (($b -band 127) -shl (7 * $i))
+              if (($b -band 128) -eq 0) { return $result }
+            }
+            throw 'Invalid VarInt'
+          }
+          try {
+            if ($Baseline) { Invoke-WebRequest -Uri $report.url -OutFile $exe }
+            $report.actualBytes = (Get-Item -LiteralPath $exe).Length
+            $report.actualSha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($Baseline -and ($report.actualBytes -ne $report.expectedBytes -or $report.actualSha256 -ne $report.expectedSha256)) { throw 'Release EXE identity mismatch' }
+            $info = [System.Diagnostics.ProcessStartInfo]::new()
+            $info.FileName = $exe
+            $info.WorkingDirectory = $work
+            $info.UseShellExecute = $false
+            $info.CreateNoWindow = $true
+            $info.RedirectStandardInput = $true
+            $info.RedirectStandardOutput = $true
+            $info.RedirectStandardError = $true
+            $process = [System.Diagnostics.Process]::new()
+            $process.StartInfo = $info
+            if (-not $process.Start()) { throw 'Process did not start' }
+            $started = $true
+            $stdout = $process.StandardOutput.ReadToEndAsync()
+            $stderr = $process.StandardError.ReadToEndAsync()
+            $report.pid = $process.Id
+            if ($Baseline) {
+              if (-not $process.WaitForExit(60000)) { throw 'Baseline did not exit as expected' }
+              throw "Baseline exit: $($process.ExitCode)"
+            }
+            $deadline = [DateTime]::UtcNow.AddSeconds(60)
+            $ready = $false
+            while ([DateTime]::UtcNow -lt $deadline) {
+              if ($process.HasExited) { throw "EXE exited before readiness: $($process.ExitCode)" }
+              $client = [System.Net.Sockets.TcpClient]::new()
+              try {
+                # Factory defaults on this isolated disposable runner only.
+                $client.Connect('127.0.0.1', 25565)
+                $stream = $client.GetStream()
+                $stream.ReadTimeout = 2000
+                $stream.WriteTimeout = 2000
+                $hostBytes = [System.Text.Encoding]::UTF8.GetBytes('localhost')
+                [byte[]]$body = @(0) + (VarInt 777) + (VarInt $hostBytes.Length) + $hostBytes + @(99, 221, 1)
+                [byte[]]$request = (VarInt $body.Length) + $body + @(1, 0)
+                $stream.Write($request, 0, $request.Length)
+                $packetLength = ReadVarInt $stream
+                if ($packetLength -le 0 -or $packetLength -gt 1048576) { throw 'Invalid status packet length' }
+                $packet = [byte[]]::new($packetLength)
+                $offset = 0
+                while ($offset -lt $packet.Length) {
+                  $n = $stream.Read($packet, $offset, $packet.Length - $offset)
+                  if ($n -eq 0) { throw 'Status truncated' }
+                  $offset += $n
+                }
+                $buffer = [System.IO.MemoryStream]::new($packet, $false)
+                if ((ReadVarInt $buffer) -ne 0) { throw 'Unexpected status packet ID' }
+                $jsonLength = ReadVarInt $buffer
+                if ($jsonLength -ne ($buffer.Length - $buffer.Position)) { throw 'Invalid status JSON length' }
+                $json = [System.Text.Encoding]::UTF8.GetString($packet, [int]$buffer.Position, $jsonLength)
+                $status = $json | ConvertFrom-Json
+                if ($status.version.protocol -ne 777) { throw 'Unexpected status protocol' }
+                $json | Set-Content -LiteralPath (Join-Path $evidence 'status.json') -Encoding utf8
+                $report.statusProtocol = $status.version.protocol
+                $ready = $true
+                break
+              } catch {
+                $report.lastReadinessError = $_.Exception.ToString()
+                Start-Sleep -Milliseconds 500
+              } finally { $client.Dispose() }
+            }
+            if (-not $ready) { throw 'No protocol 777 status within 60 seconds' }
+            if (-not (Test-Path -LiteralPath (Join-Path $work 'config/server.properties'))) { throw 'Fresh config/server.properties was not created' }
+            $report.ready = $true
+            $process.StandardInput.WriteLine('stop')
+            $process.StandardInput.Flush()
+            $report.stopSent = $true
+            if (-not $process.WaitForExit(30000)) { throw 'No normal exit within 30 seconds after stop' }
+            $report.exitCode = $process.ExitCode
+            if ($process.ExitCode -ne 0) { throw "Nonzero normal exit: $($process.ExitCode)" }
+            $report.passed = $true
+          } catch {
+            $report.error = $_.Exception.ToString()
+          } finally {
+            if ($started) {
+              if (-not $process.HasExited) {
+                $report.forcedTermination = $true
+                $process.Kill($true)
+                $process.WaitForExit()
+              }
+              $report.exitCode = $process.ExitCode
+            }
+            if ($null -ne $stdout) { [System.IO.File]::WriteAllText((Join-Path $evidence 'stdout.log'), $stdout.GetAwaiter().GetResult()) }
+            if ($null -ne $stderr) { [System.IO.File]::WriteAllText((Join-Path $evidence 'stderr.log'), $stderr.GetAwaiter().GetResult()) }
+            $report.after = @(Get-ChildItem -LiteralPath $work -Force -Recurse | Select-Object FullName, Mode, Length)
+            if ($Baseline -and $started -and $process.HasExited -and $process.ExitCode -ne 0 -and -not $report.forcedTermination) {
+              $raw = [System.IO.File]::ReadAllText((Join-Path $evidence 'stderr.log')) + [System.IO.File]::ReadAllText((Join-Path $evidence 'stdout.log'))
+              if ($raw.Contains('профиль26.3 требует исключительного замка мира')) { $report.passed = $true; $report.expectedFailureReproduced = $true }
+            }
+            $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $evidence 'observations.json') -Encoding utf8
+
+          }
+          if (-not $report.passed) { throw "Existing release smoke FAILED: $($report.error)" }
+          '@ | Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'mcsa-smoke.ps1') -Encoding utf8
+      - name: Reproduce exact published Windows regression
+        shell: pwsh
+        run: |
+          & "$env:RUNNER_TEMP/mcsa-smoke.ps1" -ExePath "$env:RUNNER_TEMP/released.exe" -Label baseline -Baseline -WorkPath "$env:RUNNER_TEMP/MCSA baseline папка"
+      - name: Test Windows world locks including rival child process
+        shell: pwsh
+        run: |
+          cargo test --release --locked --lib world::startup::tests -- --nocapture 2>&1 | Tee-Object "$env:RUNNER_TEMP/windows-release-smoke-evidence/cargo-test.log"
+          if ($LASTEXITCODE -ne 0) { throw "cargo test failed: $LASTEXITCODE" }
+      - name: Build actual candidate
+        shell: pwsh
+        run: |
+          cargo build --release --locked 2>&1 | Tee-Object "$env:RUNNER_TEMP/windows-release-smoke-evidence/cargo-build.log"
+          if ($LASTEXITCODE -ne 0) { throw "cargo build failed: $LASTEXITCODE" }
+          $out = "$env:RUNNER_TEMP/windows-release-smoke-evidence"
+          Copy-Item target/release/mcsheriffanya.exe "$out/mcsa-windows-x64.exe"
+          Get-FileHash "$out/mcsa-windows-x64.exe" -Algorithm SHA256 | ConvertTo-Json | Set-Content "$out/candidate-sha256.json"
+      - name: Candidate fresh world and reopening the same world
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = "$env:RUNNER_TEMP/windows-release-smoke-evidence/mcsa-windows-x64.exe"
+          $world = "$env:RUNNER_TEMP/MCSA candidate папка"
+          & "$env:RUNNER_TEMP/mcsa-smoke.ps1" -ExePath $exe -Label candidate-fresh -WorkPath $world
+          if (-not (Test-Path -LiteralPath (Join-Path $world 'world') -PathType Container)) { throw 'Fresh world directory missing after normal stop' }
+          & "$env:RUNNER_TEMP/mcsa-smoke.ps1" -ExePath $exe -Label candidate-reopen -WorkPath $world
+      - name: Package with exact current release workflow script
+        shell: bash
+        run: |
+          python - <<'PY_PACKAGE'
+          import os, pathlib, subprocess
+          source = pathlib.Path('.github/workflows/release.yml').read_text()
+          block = source.split('      - name: Package\n', 1)[1].split('      - uses: actions/upload-artifact', 1)[0]
+          script = block.split('        run: |\n', 1)[1]
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines())
+          for key, value in {'matrix.name': 'mcsa-windows-x64', 'matrix.target': 'x86_64-pc-windows-msvc', 'runner.os': 'Windows', 'matrix.archive': 'zip'}.items():
+              script = script.replace('$' + '{{ ' + key + ' }}', value)
+          target = pathlib.Path('target/x86_64-pc-windows-msvc/release')
+          target.mkdir(parents=True, exist_ok=True)
+          import shutil
+          shutil.copyfile('target/release/mcsheriffanya.exe', target/'mcsheriffanya.exe')
+          (pathlib.Path(os.environ['RUNNER_TEMP'])/'windows-release-smoke-evidence'/'exact-release-package.sh').write_text(script)
+          subprocess.run(['bash', '-e', '-c', script], check=True)
+          out = pathlib.Path(os.environ['RUNNER_TEMP'])/'windows-release-smoke-evidence'
+          shutil.copyfile('mcsa-windows-x64.zip', out/'mcsa-windows-x64.zip')
+          shutil.copyfile('checksums-mcsa-windows-x64.txt', out/'checksums-mcsa-windows-x64.txt')
+          PY_PACKAGE
+      - name: Upload actual EXE, package, raw logs and observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-regression-smoke
+          path: ${{ runner.temp }}/windows-release-smoke-evidence/
+          if-no-files-found: error

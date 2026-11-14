@@ -34,6 +34,10 @@ impl StartupGuard {
 
 impl Drop for StartupGuard {
     fn drop(&mut self) {
+        #[cfg(windows)]
+        if let Some(lock) = &self.lock {
+            let _ = lock.unlock();
+        }
         #[cfg(unix)]
         if let Some(lock) = &self.lock {
             use std::os::fd::AsRawFd;
@@ -55,7 +59,7 @@ fn world_path(world: &Path) -> io::Result<PathBuf> {
 
 fn check_directory(world: &Path) -> io::Result<()> {
     match fs::symlink_metadata(world) {
-        Ok(metadata) if metadata.file_type().is_dir() => Ok(()),
+        Ok(metadata) if metadata.file_type().is_dir() && !is_reparse_point(&metadata) => Ok(()),
         Ok(_) => Err(io::Error::new(io::ErrorKind::InvalidInput,
             format!("мир {} должен быть обычным каталогом, не ссылкой", world.display()))),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
@@ -90,11 +94,57 @@ fn lock_world(world: &Path) -> io::Result<Option<File>> {
     Ok(Some(file))
 }
 
-#[cfg(not(unix))]
-fn lock_world(_world: &Path) -> io::Result<Option<File>> {
-    // Не выдаём открытый файл за межпроцессный замок. Переносы и снимки
-    // пока не реализованы; обычный запуск сохраняет прежние ограничения.
-    Ok(None)
+// Windows junction и другие reparse points тоже не являются обычным путём мира.
+fn is_reparse_point(metadata: &fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        metadata.file_attributes() & 0x400 != 0 // FILE_ATTRIBUTE_REPARSE_POINT
+    }
+    #[cfg(not(windows))]
+    { let _ = metadata; false }
+}
+
+#[cfg(windows)]
+fn lock_world(world: &Path) -> io::Result<Option<File>> {
+    use std::os::windows::fs::OpenOptionsExt;
+
+    let mut name = std::ffi::OsString::from(".mcsa-");
+    name.push(world.file_name().expect("проверенное имя мира"));
+    name.push(".lock");
+    let path = world.with_file_name(name);
+    // OPEN_REPARSE_POINT: проверяем сам объект, а не цель ссылки.
+    // Без FILE_SHARE_DELETE занятый файл нельзя удалить/переименовать и подменить.
+    let file = fs::OpenOptions::new().read(true).write(true).create(true).truncate(false)
+        .share_mode(0x1 | 0x2).custom_flags(0x0020_0000).open(&path)?;
+    let metadata = file.metadata()?;
+    if !metadata.file_type().is_file() || is_reparse_point(&metadata) {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput,
+            format!("замок мира {} должен быть обычным файлом", path.display())));
+    }
+    // std использует исключительный LockFileEx без ожидания, не просто открытый файл.
+    match file.try_lock() {
+        Ok(()) => Ok(Some(file)),
+        Err(std::fs::TryLockError::WouldBlock) => Err(io::Error::new(io::ErrorKind::WouldBlock,
+            format!("папка мира {} уже занята другим процессом", world.display()))),
+        Err(std::fs::TryLockError::Error(error)) => Err(error),
+    }
+}
+
+#[cfg(not(any(unix, windows)))]
+fn lock_world(_world: &Path) -> io::Result<Option<File>> { Ok(None) }
+
+fn sync_created_world_directory(world: &Path) -> io::Result<()> {
+    #[cfg(not(windows))]
+    { File::open(world)?.sync_all() }
+    #[cfg(windows)]
+    {
+        // Windows File::open не открывает каталоги. sync_all файла манифеста выше
+        // обязателен; Unix-гарантию fsync каталога здесь не обещаем. Переносы и
+        // снимки по-прежнему доступны только на Linux.
+        let _ = world;
+        Ok(())
+    }
 }
 
 /// Не создаёт world и не маркирует неизвестные сохранения. Единственное
@@ -146,7 +196,7 @@ pub(crate) fn prepare_for_version(world: &Path, version: mcsa_protocol::JavaVers
             let mut file = fs::OpenOptions::new().write(true).create_new(true).open(world.join(profile::MANIFEST_NAME))?;
             file.write_all(&serde_json::to_vec(&manifest).map_err(io::Error::other)?)?;
             file.sync_all()?;
-            File::open(&world)?.sync_all()?;
+            sync_created_world_directory(&world)?;
             manifest
         }
     };
