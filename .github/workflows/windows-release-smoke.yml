@@ -180,7 +180,7 @@ jobs:
       - name: Test Windows world locks including rival child process
         shell: pwsh
         run: |
-          cargo test --release --locked --lib world::startup::tests -- --nocapture 2>&1 | Tee-Object "$env:RUNNER_TEMP/windows-release-smoke-evidence/cargo-test.log"
+          cargo test --release --locked --bin mcsheriffanya world::startup::tests -- --nocapture 2>&1 | Tee-Object "$env:RUNNER_TEMP/windows-release-smoke-evidence/cargo-test.log"
           if ($LASTEXITCODE -ne 0) { throw "cargo test failed: $LASTEXITCODE" }
       - name: Build actual candidate
         shell: pwsh
