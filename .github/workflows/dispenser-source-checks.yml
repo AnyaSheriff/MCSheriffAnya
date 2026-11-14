@@ -49,16 +49,6 @@ jobs:
         run: |
           set -o pipefail
           cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee dispenser-source-evidence/clippy.log
-      - name: Full default workspace tests
-        shell: bash
-        run: |
-          set -o pipefail
-          cargo test --release --locked --workspace 2>&1 | tee dispenser-source-evidence/default-tests.log
-      - name: Full no-default workspace tests
-        shell: bash
-        run: |
-          set -o pipefail
-          cargo test --release --locked --workspace --no-default-features 2>&1 | tee dispenser-source-evidence/no-default-tests.log
       - name: Build ordinary runtime
         shell: bash
         run: |
@@ -71,6 +61,16 @@ jobs:
         run: |
           python3 -B -m unittest discover -s tools/protocol-bridge -p test_level_events_original.py -v
           python3 -B tools/protocol-bridge/probe_level_events_candidate.py --binary dispenser-source-evidence/runtime-elf --output "$RUNNER_TEMP/level-events-candidate"
+      - name: Full default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace 2>&1 | tee dispenser-source-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features 2>&1 | tee dispenser-source-evidence/no-default-tests.log
       - name: Preserve actual candidate selected packets and logs
         if: always()
         run: |

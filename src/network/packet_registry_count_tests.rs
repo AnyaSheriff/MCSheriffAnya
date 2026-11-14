@@ -51,7 +51,9 @@ async fn ordinary_jukebox_song_reaches_774_but_unadvertised_bounce_is_refused() 
         out.send(&body).await.unwrap();
         let mut bytes = out.queued();
         let packet = read_packet(&mut bytes).await.unwrap();
-        assert_eq!(packet.id as u32, ids::translate(RegistryKind::PlayClientbound, wire::INTERNAL, version, 0x2e).unwrap());
+        // Pinned774 protocol.json: world_event=0x2d. Старый клиент идёт
+        // через отдельный client_774, не основной ids::translate775/777.
+        assert_eq!(packet.id, 0x2d);
         assert_eq!(packet.payload(), &body[1..]);
         assert!(bytes.is_empty());
         let mut rejected = Outgoing::capture_content(version, content);
