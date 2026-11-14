@@ -206,14 +206,16 @@ MCSheriffAnya — независимая реализация серверног
 ## Скачать
 
 Готовые сборки для Linux, Windows и macOS (Apple Silicon и Intel) лежат на
-странице [Releases](https://github.com/MCSheriffAnya-Rust/MCSheriffAnya/releases).
-Скачайте архив под свою систему, распакуйте и запустите `mcsheriffanya`
-(на Windows `mcsheriffanya.exe`) из терминала. Rust не нужен. При первом
-запуске рядом с программой создаются настройки и мир. Порты: `25565` (Java)
+странице [Releases](https://github.com/AnyaSheriff/MCSheriffAnya/releases).
+На Windows x64 скачайте `mcsa-windows-x64.zip`, распакуйте целиком и
+запустите `start.cmd`. Окно останется открытым и покажет ошибку, если запуск
+не удался. На Linux и macOS распакуйте архив своей системы и запустите
+`./mcsa` из терминала. Rust не нужен. При первом запуске рядом с программой
+создаются настройки и мир. Порты: `25565` (Java)
 и `19132/UDP` (Bedrock). В Windows консоль читает команды целыми строками
 (без живой строки ввода), в Linux и macOS строка ввода полная.
 
-Для Linux ARM64 выбирайте архив с `aarch64-unknown-linux-gnu` в имени.
+Для Linux ARM64 выбирайте архив `mcsa-linux-arm64.tar.gz`.
 Сборка использует glibc (Ubuntu 22.04 или новее, Debian 12 или новее);
 Для прямого запуска в Android/Termux нужна отдельная сборка Bionic;
 подробнее — [Android/Termux](docs/android.md).

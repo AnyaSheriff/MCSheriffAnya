@@ -202,14 +202,16 @@ verification. Earlier tick-by-tick 26.1.2 results do not establish full 26.3 par
 ## Download
 
 Ready-made builds for Linux, Windows and macOS (Apple Silicon and Intel) are
-on the [Releases](https://github.com/MCSheriffAnya-Rust/MCSheriffAnya/releases) page.
-Download the archive for your system, unpack it and run `mcsheriffanya`
-(`mcsheriffanya.exe` on Windows) from a terminal. No Rust is needed. The first
-start creates the config and the world next to the binary. Ports: `25565`
+on the [Releases](https://github.com/AnyaSheriff/MCSheriffAnya/releases) page.
+On Windows x64, download `mcsa-windows-x64.zip`, extract the whole archive
+and run `start.cmd`. The window stays open to show any startup error.
+On Linux and macOS, extract the archive for your system and run `./mcsa`
+from a terminal. No Rust is needed. The first start creates the config and
+the world next to the binary. Ports: `25565`
 (Java) and `19132/UDP` (Bedrock). On Windows the console reads whole lines
 (no live input line); on Linux and macOS it has the full line editor.
 
-For Linux ARM64, choose the archive containing `aarch64-unknown-linux-gnu`.
+For Linux ARM64, choose `mcsa-linux-arm64.tar.gz`.
 This build uses glibc (Ubuntu 22.04 or newer, Debian 12 or newer).
 Android/Termux uses Bionic; see [Android/Termux](docs/android.md) for the separate build.
 The ARM64 build includes WASM plugins, just like the regular build.
