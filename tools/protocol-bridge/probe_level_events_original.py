@@ -11,6 +11,7 @@ import socket
 import struct
 import subprocess
 import time
+import traceback
 import urllib.request
 
 from probe_gameplay import Client, connect, packed
@@ -124,7 +125,7 @@ def run(version, port, output, java):
         protocol, identity = inputs(version, folder)
         report.update(identity)
         (folder/'eula.txt').write_text('eula=true\n')
-        (folder/'server.properties').write_text(f'server-ip=127.0.0.1\nserver-port={port}\nonline-mode=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\ngamemode=creative\nmax-tick-time=0\n')
+        (folder/'server.properties').write_text(f'server-ip=127.0.0.1\nserver-port={port}\nonline-mode=false\nwhite-list=false\nenforce-secure-profile=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\ngamemode=creative\nmax-tick-time=0\n')
         with (folder/'server.log').open('w') as log:
             process = subprocess.Popen([java, '-Xmx1G', '-XX:ActiveProcessorCount=2', '-jar', 'server.jar', 'nogui'], cwd=folder, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, text=True, start_new_session=True)
             deadline = time.monotonic()+120
@@ -160,6 +161,7 @@ def run(version, port, output, java):
             report['passed'] = True
     except Exception as error:
         report['error'] = repr(error)
+        report['traceback'] = traceback.format_exc()
     finally:
         if client:
             report['selected_packets'] = client.selected
