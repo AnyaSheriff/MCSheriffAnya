@@ -447,7 +447,6 @@ fn negotiated_registry_counts(version: JavaVersion, preview: bool) -> io::Result
         JavaVersion::V26_1_2 => counts!(JavaVersion::V26_1_2),
         JavaVersion::V26_2 => counts!(JavaVersion::V26_2),
         JavaVersion::V26_3 => counts!(JavaVersion::V26_3),
-        _ => Err(io::Error::new(io::ErrorKind::InvalidData, "Версия реестров не поддерживается")),
     }
 }
 

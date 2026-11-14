@@ -6,6 +6,8 @@ on:
       - '**/*.rs'
       - '**/Cargo.toml'
       - 'tools/protocol-bridge/testdata/**'
+      - 'tools/protocol-bridge/probe_level_events_*.py'
+      - 'tools/protocol-bridge/test_level_events_original.py'
       - '.github/workflows/dispenser-source-checks.yml'
   workflow_dispatch:
 permissions:
@@ -64,6 +66,22 @@ jobs:
           cargo build --release --locked --bin mcsheriffanya 2>&1 | tee dispenser-source-evidence/build.log
           cp target/release/mcsheriffanya dispenser-source-evidence/runtime-elf
           git diff --exit-code
+      - name: Actual ordinary runtime774 and777 feedback plus clock reconnect
+        timeout-minutes: 8
+        run: |
+          python3 -B -m unittest discover -s tools/protocol-bridge -p test_level_events_original.py -v
+          python3 -B tools/protocol-bridge/probe_level_events_candidate.py --binary dispenser-source-evidence/runtime-elf --output "$RUNNER_TEMP/level-events-candidate"
+      - name: Preserve actual candidate selected packets and logs
+        if: always()
+        run: |
+          python3 -B - <<'PY_CANDIDATE'
+          import os,pathlib,shutil
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'level-events-candidate'
+          out=pathlib.Path('dispenser-source-evidence')
+          for p in root.rglob('*'):
+              if p.is_file() and p.name in ['observations.json','server.log','protocol.json']:
+                  shutil.copyfile(p,out/('candidate-'+p.parent.name+'-'+p.name))
+          PY_CANDIDATE
       - name: Preserve exact compiled source and receipts
         if: always()
         env:

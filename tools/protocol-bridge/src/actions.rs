@@ -195,7 +195,8 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
                 // они не отправляются (обратного аналога ещё не установлено).
                 2019|2020 if from == JavaVersion::V26_1_2 && to == JavaVersion::V26_3 && (0..=5).contains(&data) => data,
                 // Dispenser/jukebox: data0 — не ссылка на реестр. Только
-                // проверенные пары774/775 и775/777; другие значения закрыты.
+                // наблюдённые774 (dispenser-jukebox-feedback-774.json) и
+                // пары775/777; другие значения закрыты.
                 1000|1001|1011 if data == 0 && matches!((from,to),
                     (JavaVersion::V1_21_11,JavaVersion::V26_1_2) | (JavaVersion::V26_1_2,JavaVersion::V1_21_11) |
                     (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) => 0,
@@ -369,6 +370,24 @@ mod tests {
                 assert_eq!(output,body);
                 let mut invalid=body.clone();invalid[12..16].copy_from_slice(&255i32.to_be_bytes());
                 assert!(effects("world_event",&mut Cursor::new(&invalid),&mut Vec::new(),from,to,context).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn recorded_native_774_dispenser_and_stop_events_survive_the_adjacent_bridge() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../testdata/dispenser-jukebox-feedback-774.json")).unwrap();
+        let rows = fixture["events"].as_array().unwrap();
+        assert_eq!(rows.len(), 3);
+        for row in rows {
+            let body: Vec<u8> = row["payload_hex"].as_str().unwrap().as_bytes().as_chunks::<2>().0.iter()
+                .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap()).collect();
+            for (from, to) in [(OLD, JavaVersion::V1_21_11), (JavaVersion::V1_21_11, OLD)] {
+                let mut input = Cursor::new(&body);
+                let mut output = Vec::new();
+                effects("world_event", &mut input, &mut output, from, to, Context::default()).unwrap();
+                assert!(input.rest.is_empty());
+                assert_eq!(output, body);
             }
         }
     }

@@ -1,0 +1,26 @@
+{
+  "scope": "Scalar data0 level events actually recorded from opaque original1.21.11/native774; no all-version assertion",
+  "run": 43589125961,
+  "source_commit": "2e4673ef553313a40a0450b9518d9405201f7538",
+  "artifact_id": 14111852325,
+  "artifact_sha256": "e57f6adc2c7b55d45ae41e6f0eb5c3e5ea950a1dc5364fae12ec6cb3f0a0f4b8",
+  "protocol_sha256": "4108833ded28ee21786e4905d0a07b3a06164a3842a8d6bab98096fd3c2e28ab",
+  "jar_sha256": "f83b8e093865806f931c7e34aae41b177d4c076335263dd124c75d6d65dd1726",
+  "events": [
+    {
+      "phase": "empty",
+      "payload_hex": "000003e900000a00000280640000000000",
+      "effect": 1001
+    },
+    {
+      "phase": "item",
+      "payload_hex": "000003e800000a00000280640000000000",
+      "effect": 1000
+    },
+    {
+      "phase": "jukebox-stop",
+      "payload_hex": "000003f300000a80000280640000000000",
+      "effect": 1011
+    }
+  ]
+}
