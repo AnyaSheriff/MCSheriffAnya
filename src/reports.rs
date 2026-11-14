@@ -46,7 +46,7 @@ mod first_start_tests {
 }
 
 /// Куда отправляются отчёты.
-const RECEIVER: &str = "https://log.sheriffanya.ru:7443/v1/report";
+const RECEIVER: &str = "https://log.sheriffanya.ru:8444/v1/report";
 
 /// Папки отчётов: ждущие отправки и отправленные.
 const PENDING: &str = "logs/reports/pending";

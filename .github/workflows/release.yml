@@ -107,9 +107,32 @@ jobs:
             ${{ env.RAW_ASSET }}
             checksums-${{ matrix.name }}.txt
 
+  launcher:
+    name: Build and test own Java launcher
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Build own Java sources with strict warnings
+        run: MCSA_JDK_BIN="$JAVA_HOME/bin" bash tools/jar-launcher/build.sh
+      - name: Test both own launcher entry points
+        run: |
+          "$JAVA_HOME/bin/java" -jar tools/jar-launcher/dist/server.jar --launcher-self-test
+          "$JAVA_HOME/bin/java" -cp tools/jar-launcher/dist/ServerWrapper.jar pro.gravit.launcher.server.ServerWrapper --launcher-self-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: own-java-launcher
+          path: |
+            tools/jar-launcher/dist/server.jar
+            tools/jar-launcher/dist/ServerWrapper.jar
+          if-no-files-found: error
+
   release:
     name: Publish GitHub Release
-    needs: build
+    needs: [build, launcher]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -129,7 +152,7 @@ jobs:
           files = sorted(path for path in directory.iterdir() if path.is_file())
           names = ['mcsa-windows-x64', 'mcsa-linux-x64', 'mcsa-linux-x64-gnu',
                    'mcsa-linux-arm64', 'mcsa-macos-arm64', 'mcsa-macos-x64']
-          expected = {'Cargo.lock'}
+          expected = {'Cargo.lock', 'server.jar', 'ServerWrapper.jar'}
           for name in names:
               raw = name + ('.exe' if name == 'mcsa-windows-x64' else '.bin')
               archive = name + ('.zip' if name == 'mcsa-windows-x64' else '.tar.gz')

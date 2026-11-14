@@ -23,7 +23,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $out = Join-Path $env:RUNNER_TEMP 'windows-release-smoke-evidence'
           New-Item -ItemType Directory -Path $out -Force | Out-Null
-          Copy-Item .github/release.lock Cargo.lock
+          python tools/fetch-release-lock.py
+          if ($LASTEXITCODE -ne 0) { throw "Release lock preparation failed: $LASTEXITCODE" }
           $sha = (Get-FileHash Cargo.lock -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($sha -ne '6508363c084753b8b60f779a7b7fae6f4222fa6b6c900ddbaa6575ea36fbe1f8') { throw 'Pinned Cargo.lock mismatch' }
           Copy-Item Cargo.lock $out
@@ -206,7 +207,7 @@ jobs:
         run: |
           python - <<'PY_PACKAGE'
           import os, pathlib, subprocess
-          source = pathlib.Path('.github/workflows/release.yml').read_text()
+          source = pathlib.Path('.github/workflows/release.yml').read_text(encoding='utf-8')
           block = source.split('      - name: Package\n', 1)[1].split('      - uses: actions/upload-artifact', 1)[0]
           script = block.split('        run: |\n', 1)[1]
           script = '\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines())
@@ -216,8 +217,10 @@ jobs:
           target.mkdir(parents=True, exist_ok=True)
           import shutil
           shutil.copyfile('target/release/mcsheriffanya.exe', target/'mcsheriffanya.exe')
-          (pathlib.Path(os.environ['RUNNER_TEMP'])/'windows-release-smoke-evidence'/'exact-release-package.sh').write_text(script)
-          subprocess.run(['bash', '-e', '-c', script], check=True)
+          (pathlib.Path(os.environ['RUNNER_TEMP'])/'windows-release-smoke-evidence'/'exact-release-package.sh').write_text(script, encoding='utf-8')
+          bash = pathlib.Path(os.environ['ProgramFiles'])/'Git/bin/bash.exe'
+          assert bash.is_file(), 'Git Bash is missing'
+          subprocess.run([str(bash), '-e', '-c', script], check=True)
           out = pathlib.Path(os.environ['RUNNER_TEMP'])/'windows-release-smoke-evidence'
           shutil.copyfile('mcsa-windows-x64.zip', out/'mcsa-windows-x64.zip')
           shutil.copyfile('checksums-mcsa-windows-x64.txt', out/'checksums-mcsa-windows-x64.txt')

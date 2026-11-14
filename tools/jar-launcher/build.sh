@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
-JDK=/usr/lib/jvm/java-25-openjdk/bin
+JDK=${MCSA_JDK_BIN:-/usr/lib/jvm/java-25-openjdk/bin}
 mkdir -p dist
 BUILD_DIR=$(mktemp -d dist/build.XXXXXX)
 trap 'rm -rf -- "$BUILD_DIR"' EXIT

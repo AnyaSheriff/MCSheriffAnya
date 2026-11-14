@@ -11,7 +11,7 @@ import tomllib
 
 
 def install(root):
-    expected = (root / '.github/release-lock.sha256').read_text().strip()
+    expected = (root / '.github/release-lock.sha256').read_text(encoding='utf-8').strip()
     if not re.fullmatch('[0-9a-f]{64}', expected):
         raise RuntimeError('Invalid release lock SHA256 pin')
     destination = root / 'Cargo.lock'
@@ -44,7 +44,7 @@ def verify_and_copy(root, lock, destination, expected):
     data = lock.read_bytes()
     if hashlib.sha256(data).hexdigest() != expected:
         raise RuntimeError('Release lock SHA256 mismatch')
-    manifest = tomllib.loads((root / 'Cargo.toml').read_text())['package']
+    manifest = tomllib.loads((root / 'Cargo.toml').read_text(encoding='utf-8'))['package']
     packages = tomllib.loads(data.decode('utf-8'))['package']
     own = [package for package in packages if package['name'] == manifest['name']]
     if len(own) != 1 or own[0]['version'] != manifest['version']:
