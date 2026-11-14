@@ -13,6 +13,9 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
+      - name: Preserve pinned source bytes on Windows
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - name: Prepare evidence and pinned lock
         shell: pwsh

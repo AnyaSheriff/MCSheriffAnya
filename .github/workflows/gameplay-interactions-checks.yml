@@ -1,7 +1,7 @@
 name: "Gameplay interactions: complete source checks"
 on:
   push:
-    branches: ['fix/gameplay-interactions-20261113']
+    branches: ['fix/gameplay-interactions-20261113', 'chore/short-release-names-20261114']
     paths:
       - '**/*.rs'
       - 'src/**'
