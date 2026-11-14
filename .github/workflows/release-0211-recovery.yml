@@ -1,0 +1,222 @@
+name: Recover immutable 0.2.11 release
+
+on:
+  push:
+    branches: [release/0.2.11-alpha-recovery]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-0211-recovery
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RELEASE_SOURCE: 73ca2966b8bb500ff63c485634b26abad72cb089
+  RELEASE_TAG: v0.2.11-alpha
+
+jobs:
+  arm:
+    name: Recover original ARM64 build
+    runs-on: ubuntu-22.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v0.2.11-alpha
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Assert immutable source and exact lock
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_SOURCE"
+          python tools/fetch-release-lock.py
+          echo '6508363c084753b8b60f779a7b7fae6f4222fa6b6c900ddbaa6575ea36fbe1f8  Cargo.lock' | sha256sum -c -
+      - name: Install original ARM64 target
+        run: rustup target add aarch64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: aarch64-unknown-linux-gnu
+      - name: Build immutable source
+        run: cargo build --release --locked --target aarch64-unknown-linux-gnu
+      - name: Run exact immutable tag packaging script
+        shell: bash
+        run: |
+          python - <<'PY_PACKAGE'
+          import pathlib, subprocess
+          source = pathlib.Path('.github/workflows/release.yml').read_text(encoding='utf-8')
+          block = source.split('      - name: Package\n', 1)[1].split('      - uses: actions/upload-artifact', 1)[0]
+          script = block.split('        run: |\n', 1)[1]
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines())
+          for key, value in {'matrix.name': 'mcsa-linux-arm64', 'matrix.target': 'aarch64-unknown-linux-gnu', 'runner.os': 'Linux', 'matrix.archive': 'tar.gz'}.items():
+              script = script.replace('$' + '{{ ' + key + ' }}', value)
+          assert '$' + '{{' not in script
+          subprocess.run(['bash', '-e', '-c', script], check=True)
+          PY_PACKAGE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aarch64-unknown-linux-gnu
+          path: |
+            mcsa-linux-arm64.bin
+            mcsa-linux-arm64.tar.gz
+            checksums-mcsa-linux-arm64.txt
+          if-no-files-found: error
+
+  publish:
+    name: Publish all immutable-tag payloads
+    needs: arm
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v0.2.11-alpha
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Assert immutable tag checkout
+        run: test "$(git rev-parse HEAD)" = "$RELEASE_SOURCE"
+      - name: Gate original run and exact successful artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY_GATE'
+          import json, os, pathlib, time, urllib.request
+          repository = 'AnyaSheriff/MCSheriffAnya'
+          run_id = 43579742190
+          source = os.environ['RELEASE_SOURCE']
+          def get(path):
+              request = urllib.request.Request('https://api.github.com/repos/' + repository + path,
+                  headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json'})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          for attempt in range(60):
+              run = get('/actions/runs/' + str(run_id))
+              assert run['head_sha'] == source and run['repository']['full_name'] == repository
+              if run['status'] == 'completed':
+                  break
+              if attempt == 59:
+                  raise RuntimeError('Original release run still incomplete; refusing publication')
+              time.sleep(20)
+          assert run['conclusion'] == 'failure', 'Original failure must remain visible'
+          jobs = get('/actions/runs/' + str(run_id) + '/jobs?per_page=100&filter=latest')
+          assert jobs['total_count'] == len(jobs['jobs']) == 8
+          targets = ['x86_64-unknown-linux-gnu', 'x86_64-unknown-linux-musl',
+                     'x86_64-pc-windows-msvc', 'aarch64-apple-darwin', 'x86_64-apple-darwin']
+          expected = {'Build ' + target: 'success' for target in targets}
+          expected.update({'Build aarch64-unknown-linux-gnu': 'failure',
+                           'Build and test own Java launcher': 'success', 'Publish GitHub Release': 'skipped'})
+          assert {job['name']: job['conclusion'] for job in jobs['jobs']} == expected
+          arm = next(job for job in jobs['jobs'] if job['name'] == 'Build aarch64-unknown-linux-gnu')
+          assert arm['id'] == 132401704809
+          failed_steps = [step['name'] for step in arm['steps'] if step['conclusion'] == 'failure']
+          assert failed_steps == ['Use the locally verified release lock']
+          artifacts = get('/actions/runs/' + str(run_id) + '/artifacts?per_page=100')
+          assert artifacts['total_count'] == len(artifacts['artifacts']) == 6
+          assert {asset['name'] for asset in artifacts['artifacts']} == set(targets + ['own-java-launcher'])
+          for asset in artifacts['artifacts']:
+              assert not asset['expired'] and asset['size_in_bytes'] > 0
+              assert asset['workflow_run']['head_sha'] == source
+          pathlib.Path('original-run-gate.json').write_text(json.dumps({'run': run, 'jobs': jobs, 'artifacts': artifacts}, indent=2))
+          print('PASS original failed ARM-only run; five native builds and own launcher successful')
+          PY_GATE
+      - uses: actions/download-artifact@v4
+        with:
+          name: x86_64-unknown-linux-gnu
+          run-id: 43579742190
+          github-token: ${{ github.token }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: x86_64-unknown-linux-musl
+          run-id: 43579742190
+          github-token: ${{ github.token }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: x86_64-pc-windows-msvc
+          run-id: 43579742190
+          github-token: ${{ github.token }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: aarch64-apple-darwin
+          run-id: 43579742190
+          github-token: ${{ github.token }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: x86_64-apple-darwin
+          run-id: 43579742190
+          github-token: ${{ github.token }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: own-java-launcher
+          run-id: 43579742190
+          github-token: ${{ github.token }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: aarch64-unknown-linux-gnu
+          path: dist
+      - name: Run exact immutable tag lock and global checksum script
+        run: |
+          python - <<'PY_FINAL'
+          import os, pathlib, subprocess
+          source = pathlib.Path('.github/workflows/release.yml').read_text(encoding='utf-8')
+          block = source.split('      - name: Publish exact source lock and global checksums\n', 1)[1].split('      - uses: softprops/action-gh-release', 1)[0]
+          script = block.split('        run: |\n', 1)[1]
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in script.splitlines())
+          subprocess.run(['bash', '-e', '-c', script], check=True)
+          import hashlib
+          assert hashlib.sha256(pathlib.Path('dist/Cargo.lock').read_bytes()).hexdigest() == '6508363c084753b8b60f779a7b7fae6f4222fa6b6c900ddbaa6575ea36fbe1f8'
+          assert len(list(pathlib.Path('dist').iterdir())) == 22
+          assert len(pathlib.Path('dist/SHA256SUMS').read_text().splitlines()) == 21
+          PY_FINAL
+      - name: Refuse existing release assets or changed tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY_RELEASE'
+          import json, os, pathlib, urllib.error, urllib.request
+          root = 'https://api.github.com/repos/AnyaSheriff/MCSheriffAnya'
+          def get(path):
+              request = urllib.request.Request(root + path, headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json'})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          tag = get('/git/ref/tags/v0.2.11-alpha')['object']
+          if tag['type'] == 'tag':
+              tag = get('/git/tags/' + tag['sha'])['object']
+          assert tag['type'] == 'commit' and tag['sha'] == os.environ['RELEASE_SOURCE']
+          try:
+              release = get('/releases/tags/v0.2.11-alpha')
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+              release = None
+          if release is not None:
+              assert release['tag_name'] == 'v0.2.11-alpha'
+              assert release['assets'] == [], 'Refuse to replace or overwrite any asset'
+          pathlib.Path('release-before-recovery.json').write_text(json.dumps(release, indent=2))
+          PY_RELEASE
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.2.11-alpha
+          target_commitish: 73ca2966b8bb500ff63c485634b26abad72cb089
+          files: dist/*
+          overwrite_files: false
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+      - name: Retain recovery gate receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-0211-recovery-receipts
+          path: |
+            original-run-gate.json
+            release-before-recovery.json
+            dist/SHA256SUMS
+          if-no-files-found: warn

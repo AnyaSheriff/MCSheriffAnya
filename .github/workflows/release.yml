@@ -33,6 +33,10 @@ jobs:
         run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Use the locally verified release lock
         env:
           GH_TOKEN: ${{ github.token }}
@@ -141,6 +145,10 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Publish exact source lock and global checksums
         run: |
