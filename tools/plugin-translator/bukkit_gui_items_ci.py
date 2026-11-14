@@ -18,7 +18,7 @@ OUT = ROOT / 'bukkit-gui-items-evidence'
 CONTROL = ROOT / 'tmp/bukkit-gui-items-old-control'
 BASE = 'aa889fbc7b8a04643fdc9d91154f243805f2f423'
 CHEST = 'tools/plugin-translator/mcsa-bukkit/src/main/java/ru/mcsa/bukkit/ChestInventory.java'
-LOCK_SHA = 'e24fe5fda7b58f4367573e46866c48bd532d0ef70dac0da02dbbaf5b9c6d04e0'
+LOCK_SHA = '6508363c084753b8b60f779a7b7fae6f4222fa6b6c900ddbaa6575ea36fbe1f8'
 WORKFLOW = '.github/workflows/bukkit-gui-items-checks.yml'
 NODE = 'tools/blackbox/ci/attr-phase'
 
@@ -50,7 +50,7 @@ def source_paths():
         if name.startswith('tools/plugin-translator/') and p.suffix in {'.java', '.py', '.c', '.h', '.xml', '.json', '.cjs', '.yml', '.md'}:
             if not {'target', '.toolchain', '__pycache__'} & set(p.parts):
                 paths.add(name)
-    paths.update([WORKFLOW, NODE + '/package.json', NODE + '/package-lock.json', 'android/ota-pins/r8-native.lock'])
+    paths.update([WORKFLOW, NODE + '/package.json', NODE + '/package-lock.json', '.github/release.lock', '.github/release-lock.sha256'])
     return sorted(paths)
 
 
@@ -58,7 +58,7 @@ def prepare():
     OUT.mkdir(exist_ok=False)
     subprocess.run(['git', 'diff', '--exit-code'], cwd=ROOT, check=True)
     subprocess.run(['git', 'merge-base', '--is-ancestor', BASE, 'HEAD'], cwd=ROOT, check=True)
-    lock = ROOT / 'android/ota-pins/r8-native.lock'
+    lock = ROOT / '.github/release.lock'
     if digest(lock) != LOCK_SHA:
         raise ValueError('unexpected tested root dependency lock')
     # Cargo.lock не отслеживается; меняется только в одноразовом checkout CI.

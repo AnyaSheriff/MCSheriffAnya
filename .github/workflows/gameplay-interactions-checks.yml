@@ -13,7 +13,7 @@ on:
       - '**/Cargo.lock'
       - 'wit/**'
       - 'plugins-examples/**'
-      - 'android/ota-pins/r8-native.lock'
+      - '.github/release.lock'
       - 'tools/blackbox/ci/simulation-distance-two-runtime.lock'
   workflow_dispatch:
 permissions:
@@ -39,7 +39,7 @@ jobs:
           set -o pipefail
           mkdir -p interactions-evidence
           cp .github/workflows/gameplay-interactions-checks.yml interactions-evidence/workflow-source.yml
-          cp android/ota-pins/r8-native.lock Cargo.lock
+          cp .github/release.lock Cargo.lock
           python3 -B - <<'PY'
           import hashlib, json, shutil
           from pathlib import Path
@@ -68,7 +68,7 @@ jobs:
           PY
           python3 -B - <<'PY'
           import hashlib, sys
-          expected = 'e24fe5fda7b58f4367573e46866c48bd532d0ef70dac0da02dbbaf5b9c6d04e0'
+          expected = '6508363c084753b8b60f779a7b7fae6f4222fa6b6c900ddbaa6575ea36fbe1f8'
           digest = hashlib.sha256(open('Cargo.lock','rb').read()).hexdigest()
           if digest != expected: sys.exit(f'unexpected dependency lock digest: {digest}')
           print('dependency lock digest verified')

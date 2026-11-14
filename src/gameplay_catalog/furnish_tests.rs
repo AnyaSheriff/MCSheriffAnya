@@ -27,7 +27,8 @@ fn ids_continue_after_poplar_boats_and_match_the_pinned_777_tables() {
     let rule = blocks::orientation_of(state).unwrap();
     assert_eq!((rule.value(state, "part"), rule.value(state, "occupied"), rule.value(state, "facing")), (Some("foot"), Some("false"), Some("north")));
     // Сверка с pinned JSON 777 (если лежит на машине).
-    let candidate = std::path::Path::new(env!("HOME")).join(".local/share/mcsa-handoff/local/probe/candidate-json");
+    let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) else { return; };
+    let candidate = std::path::PathBuf::from(home).join(".local/share/mcsa-handoff/local/probe/candidate-json");
     let (Ok(blocks_json), Ok(items_json)) = (std::fs::read_to_string(candidate.join("blocks.json")), std::fs::read_to_string(candidate.join("items.json"))) else { return; };
     let blocks_json: Vec<serde_json::Value> = serde_json::from_str(&blocks_json).unwrap();
     let items_json: Vec<serde_json::Value> = serde_json::from_str(&items_json).unwrap();

@@ -19,11 +19,13 @@
 // debug=true в config/mcsa.properties.
 
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(unix)]
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::io::IsTerminal;
 use crate::colors::ConsoleColors;
 
 /// Что печатается, если время у системы спросить не удалось.
+#[cfg(unix)]
 const UNKNOWN_TIME: &str = "--:--:--";
 
 /// Включён ли подробный лог. Задаётся один раз при запуске из настроек

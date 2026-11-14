@@ -23,14 +23,16 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $out = Join-Path $env:RUNNER_TEMP 'windows-release-smoke-evidence'
           New-Item -ItemType Directory -Path $out -Force | Out-Null
-          Copy-Item android/ota-pins/r8-native.lock Cargo.lock
+          Copy-Item .github/release.lock Cargo.lock
           $sha = (Get-FileHash Cargo.lock -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($sha -ne 'e24fe5fda7b58f4367573e46866c48bd532d0ef70dac0da02dbbaf5b9c6d04e0') { throw 'Pinned Cargo.lock mismatch' }
+          if ($sha -ne '6508363c084753b8b60f779a7b7fae6f4222fa6b6c900ddbaa6575ea36fbe1f8') { throw 'Pinned Cargo.lock mismatch' }
           Copy-Item Cargo.lock $out
           @{ source = (git rev-parse HEAD); lockSha256 = $sha; runnerOs = [Environment]::OSVersion.VersionString; scope = 'Hosted Windows with preinstalled VC runtime; clean physical Win10 not proven' } | ConvertTo-Json | Set-Content "$out/source.json"
       - name: Install NASM
         run: choco install nasm -y --no-progress
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - name: Prepare bounded raw protocol smoke script
         shell: pwsh
         run: |

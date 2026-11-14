@@ -9,7 +9,6 @@ fn row(name: &str) -> &'static SlabDescriptor { MINERALS.iter().find(|row| row.n
 
 #[test]
 fn ids_are_appended_without_gaps_and_match_the_pinned_777_tables() {
-    let candidate = std::path::Path::new(env!("HOME")).join(".local/share/mcsa-handoff/local/probe/candidate-json");
     assert_eq!(MINERALS.len(), 28);
     assert_eq!(MINERALS[0].item, WOOL_STAIRS[15].item + 1);
     assert_eq!(MINERALS[0].block, WOOL_STAIRS[15].block + 1);
@@ -26,6 +25,8 @@ fn ids_are_appended_without_gaps_and_match_the_pinned_777_tables() {
         assert_eq!(PREVIEW.stack_size(row.item), Ok(64));
     }
     // Номера 777 сверяются с файлами, если они есть на этой машине.
+    let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) else { return; };
+    let candidate = std::path::PathBuf::from(home).join(".local/share/mcsa-handoff/local/probe/candidate-json");
     let (Ok(blocks), Ok(items)) = (std::fs::read_to_string(candidate.join("blocks.json")), std::fs::read_to_string(candidate.join("items.json"))) else { return; };
     let blocks: Vec<serde_json::Value> = serde_json::from_str(&blocks).unwrap();
     let items: Vec<serde_json::Value> = serde_json::from_str(&items).unwrap();
