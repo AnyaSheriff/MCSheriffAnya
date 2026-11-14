@@ -413,6 +413,44 @@ pub(super) fn legacy_enchantments() -> &'static [&'static str] {
     &NAMES
 }
 
+// Числа берём из того же набора, который Configuration отправляет этому
+// клиенту. Например, bounce существует в776/777, но не в774.
+fn negotiated_registry_counts(version: JavaVersion, preview: bool) -> io::Result<&'static [(&'static str, u32)]> {
+    type Counts = Vec<(&'static str, u32)>;
+    fn build(version: JavaVersion, preview: bool) -> io::Result<Counts> {
+        super::configuration::registry_bundle_for(version, preview)?.into_iter().map(|registry| {
+            let name = super::configuration::REQUIRED_REGISTRIES.iter().map(|(name, _)| *name)
+                .chain(["minecraft:damage_type", "minecraft:block_transformer", "minecraft:decorated_pot_pattern"])
+                .find(|name| *name == registry.name)
+                .ok_or_else(|| io::Error::other("Неизвестное имя согласованного реестра"))?;
+            Ok((name, registry.entries.len() as u32))
+        }).collect()
+    }
+    // Конечный кеш: набор создаётся один раз на версию/профиль, не на пакет.
+    macro_rules! counts {
+        ($version:expr) => {{
+            static COUNTS: std::sync::LazyLock<[io::Result<Counts>; 2]> =
+                std::sync::LazyLock::new(|| [build($version, false), build($version, true)]);
+            COUNTS[usize::from(preview)].as_ref().map(|counts| counts.as_slice())
+                .map_err(|_| io::Error::other("Не удалось получить согласованные размеры реестров"))
+        }};
+    }
+    match version {
+        // У340 нет Configuration; отдельный старый кодек не использует эти ID.
+        JavaVersion::V1_12_2 => Ok(&[]),
+        JavaVersion::V1_21_4 => counts!(JavaVersion::V1_21_4),
+        JavaVersion::V1_21_5 => counts!(JavaVersion::V1_21_5),
+        JavaVersion::V1_21_6 => counts!(JavaVersion::V1_21_6),
+        JavaVersion::V1_21_8 => counts!(JavaVersion::V1_21_8),
+        JavaVersion::V1_21_9 => counts!(JavaVersion::V1_21_9),
+        JavaVersion::V1_21_11 => counts!(JavaVersion::V1_21_11),
+        JavaVersion::V26_1_2 => counts!(JavaVersion::V26_1_2),
+        JavaVersion::V26_2 => counts!(JavaVersion::V26_2),
+        JavaVersion::V26_3 => counts!(JavaVersion::V26_3),
+        _ => Err(io::Error::new(io::ErrorKind::InvalidData, "Версия реестров не поддерживается")),
+    }
+}
+
 fn item_context(content: mcsa_protocol::content::ContentCodec) -> mcsa_protocol::items::Context {
     // Оба профиля Configuration получают этот порядок; тест реестров это проверяет.
     mcsa_protocol::items::Context { shared_enchantment_count: Some(crate::stackdata::ENCHANTMENTS.len() as u32), content }
@@ -560,12 +598,7 @@ impl<'a> Outgoing<'a> {
         if self.content.is_preview() && !matches!(self.version, JavaVersion::V26_1_2 | JavaVersion::V26_3) && !self.probe_776 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
         }
-        // Оба Configuration-профиля используют REQUIRED_REGISTRIES в том же
-        // порядке; имя/число записей ограничивает динамические metadata ID.
-        static COUNTS: std::sync::LazyLock<Vec<(&'static str,u32)>> = std::sync::LazyLock::new(||
-            super::configuration::REQUIRED_REGISTRIES.iter().map(|(name,entries)| (*name,entries.len() as u32))
-                .chain(std::iter::once(("minecraft:damage_type", super::configuration::DAMAGE_TYPES.len() as u32))).collect());
-        context.metadata_registry_counts = &COUNTS;
+        context.metadata_registry_counts = negotiated_registry_counts(self.version, self.content.is_preview())?;
         if self.probe_776 {
             let adapter=if self.version==JavaVersion::V1_21_4 {mcsa_protocol::client_769::clientbound} else if self.version==JavaVersion::V1_21_5 {mcsa_protocol::client_770::clientbound} else if self.version==JavaVersion::V1_21_6 {mcsa_protocol::client_771::clientbound} else if self.version==JavaVersion::V1_21_8 {mcsa_protocol::client_772::clientbound} else if self.version==JavaVersion::V1_21_9 {mcsa_protocol::client_773::clientbound} else if self.version==JavaVersion::V1_21_11 {mcsa_protocol::client_774::clientbound} else {mcsa_protocol::client_776::clientbound};
             let body = adapter(&mut self.entities, body, context).map_err(translate_error)?;
@@ -1254,3 +1287,7 @@ impl Drop for TimingSpan {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "packet_registry_count_tests.rs"]
+mod registry_count_tests;

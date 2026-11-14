@@ -1,0 +1,86 @@
+name: Dispenser and jukebox source checks
+on:
+  push:
+    branches: ['fix/dispenser-events-20261114']
+    paths:
+      - '**/*.rs'
+      - '**/Cargo.toml'
+      - 'tools/protocol-bridge/testdata/**'
+      - '.github/workflows/dispenser-source-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Install exact tested dependency lock
+        run: |
+          mkdir -p dispenser-source-evidence
+          python3 -B tools/fetch-release-lock.py
+          cp Cargo.lock dispenser-source-evidence/Cargo.lock
+          rustc -vV > dispenser-source-evidence/rustc-version.log
+          cargo -vV > dispenser-source-evidence/cargo-version.log
+      - name: Prepare mandatory own WASM components
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output dispenser-source-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 2>&1 | tee dispenser-source-evidence/examples-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output dispenser-source-evidence
+      - name: Strict workspace Clippy
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee dispenser-source-evidence/clippy.log
+      - name: Full default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace 2>&1 | tee dispenser-source-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features 2>&1 | tee dispenser-source-evidence/no-default-tests.log
+      - name: Build ordinary runtime
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee dispenser-source-evidence/build.log
+          cp target/release/mcsheriffanya dispenser-source-evidence/runtime-elf
+          git diff --exit-code
+      - name: Preserve exact compiled source and receipts
+        if: always()
+        env:
+          MCSA_JOB_STATUS: ${{ job.status }}
+        run: |
+          python3 -B - <<'PY'
+          import hashlib,json,os,subprocess
+          from pathlib import Path
+          out=Path('dispenser-source-evidence');out.mkdir(exist_ok=True)
+          subprocess.run(['git','archive','--format=tar.gz','--output='+str(out/'source.tar.gz'),'HEAD'],check=True)
+          files={p.name:{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in out.iterdir() if p.is_file()}
+          (out/'receipt.json').write_text(json.dumps({'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'job_status':os.environ['MCSA_JOB_STATUS'],'files':files,'scope':'Full source checks only; no physical client or Android execution'},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dispenser-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dispenser-source-evidence/
+          retention-days: 7
+          if-no-files-found: error
