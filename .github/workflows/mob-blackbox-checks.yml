@@ -1,13 +1,8 @@
 name: Mob paired observations 777
 on:
   push:
-    branches: [test/mob-blackbox-20261114]
+    branches: [test/mob-blackbox-20261114, test/mob-blackbox-full-20261115]
   workflow_dispatch:
-    inputs:
-      suite:
-        description: Run all descriptions in eight shards (only after reviewed preflight)
-        type: boolean
-        default: false
 permissions:
   contents: read
   actions: read
@@ -20,7 +15,7 @@ jobs:
     steps:
       - id: plan
         env:
-          FULL_SUITE: ${{ inputs.suite || false }}
+          FULL_SUITE: ${{ github.ref == 'refs/heads/test/mob-blackbox-full-20261115' }}
         run: |
           if [ "$FULL_SUITE" = true ]; then
             echo 'matrix=[0,1,2,3,4,5,6,7]' >> "$GITHUB_OUTPUT"

@@ -20,9 +20,11 @@ def common_cases():
             return dict(id=name, commands=list(commands), ticks=ticks)
         add('controlled_spawn', [phase('spawn', ticks=3)],
             ['type', 'position', 'rotation', 'health'], ['spawn_observed'])
-        add('turn', [phase('before'), phase('turned', ['tp {target} {x} {y} {z} 127 0'])],
+        # Проверяем конечное состояние, не задержку команды: два полных
+        # трёхтактовых цикла сетевого слежения, одинаково у обеих сторон.
+        add('turn', [phase('before'), phase('turned', ['tp {target} {x} {y} {z} 127 0'], ticks=6)],
             ['position', 'rotation'], ['spawn_observed', 'rotation_changed'])
-        add('teleport', [phase('before'), phase('moved', ['tp {target} 7.5 103 2.5 37 0'])],
+        add('teleport', [phase('before'), phase('moved', ['tp {target} 7.5 103 2.5 37 0'], ticks=6)],
             ['position', 'rotation'], ['spawn_observed', 'position_changed'])
         # Это уход из области слежения, а не смерть. Возврат доказывает сохранение сущности.
         add('tracking_leave_return', [phase('before'),

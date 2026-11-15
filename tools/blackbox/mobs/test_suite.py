@@ -7,6 +7,15 @@ from common_cases import common_cases
 from special_cases import special_cases
 
 class SuiteTests(unittest.TestCase):
+    def test_controlled_actions_allow_complete_tracking_cycles(self):
+        # Регрессия собственного CI43712687277: двух тиков не хватало
+        # для гарантированной сверки; это проверка состояния, не задержки.
+        for case in common_cases():
+            if case['family'] in ('turn','teleport'):
+                action=case['phases'][-1]
+                self.assertTrue(action['commands'])
+                self.assertGreaterEqual(action['ticks'],6)
+
     def test_preflight_and_eight_disjoint_shards(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)

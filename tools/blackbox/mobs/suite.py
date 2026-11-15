@@ -11,8 +11,8 @@ from catalog import catalog, coverage_matrix
 from common_cases import common_cases
 from special_cases import special_cases
 
-BASE = '95814d8287ce6f0c01215459b6f78c3055e2a2ad'
-ELF_SHA = '588d652b0c2ef64d058afb3c1c78f541a6873dd0c66b37c1384c8c2995e9049c'
+BASE = '0d3db6fe24bbde186af9d2d4cb62f64d12ae7285'
+ELF_SHA = '4a8d148c670b3c2813778a50aa8925ff339d3e36ef1fe5828382f7b6588fbfe4'
 PREFLIGHT = ('cow.controlled_spawn','cow.turn','cow.teleport','cow.tracking_leave_return',
              'cow.damage','cow.death','salmon.controlled_spawn','salmon.damage',
              'special-pose-negative','special-water-salmon-ai',
