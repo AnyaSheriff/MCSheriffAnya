@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 /** Подпись проверяется над исходными байтами payload, до доверия к полям JSON. */
 final class CoreManifest {
     static final long MAX_MODULE=128L*1024*1024;
+    final SettingsSchema settings;
     final byte[] envelope;final int revision,minApp,hostApi;final String version,source,buildId,notes,abi,url,sha256;final long bytes;
     private CoreManifest(byte[] raw,JSONObject data,String selectedAbi,int appVersion) throws Exception {
         if(data.getInt("schema")!=1||!"preview".equals(data.getString("channel"))||!"26.3".equals(data.getString("game"))||data.getInt("data_compat")!=1) throw new IOException("Эта версия ядра требует другого приложения");
@@ -19,6 +20,7 @@ final class CoreManifest {
         if(!selectedAbi.equals("arm64-v8a")&&!selectedAbi.equals("armeabi-v7a")&&!selectedAbi.equals("x86_64")) throw new IOException("Архитектура устройства не поддерживается");
         JSONObject file=data.getJSONObject("packages").getJSONObject(selectedAbi);abi=selectedAbi;url=file.getString("url");https(url);bytes=file.getLong("bytes");sha256=file.getString("sha256");
         if(bytes<1_000_000||bytes>MAX_MODULE||!sha256.matches("[0-9a-f]{64}")) throw new IOException("Неверные параметры файла ядра");
+        settings=SettingsSchema.parse(data);
         envelope=raw.clone();
     }
     static CoreManifest parse(byte[] raw,byte[] publicKey,String abi,int appVersion) throws IOException {

@@ -1,0 +1,140 @@
+{
+  "format": 2,
+  "api": 24,
+  "host_api": 1,
+  "core_revision": 9,
+  "runtimes": {
+    "armeabi-v7a": {
+      "host": {
+        "bytes": 6416,
+        "sha256": "c9d53da3b9af4c7b885896c4dc0d7b9a2b84c4592694e8805d6374b9eb930c86",
+        "bits": 32,
+        "machine": 40,
+        "load_alignments": [
+          16384,
+          16384,
+          16384
+        ],
+        "interpreter": "/system/bin/linker"
+      },
+      "core": {
+        "bytes": 21691564,
+        "sha256": "4c125a2fe93bfccbb9c84f6448c7a214ce02ac9293793d48a2041c1af76e5c23",
+        "bits": 32,
+        "machine": 40,
+        "load_alignments": [
+          16384,
+          16384,
+          16384
+        ],
+        "interpreter": null
+      },
+      "features": "no-default, plugins disabled",
+      "build_id": "c5705a8796f97b6ac20cceedeaa74d33cf60e9e9-r9"
+    },
+    "arm64-v8a": {
+      "host": {
+        "bytes": 8072,
+        "sha256": "0a0a77a33038419395682dd61567d77e7f53a08c830dcc3faed2708e51aa8c3a",
+        "bits": 64,
+        "machine": 183,
+        "load_alignments": [
+          16384,
+          16384,
+          16384
+        ],
+        "interpreter": "/system/bin/linker64"
+      },
+      "core": {
+        "bytes": 43169784,
+        "sha256": "1c0324df7e2c5cdd4332a5ff9ca604598d7d63b45f103042446b226235b757e8",
+        "bits": 64,
+        "machine": 183,
+        "load_alignments": [
+          16384,
+          16384,
+          16384
+        ],
+        "interpreter": null
+      },
+      "features": "default, plugins enabled",
+      "build_id": "c5705a8796f97b6ac20cceedeaa74d33cf60e9e9-r9"
+    },
+    "x86_64": {
+      "host": {
+        "bytes": 7504,
+        "sha256": "708f5803aa395df07de8c89bce031f3185d8e6e9974bf8180daeaa6fe4d7a074",
+        "bits": 64,
+        "machine": 62,
+        "load_alignments": [
+          16384,
+          16384,
+          16384
+        ],
+        "interpreter": "/system/bin/linker64"
+      },
+      "core": {
+        "bytes": 32211496,
+        "sha256": "d4ebbb30ca69c344292ad999b981251f96aad8efe94f28eafaa78b705b7a4665",
+        "bits": 64,
+        "machine": 62,
+        "load_alignments": [
+          16384,
+          16384,
+          16384
+        ],
+        "interpreter": null
+      },
+      "features": "no-default, plugins disabled",
+      "build_id": "c5705a8796f97b6ac20cceedeaa74d33cf60e9e9-r9"
+    }
+  },
+  "updates": {
+    "10": {
+      "build_id": "c5705a8796f97b6ac20cceedeaa74d33cf60e9e9-r10",
+      "runtimes": {
+        "armeabi-v7a": {
+          "bytes": 21691564,
+          "sha256": "bbcbcda9c828c1610e47e8eea77dd74ad6daa7a14bce31b03470036bf590ae35",
+          "bits": 32,
+          "machine": 40,
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "interpreter": null
+        },
+        "arm64-v8a": {
+          "bytes": 43169784,
+          "sha256": "d96b37ff625f576620dd264181a0c45cab1ca0e618adf34da50fe5bed6374e58",
+          "bits": 64,
+          "machine": 183,
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "interpreter": null
+        },
+        "x86_64": {
+          "bytes": 32211496,
+          "sha256": "2d6c834d28668efba6cf18e2b8c651f9b7c0d828eb74ee73145027893b65e931",
+          "bits": 64,
+          "machine": 62,
+          "load_alignments": [
+            16384,
+            16384,
+            16384
+          ],
+          "interpreter": null
+        }
+      }
+    }
+  },
+  "run_id": "43711537898",
+  "head": "c5705a8796f97b6ac20cceedeaa74d33cf60e9e9",
+  "artifact_name": "android-core-native-43711537898-1",
+  "artifact_sha256": "9bced65255d72396842b1ce86ce007fb6528c163cc071f1fd7ecba1fa71084c3",
+  "version": "0.2.11-alpha"
+}

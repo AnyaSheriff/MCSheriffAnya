@@ -25,4 +25,9 @@
     <item name="core_update_status" type="id" />
     <item name="core_selected_version" type="id" />
     <item name="core_update_progress" type="id" />
+    <item name="app_update_status" type="id" />
+    <item name="app_check_updates" type="id" />
+    <item name="app_download_update" type="id" />
+    <item name="app_install_update" type="id" />
+    <item name="app_cancel_install" type="id" />
 </resources>

@@ -57,7 +57,8 @@ public final class MainActivity extends AppCompatActivity {
     private int tab;
     private String group;
     private TextView status, log, backupStatus, onlineValue,tpsValue,cpuValue,ramValue,resources;
-    private TextView coreStatus,coreSelected,coreDetails;
+    private TextView coreStatus,coreSelected,coreDetails,appStatus;
+    private Button appCheck,appDownload,appInstall,appCancel;
     private Button coreCheck,coreApply,coreRollback;
     private com.google.android.material.progressindicator.LinearProgressIndicator coreProgress;
     private CoreUpdateStore coreViewStore;
@@ -147,7 +148,7 @@ public final class MainActivity extends AppCompatActivity {
         onlineValue=null;tpsValue=null;cpuValue=null;ramValue=null;resources=null;
         synchronized(HostState.LOCK) { HostState.dashboardVisible=tab==0&&getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED); }
         backupStatus=null; backupButtons.clear(); status=null; log=null; start=null; stop=null; save=null; send=null; editors.clear(); settings=null; shownRevision=-1;
-        coreStatus=null;coreSelected=null;coreDetails=null;coreCheck=null;coreApply=null;coreRollback=null;coreProgress=null;coreViewStore=null;
+        appStatus=null;appCheck=null;appDownload=null;appInstall=null;appCancel=null;coreStatus=null;coreSelected=null;coreDetails=null;coreCheck=null;coreApply=null;coreRollback=null;coreProgress=null;coreViewStore=null;
         container=column(); container.setBackgroundColor(BG); container.setPadding(dp(18),dp(12),dp(18),dp(8));
         container.setOnApplyWindowInsetsListener((view,insets)->{
             // В Android15+ target35 рисуется до краёв экрана; элементы остаются за пределами системных панелей.
@@ -172,7 +173,7 @@ public final class MainActivity extends AppCompatActivity {
         dashboard();
         LinearLayout address=card(); address.addView(text("Подключение",19,INK));
         try {
-            ServerSettings config=new ServerSettings(new File(getFilesDir(),"server"));
+            ServerSettings config=new ServerSettings(this,new File(getFilesDir(),"server"));
             String port=config.server.get("server-port","25565");
             address.addView(text("На этом телефоне: 127.0.0.1:"+port,16,INK));
             String ip=lanAddress();
@@ -224,12 +225,18 @@ public final class MainActivity extends AppCompatActivity {
         page.addView(text("Настройки",23,INK));
         if("Оформление".equals(group)) { appearance(); return; }
         if("Резервные копии".equals(group)) { backups(); return; }
+        if("Обновления".equals(group)) { updates(); return; }
+        if("Обновления приложения".equals(group)) { appUpdates(); return; }
         if("Обновления ядра".equals(group)) { coreUpdates(); return; }
         page.addView(text("Настройки сервера применятся при следующем запуске. Оформление можно менять во время игры.",14,MUTED));
-        try { settings=new ServerSettings(new File(getFilesDir(),"server")); }
+        try { settings=new ServerSettings(this,new File(getFilesDir(),"server")); }
         catch(IOException error) { page.addView(text(error.getMessage(),16,ERROR)); return; }
+        if(!settings.schemaDiagnostic().isEmpty()) page.addView(text(settings.schemaDiagnostic(),14,WARNING));
         if(group==null) {
-            for(String name:new String[]{"Оформление","Резервные копии","Обновления ядра","Сервер","Мир","Вход","Производительность","Сеть","Дополнительно"}) {
+            java.util.List<String> groups=new java.util.ArrayList<>();
+            java.util.Collections.addAll(groups,"Оформление","Резервные копии","Обновления");
+            groups.addAll(settings.groups());
+            for(String name:groups) {
                 LinearLayout card=card(); card.addView(button(name+"  ›",0,()->{ group=name; draw(); }));
             }
             page.addView(text("Версия игры: 26.3. Комментарии и остальные параметры в конфиге сохраняются.",14,MUTED)); return;
@@ -237,7 +244,7 @@ public final class MainActivity extends AppCompatActivity {
         page.addView(button("‹ Все разделы",0,()->leave(()->{group=null;draw();})));
         page.addView(text(group,20,INK));
         Map<String,String> values=restoredDraft==null?settings.values():restoredDraft; restoredDraft=null;
-        for(ServerSettings.Field f:ServerSettings.FIELDS) if(f.group.equals(group)) {
+        for(ServerSettings.Field f:settings.fields()) if(f.group.equals(group)) {
             LinearLayout card=card(); card.addView(text(f.title,17,INK)); card.addView(text(f.help,13,MUTED));
             String value=values.containsKey(f.key)?values.get(f.key):settings.value(f); View editor;
             if(f.toggle()) { MaterialSwitch toggle=new MaterialSwitch(this); toggle.setText("Включено"); toggle.setChecked(Boolean.parseBoolean(value)); editor=toggle; }
@@ -291,6 +298,63 @@ public final class MainActivity extends AppCompatActivity {
             recreate();
         }); colors.addView(dynamic);
         page.addView(text("Material Design 3 · MCSheriffAnya "+BuildConfig.VERSION_NAME,13,MUTED));
+    }
+    private void updates() {
+        page.addView(button("‹ Все разделы",0,()->{group=null;draw();}));
+        page.addView(text("Обновления",20,INK));
+        page.addView(button("Ядро сервера  ›",0,()->{group="Обновления ядра";draw();}));
+        page.addView(button("Приложение Android  ›",0,()->{group="Обновления приложения";draw();}));
+    }
+    private void appUpdates() {
+        AppUpdateStore.restore(this,()->{if(!isDestroyed()) update();});
+        page.addView(button("‹ Обновления",0,()->{group="Обновления";draw();}));
+        page.addView(text("Обновления приложения",20,INK));
+        page.addView(text("Установлено: "+BuildConfig.VERSION_NAME+". Android попросит подтвердить установку. Мир и настройки сохранятся. Перед установкой останови сервер; важный мир можно заранее экспортировать в разделе резервных копий.",14,MUTED));
+        appStatus=text(AppUpdateStore.message,14,MUTED);appStatus.setId(R.id.app_update_status);page.addView(appStatus);
+        appCheck=button("Проверить обновления приложения",R.id.app_check_updates,()->AppUpdateStore.check(this,()->{if(!isDestroyed()) update();}));page.addView(appCheck);
+        appDownload=button("Скачать приложение",R.id.app_download_update,()->AppUpdateStore.download(this,()->{if(!isDestroyed()) update();}));page.addView(appDownload);
+        appInstall=button("Установить приложение",R.id.app_install_update,this::installAppUpdate);page.addView(appInstall);
+        appCancel=button("Отменить ожидание установки",R.id.app_cancel_install,()->{AppUpdateStore.Installation pending=AppUpdateStore.currentInstallation();new Thread(()->{AppInstallSession.cancel(getApplicationContext(),pending,"Установка отменена. Можно попробовать снова.");runOnUiThread(()->{if(!isDestroyed()) update();});},"app-install-cancel").start();});page.addView(appCancel);
+        updateAppControls();
+    }
+    private void updateAppControls() {
+        if(appStatus==null) return;
+        AppUpdateManifest available=AppUpdateStore.available;
+        appStatus.setText(AppUpdateStore.message+(available==null?"":"\nВерсия: "+available.version+" · "+android.text.format.Formatter.formatFileSize(this,available.bytes)));
+        appCheck.setEnabled(!AppUpdateStore.busy);appDownload.setEnabled(!AppUpdateStore.busy&&available!=null);
+        appInstall.setText(AppUpdateStore.readyManifest==null?"Установить приложение":"Установить "+AppUpdateStore.readyManifest.version);
+        appInstall.setEnabled(AppUpdateStore.canInstall());
+        if(AppUpdateStore.hasInstallation()) { appInstall.setText("Подтвердить установку Android");appInstall.setEnabled(AppInstallSession.hasConfirmation()); }
+        appCancel.setVisibility(AppUpdateStore.hasInstallation()?View.VISIBLE:View.GONE);
+        if(hasWindowFocus()) showAppConfirmation(true);
+    }
+    private void installAppUpdate() {
+        if(AppUpdateStore.hasInstallation()) { showAppConfirmation(false);return; }
+        if(!AppUpdateStore.hasInstallation()&&!HostState.idle()) { alert("Сначала останови сервер и дождись завершения операций.");return; }
+        if(Build.VERSION.SDK_INT>=26&&!getPackageManager().canRequestPackageInstalls()) {
+            new MaterialAlertDialogBuilder(this).setTitle("Разрешить установку?").setMessage("Откроем настройки Android. Разреши установку из этого приложения, затем вернись и нажми «Установить приложение» ещё раз.")
+                .setNegativeButton("Отмена",null).setPositiveButton("Открыть настройки",(d,w)->{
+                    try { startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,android.net.Uri.parse("package:"+getPackageName()))); }
+                    catch(RuntimeException error) { alert("Открой настройки Android и разреши установку из MCSheriffAnya."); }
+                }).show();return;
+        }
+        final AppUpdateStore.Installation ticket;
+        try { ticket=AppUpdateStore.beginInstallation(this); }
+        catch(IOException error) { alert(error.getMessage());return; }
+        update();
+        // APK и операции сервера уже зарезервированы до повторной проверки подписи.
+        new Thread(()->{
+            try {
+                AppUpdateStore.verify(getApplicationContext(),ticket.apk,ticket.manifest);
+                AppInstallSession.commit(getApplicationContext(),ticket);
+            } catch(Exception error) { AppInstallSession.cancel(getApplicationContext(),ticket,"Проверка или подготовка APK не пройдена. Скачай обновление снова."); }
+            runOnUiThread(()->{if(!isDestroyed()) update();});
+        },"app-update-verify").start();
+    }
+    private void showAppConfirmation(boolean onlyUnshown) {
+        Intent confirmation=AppInstallSession.confirmation(onlyUnshown);if(confirmation==null) return;
+        try { startActivity(confirmation); }
+        catch(RuntimeException error) { AppInstallSession.cancel(this,AppUpdateStore.currentInstallation(),"Не удалось открыть установщик Android.");alert("Не удалось открыть установщик Android."); }
     }
     private void coreUpdates() {
         page.addView(button("‹ Все разделы",0,()->{group=null;draw();}));page.addView(text("Обновления ядра",20,INK));
@@ -381,7 +445,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private Map<String,String> edited() {
         Map<String,String> values=settings.values();
-        for(ServerSettings.Field f:ServerSettings.FIELDS) {
+        for(ServerSettings.Field f:settings.fields()) {
             View v=editors.get(f.key); if(v==null) continue;
             if(v instanceof CompoundButton) values.put(f.key,Boolean.toString(((CompoundButton)v).isChecked()));
             else if(v instanceof Spinner) values.put(f.key,f.choices[((Spinner)v).getSelectedItemPosition()]);
@@ -410,6 +474,7 @@ public final class MainActivity extends AppCompatActivity {
     }
     private void action(String action,String value) { Intent intent=new Intent(this,ServerService.class).setAction(action); if(value!=null) intent.putExtra("command",value); startService(intent); }
     private void update() {
+        if(AppUpdateStore.canReconcileInstallation()) AppInstallSession.reconcile(this);
         HostState.Phase phase; String message; long revision;
         synchronized(HostState.LOCK) { phase=HostState.phase;message=HostState.message;revision=HostState.revision; }
         String operation,backupMessage;long backupRevision;
@@ -417,6 +482,7 @@ public final class MainActivity extends AppCompatActivity {
         updateDashboard(phase);
         boolean idle=phase==HostState.Phase.STOPPED&&operation==null;
         updateCoreControls(phase,operation,idle);
+        updateAppControls();
         if(backupStatus!=null) {
             if(operation==null&&shownBackupRevision!=backupRevision) { draw();return; }
             backupStatus.setText(operation==null?backupMessage:operation);

@@ -40,6 +40,8 @@ import hashlib,json,os
 root=Path('apk-device-evidence/ota');proof=json.loads((root/'ota-test.json').read_text());security=json.loads((root/'ota-security.json').read_text())
 assert proof['api']==security['api']==int(os.environ['TEST_API']) and proof['abi']=='x86_64'
 assert all(proof[k] for k in ['no_apk_reinstall','world_retained','settings_retained','automatic_backup','ui_rollback','corrupt_module_rejected','interrupted_start_recovered','failed_start_recovered','running_install_rejected','replay_rejected','corrupt_pointer_recovered','read_only'])
+assert proof['dynamic_settings_visible'] and proof['dynamic_settings_read_only_visit'] and proof['schema_extra_fields']==4
+assert proof['rollback_dynamic_settings_absent'] and proof['rollback_schema_fields']==28
 pin=json.loads(Path('android/runtime-pin.json').read_text());update_pin=json.loads(Path(os.environ.get('CORE_UPDATE_PIN','android/runtime-pin.json')).read_text());revision=max(map(int,update_pin['updates']))
 assert proof['bundled_build']==pin['runtimes']['x86_64']['build_id'] and proof['updated_build']==update_pin['updates'][str(revision)]['build_id']
 assert proof['updated_status']['version']['protocol']==777 and proof['updated_status']['players']['max']==7

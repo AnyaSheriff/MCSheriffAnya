@@ -50,6 +50,23 @@ final class CoreUpdateStore {
         }
         return new Core(library,name,data.revision,data.version,data.buildId);
     }
+    /** Проверяется подпись небольшого описания; большой бинарный файл проверяется перед запуском. */
+    String settingsSelection() throws IOException { return pointer("active"); }
+    SettingsSchema selectedSettings() {
+        synchronized(STATE_IO) {
+            try {
+                String selected=pointer("active");if("bundled".equals(selected)) return SettingsSchema.base();
+                File root=new File(directory,selected);
+                if(!root.isDirectory()||!root.getCanonicalFile().equals(root.getAbsoluteFile())) return SettingsSchema.unavailable();
+                File description=new File(root,"manifest.json");
+                if(!description.getCanonicalFile().equals(description.getAbsoluteFile())) return SettingsSchema.unavailable();
+                CoreManifest data;
+                try(InputStream in=new FileInputStream(description)) { data=manifest(read(in,65536)); }
+                if(!selected.equals(name(data))) return SettingsSchema.unavailable();
+                return data.settings;
+            } catch(Exception invalid) { return SettingsSchema.unavailable(); }
+        }
+    }
     String version() {
         try { return slot(pointer("active"),false).version; }
         catch(Exception unavailable) { return BuildConfig.BUNDLED_CORE_VERSION; }
