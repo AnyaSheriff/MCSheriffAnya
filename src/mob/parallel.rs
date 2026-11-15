@@ -11,6 +11,7 @@ impl Default for Executor { fn default() -> Self { Self::new() } }
 impl Executor {
     pub fn new() -> Self { Self { workers: Vec::new(), width: 1, stats: Stats::default(), failed: false } }
     pub fn set_width(&mut self, width: usize) { self.width = width.clamp(1, 8); }
+    #[cfg(test)]
     pub fn width(&self) -> usize { self.width }
     pub fn spawn_failed(&self) -> bool { self.failed }
     pub fn begin_tick(&mut self) { self.stats = Stats { workers: self.workers.len(), ..Stats::default() }; }
@@ -39,7 +40,7 @@ impl Executor {
         if input.is_empty() { return Vec::new(); }
         let width = self.width.min(input.len());
         self.grow(width.saturating_sub(1));
-        let width = width.min(self.workers.len()+1);
+        let width = if self.failed { 1 } else { width.min(self.workers.len()+1) };
         if width == 1 { return input.into_iter().map(map).collect(); }
         let chunk_size = input.len().div_ceil(width);
         let mut source = input.into_iter();
@@ -120,6 +121,17 @@ mod tests {
         assert_eq!(executor.stats().jobs,1);
         assert_eq!(executor.stats().workers,3);
     }
+    #[test]
+    fn failed_executor_uses_only_tick_thread_even_with_existing_helpers() {
+        let mut executor = Executor::new(); executor.set_width(2);
+        executor.ordered_map(vec![0,1], |v| v);
+        executor.failed = true; executor.begin_tick();
+        let main = thread::current().id();
+        assert_eq!(executor.ordered_map(vec![0,1,2], move |v| (v, thread::current().id() == main)), [(0,true),(1,true),(2,true)]);
+        assert_eq!(executor.stats().jobs, 0);
+        assert!(!executor.should_parallel(100, 20000));
+    }
+
     #[test]
     fn panic_waits_for_workers_and_executor_remains_reusable() {
         let mut executor=Executor::new(); executor.set_width(2);

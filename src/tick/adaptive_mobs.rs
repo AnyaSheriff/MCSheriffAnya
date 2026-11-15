@@ -1,113 +1,106 @@
-// Эксперимент: дополнительные исполнители только после превышения
-// 50 мс и заметной независимой работе мобов внутри одного измерения.
+// Общий бюджет независимых фаз: блочные миры и наблюдение мобов не перекрываются.
 use std::time::Duration;
-
-pub(super) const MAX_THREADS: usize = 8;
-const LIMIT: Duration = Duration::from_millis(50);
-const MIN_WORK: Duration = Duration::from_millis(1);
-const GROW_AFTER: u16 = 20;
-const SHRINK_AFTER: u16 = 200;
 
 pub(super) struct Policy {
     cap: usize,
     pub(super) width: usize,
     pressure: u16,
     quiet: u16,
+    #[cfg(test)]
+    pub(super) block_phases: Option<std::sync::Arc<std::sync::atomic::AtomicUsize>>,
+    #[cfg(test)]
+    pub(super) mob_jobs: Option<std::sync::Arc<std::sync::atomic::AtomicUsize>>,
 }
-
 impl Policy {
-    pub(super) fn new(available: usize, configured: usize) -> Self {
-        let requested = if configured == 0 { MAX_THREADS } else { configured.clamp(1, MAX_THREADS) };
-        Self { cap: available.max(1).min(requested), width: 1, pressure: 0, quiet: 0 }
+    pub(super) fn new(available: usize) -> Self {
+        Self { cap: available.clamp(1, 8), width: 1, pressure: 0, quiet: 0, #[cfg(test)] block_phases: None, #[cfg(test)] mob_jobs: None }
     }
-
-    pub(super) fn reset(&mut self) {
-        self.width = 1;
-        self.pressure = 0;
-        self.quiet = 0;
+    pub(super) fn reset(&mut self) { self.width = 1; self.pressure = 0; self.quiet = 0; }
+    pub(super) fn phase_width(&self, configured: usize, maximum: usize, useful: usize, allowed: bool) -> usize {
+        if !allowed { return 1; }
+        self.width.min(self.cap_for_phase(configured, maximum, useful))
     }
-
-    /// Длительность — вся работа такта, без ожидания следующего. Один сетевой
-    /// таймаут не включает помощников: нужны замеренные расчёты мобов.
-    pub(super) fn observe(&mut self, tick: Duration, work: Duration, items: usize, allowed: bool) {
-        if !allowed {
-            self.reset();
-            return;
-        }
-        let useful = items >= 64 && work >= MIN_WORK;
-        if tick > LIMIT && useful && self.width < self.cap {
+    pub(super) fn cap_for_phase(&self, configured: usize, maximum: usize, useful: usize) -> usize {
+        let cap = if configured == 0 { maximum } else { configured.clamp(1, maximum) };
+        self.cap.min(cap).min(useful.max(1))
+    }
+    // Результат влияет только на следующий такт; ожидание сетки сюда не входит.
+    pub(super) fn observe(&mut self, tick: Duration, useful_cap: usize, allowed: bool) {
+        if !allowed { self.reset(); return; }
+        let useful_cap = useful_cap.min(self.cap);
+        if tick > Duration::from_millis(50) && useful_cap > self.width {
             self.quiet = 0;
             self.pressure += 1;
-            let required = if self.width == 1 { 1 } else { GROW_AFTER };
-            if self.pressure >= required {
-                self.width += 1;
-                self.pressure = 0;
+            if self.pressure >= if self.width == 1 { 1 } else { 20 } {
+                self.width += 1; self.pressure = 0;
             }
         } else {
             self.pressure = 0;
-            if !useful || tick < Duration::from_millis(40) {
+            if useful_cap < self.width || useful_cap <= 1 || tick < Duration::from_millis(40) {
                 self.quiet += 1;
-                if self.quiet >= SHRINK_AFTER {
-                    self.width = self.width.saturating_sub(1).max(1);
-                    self.quiet = 0;
-                }
-            } else {
-                self.quiet = 0;
-            }
+                if self.quiet >= 200 { self.width = self.width.saturating_sub(1).max(1); self.quiet = 0; }
+            } else { self.quiet = 0; }
         }
     }
+}
+
+pub(super) fn block_useful(costs: [Duration; 3], enabled: [bool; 3]) -> usize {
+    let costs: Vec<_> = costs.into_iter().zip(enabled).filter_map(|(cost, enabled)| enabled.then_some(cost)).collect();
+    let busy = costs.iter().filter(|&&cost| cost >= Duration::from_micros(250)).count();
+    if busy >= 2 && costs.into_iter().sum::<Duration>() >= Duration::from_millis(1) { busy } else { 1 }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    const BUSY: Duration = Duration::from_millis(51);
-    const WORK: Duration = Duration::from_millis(2);
-
     #[test]
-    fn strict_fifty_ms_threshold_then_gradual_growth() {
-        let mut policy = Policy::new(8, 0);
-        for _ in 0..200 { policy.observe(LIMIT, WORK, 100, true); }
-        assert_eq!(policy.width, 1);
-        policy.observe(LIMIT + Duration::from_nanos(1), WORK, 100, true);
-        assert_eq!(policy.width, 2);
-        policy.observe(LIMIT, WORK, 100, true);
-        for _ in 0..GROW_AFTER - 1 { policy.observe(BUSY, WORK, 100, true); }
-        assert_eq!(policy.width, 2);
+    fn strict_threshold_next_tick_and_consecutive_growth() {
+        let mut p = Policy::new(8);
+        for _ in 0..30 { p.observe(Duration::from_millis(50), 8, true); }
+        assert_eq!(p.phase_width(0, 8, 64, true), 1);
+        p.observe(Duration::from_millis(50)+Duration::from_nanos(1), 8, true);
+        assert_eq!(p.width, 2);
+        for _ in 0..19 { p.observe(Duration::from_millis(51), 8, true); }
+        assert_eq!(p.width, 2);
+        p.observe(Duration::from_millis(50), 8, true);
+        for _ in 0..20 { p.observe(Duration::from_millis(51), 8, true); }
+        assert_eq!(p.width, 3);
+        for _ in 0..199 { p.observe(Duration::from_millis(30), 8, true); }
+        assert_eq!(p.width, 3);
+        p.observe(Duration::from_millis(30), 8, true); assert_eq!(p.width, 2);
+        p.observe(Duration::from_millis(100), 8, false); assert_eq!(p.width, 1);
     }
-
     #[test]
-    fn unrelated_lag_and_small_batches_do_not_activate_workers() {
-        for (cost, items) in [(Duration::ZERO, 1000), (WORK, 63)] {
-            let mut policy = Policy::new(8, 0);
-            for _ in 0..1000 { policy.observe(BUSY, cost, items, true); }
-            assert_eq!(policy.width, 1);
+    fn shared_budget_respects_phase_caps_flags_failure_and_single_world() {
+        let mut p = Policy::new(4);
+        for _ in 0..100 { p.observe(Duration::from_millis(51), 8, true); }
+        assert_eq!(p.width, 4);
+        assert_eq!(p.phase_width(0, 3, 3, true), 3);
+        assert_eq!(p.phase_width(2, 8, 64, true), 2);
+        assert_eq!(p.cap_for_phase(1, 3, 3), 1);
+        assert_eq!(p.cap_for_phase(1, 8, 64), 1);
+        assert_eq!(p.cap_for_phase(0, 3, 3).max(p.cap_for_phase(0, 8, 64)), 4);
+        assert_eq!(p.phase_width(0, 3, 1, true), 1);
+        assert_eq!(p.phase_width(0, 8, 64, false), 1);
+        assert_eq!(p.phase_width(0, 8, 64, true), 4);
+        for cpu in [0,1,2,16] {
+            let mut p=Policy::new(cpu);
+            for _ in 0..200 { p.observe(Duration::from_millis(51),8,true); }
+            assert_eq!(p.width,cpu.clamp(1,8));
         }
     }
-
     #[test]
-    fn respects_available_cpus_and_manual_cap() {
-        for (available, configured, expected) in [(0, 0, 1), (1, 8, 1), (2, 0, 2), (20, 0, 8), (8, 3, 3), (8, 1, 1)] {
-            let mut policy = Policy::new(available, configured);
-            for _ in 0..1000 { policy.observe(BUSY, WORK, 1000, true); }
-            assert_eq!(policy.width, expected);
-        }
-    }
-
-    #[test]
-    fn quiet_period_shrinks_gradually_and_forbidden_resets_immediately() {
-        let mut policy = Policy::new(3, 0);
-        for _ in 0..=GROW_AFTER { policy.observe(BUSY, WORK, 1000, true); }
-        assert_eq!(policy.width, 3);
-        for _ in 0..SHRINK_AFTER - 1 { policy.observe(Duration::from_millis(30), WORK, 1000, true); }
-        assert_eq!(policy.width, 3);
-        policy.observe(Duration::from_millis(30), WORK, 1000, true);
-        assert_eq!(policy.width, 2);
-        policy.observe(BUSY, WORK, 1000, false);
-        assert_eq!(policy.width, 1);
-        policy.observe(LIMIT, WORK, 1000, true);
-        assert_eq!(policy.width, 1);
-        policy.observe(BUSY, WORK, 1000, true);
-        assert_eq!(policy.width, 2);
+    fn only_enabled_busy_worlds_and_real_useful_work_count() {
+        let ms=Duration::from_millis(1);
+        assert_eq!(block_useful([ms;3],[true,false,false]),1);
+        assert_eq!(block_useful([ms;3],[true,false,true]),2);
+        assert_eq!(block_useful([Duration::from_micros(250);3],[true;3]),1);
+        assert_eq!(block_useful([ms,Duration::ZERO,Duration::ZERO],[true;3]),1);
+        assert_eq!(block_useful([Duration::from_micros(250),Duration::from_micros(750),Duration::ZERO],[true;3]),2);
+        assert_eq!(block_useful([Duration::from_micros(250),Duration::from_micros(749),Duration::ZERO],[true;3]),1);
+        assert_eq!(block_useful([Duration::from_micros(249),Duration::from_micros(751),Duration::ZERO],[true;3]),1);
+        let mut p=Policy::new(8);
+        for _ in 0..100 { p.observe(Duration::from_secs(1),1,true); }
+        assert_eq!(p.width,1);
     }
 }

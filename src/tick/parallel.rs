@@ -1,6 +1,6 @@
 // Ограниченный пул только для независимой блочной части измерений.
 // В рабочих заданиях нельзя выполнять команды, плагины или брать другой мир.
-use std::{any::Any, panic::{self, AssertUnwindSafe}, sync::mpsc, thread, time::Duration};
+use std::{any::Any, panic::{self, AssertUnwindSafe}, sync::mpsc, thread};
 
 pub(super) type Job<R> = Box<dyn FnOnce() -> R + Send>;
 type Outcome<R> = Result<R, Box<dyn Any + Send>>;
@@ -35,7 +35,7 @@ impl<R: Send + 'static> Pool<R> {
     pub(super) fn run(&mut self, width: usize, mut jobs: Vec<Job<R>>) -> Vec<R> {
         let helpers = width.clamp(1, 3).min(jobs.len()).saturating_sub(1);
         self.grow(helpers);
-        let helpers = helpers.min(self.workers.len());
+        let helpers = if self.failed { 0 } else { helpers.min(self.workers.len()) };
         let (done, results) = mpsc::channel();
         for (worker, job) in self.workers.iter().take(helpers).zip(jobs.drain(..helpers)) {
             worker.sender.send(Work { job, done: done.clone() }).unwrap_or_else(|_| panic!("поток блочной части остановился"));
@@ -63,68 +63,11 @@ impl<R: Send + 'static> Drop for Pool<R> {
     }
 }
 
-pub(super) struct Policy { cap: usize, pub(super) width: usize, pressure: u16, quiet: u16 }
-impl Policy {
-    pub(super) fn new(available: usize, configured: usize) -> Self {
-        let cap = available.max(1).min(if configured == 0 { 3 } else { configured.clamp(1, 3) });
-        Self { cap, width: 1, pressure: 0, quiet: 0 }
-    }
-    pub(super) fn reset(&mut self) { self.width = 1; self.pressure = 0; self.quiet = 0; }
-    /// Сравниваем с длительностью такта, чтобы учитывать tick rate/sprint.
-    /// Один тяжёлый мир сам по себе не повод занимать второй CPU.
-    pub(super) fn observe(&mut self, costs: [Duration; 3], period: Duration, allowed: bool) {
-        if !allowed { self.reset(); return; }
-        let period = period.max(Duration::from_millis(1));
-        let useful = costs.iter().filter(|&&cost| cost >= Duration::from_micros(250)).count();
-        let total: Duration = costs.into_iter().sum();
-        if useful > self.width && total >= period.mul_f64(0.4) && self.width < self.cap {
-            self.pressure += 1;
-            self.quiet = 0;
-            if self.pressure >= 20 { self.width += 1; self.pressure = 0; }
-        } else {
-            self.pressure = 0;
-            if useful < self.width || total < period.mul_f64(0.15) {
-                self.quiet += 1;
-                if self.quiet >= 200 { self.width = self.width.saturating_sub(1).max(1); self.quiet = 0; }
-            } else { self.quiet = 0; }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
     use std::sync::{Arc, Barrier, atomic::{AtomicUsize, Ordering}};
-
-    #[test]
-    fn grows_one_at_a_time_after_sustained_work_and_sleeps_when_quiet() {
-        let mut policy = Policy::new(8, 0);
-        let busy = [Duration::from_millis(12); 3];
-        for _ in 0..19 { policy.observe(busy, Duration::from_millis(50), true); }
-        assert_eq!(policy.width, 1);
-        policy.observe(busy, Duration::from_millis(50), true);
-        assert_eq!(policy.width, 2);
-        for _ in 0..20 { policy.observe(busy, Duration::from_millis(50), true); }
-        assert_eq!(policy.width, 3);
-        for expected in [2, 1] {
-            for _ in 0..200 { policy.observe([Duration::ZERO; 3], Duration::from_millis(50), true); }
-            assert_eq!(policy.width, expected);
-        }
-    }
-
-    #[test]
-    fn respects_cpu_cap_manual_cap_single_busy_world_and_fallback() {
-        for (available, configured, cap) in [(1,0,1), (2,0,2), (64,0,3), (64,1,1), (64,2,2)] {
-            let mut policy = Policy::new(available, configured);
-            for _ in 0..1000 { policy.observe([Duration::from_millis(20);3], Duration::from_millis(50), true); }
-            assert_eq!(policy.width, cap);
-            policy.observe([Duration::ZERO;3], Duration::from_millis(50), false);
-            assert_eq!(policy.width, 1);
-        }
-        let mut policy = Policy::new(8, 0);
-        for _ in 0..1000 { policy.observe([Duration::from_millis(80),Duration::ZERO,Duration::ZERO], Duration::from_millis(50), true); }
-        assert_eq!(policy.width, 1);
-    }
 
     #[test]
     fn pool_runs_three_jobs_together_once_and_reuses_workers() {
@@ -157,6 +100,16 @@ mod tests {
         let result = pool.run(1, (0..3).map(|id| Box::new(move || id) as Job<_>).collect());
         assert_eq!(result, [0,1,2]);
         assert!(pool.workers.is_empty());
+    }
+
+    #[test]
+    fn failed_pool_stays_serial_even_with_existing_helpers() {
+        let mut pool = Pool::new();
+        pool.run(2, vec![Box::new(|| 0), Box::new(|| 1)]);
+        pool.failed = true;
+        let main = thread::current().id();
+        let results = pool.run(3, (0..3).map(|i| Box::new(move || (i, thread::current().id() == main)) as Job<_>).collect());
+        assert_eq!(results, [(0,true),(1,true),(2,true)]);
     }
 
     #[test]

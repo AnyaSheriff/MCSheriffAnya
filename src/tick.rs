@@ -168,11 +168,18 @@ fn pin_to_core(core: usize) {
 }
 
 async fn run(shared: Arc<Shared>) {
-    let policy = parallel::Policy::new(cores(), shared.settings.dimension_tick_threads);
-    run_with_block_policy(shared, policy).await;
+    let policy = adaptive_mobs::Policy::new(cores());
+    run_with_budget(shared, policy, [Duration::ZERO; 3], false).await;
 }
 
-async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::Policy) {
+#[cfg(test)]
+async fn run_with_block_policy(shared: Arc<Shared>, policy: adaptive_mobs::Policy) {
+    run_with_budget(shared, policy, [Duration::from_millis(1); 3], true).await;
+}
+
+async fn run_with_budget(shared: Arc<Shared>, mut policy: adaptive_mobs::Policy,
+    mut block_costs: [Duration; 3], mut previous_mob_useful: bool,
+) {
     // Сетка тактов — по 50 мс от запуска. Задержался такт (запись мира,
     // складывание чанков) — пропущенные такты делаются подряд, пока мир не
     // догонит часы: так у оригинала (снято чёрным ящиком — с пропуском мир
@@ -191,10 +198,8 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
     let mut morning_due = false;
     let parallel_enabled = shared.settings.parallel_dimension_ticks;
     let mob_parallel_enabled = shared.settings.experimental_parallel_mobs;
-    let mut mob_policy = adaptive_mobs::Policy::new(cores(), shared.settings.mob_tick_threads);
     let mut mob_executor = crate::mob::parallel::Executor::new();
     let mut block_pool: parallel::Pool<(Dimension, PhaseStats, Duration)> = parallel::Pool::new();
-    let mut block_costs = [Duration::ZERO; 3];
     let mut last_fallback = None;
     let mut spawn_warning = false;
     let mut mob_spawn_warning = false;
@@ -209,8 +214,7 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
         // Пауза пустого сервера сильнее freeze/step/sprint: их счётчики ждут
         // входа игрока; функции и плагины тоже не тикают в пустом мире.
         if let Some(paused) = idle::wait_tick(&shared, &mut presence, next).await {
-            block_policy.reset();
-            mob_policy.reset();
+            policy.reset();
             next = tokio::time::Instant::now();
             shared.world_cmd.ticking.lock().expect("такт").resumed_after_idle(paused);
         }
@@ -229,8 +233,9 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
         // Скорость, заморозка, шаги и разгон — команда `tick`
         // (commands_world.rs). При 20 тактах в секунду — те же 50 мс.
         let plan = crate::commands_world::next_tick(&shared);
-        if !plan.run_world || crate::plugins::active() { mob_policy.reset(); }
-        mob_executor.set_width(mob_policy.width);
+        if !plan.run_world || crate::plugins::active() { policy.reset(); }
+        mob_executor.set_width(policy.phase_width(shared.settings.mob_tick_threads, 8, 64,
+            mob_parallel_enabled && previous_mob_useful && !mob_executor.spawn_failed()));
         mob_executor.begin_tick();
 
         if plan.period.is_zero() {
@@ -286,13 +291,17 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
             && !shared.enabled_dimensions().any(|d| shared.world_in(d).lock().expect("мир").has_command_blocks());
         if parallel_enabled && plan.run_world && last_fallback != Some(!block_allowed) {
             if !block_allowed { crate::log_info!("Блочная часть измерений идёт последовательно: {}", fallback); }
-            else if last_fallback.is_some() { crate::log_info!("Параллельная блочная часть снова доступна; начинаем с 1 исполнителя"); }
+            else if last_fallback.is_some() { crate::log_info!("Параллельная блочная часть снова доступна в пределах общего бюджета"); }
             last_fallback = Some(!block_allowed);
         }
-        if !block_allowed { block_policy.reset(); }
-        let parallel_blocks_done = block_allowed && block_policy.width > 1;
+        let enabled = Dimension::ALL.map(|d| shared.dimension_enabled(d));
+        let block_width = policy.phase_width(shared.settings.dimension_tick_threads, 3,
+            adaptive_mobs::block_useful(block_costs, enabled), block_allowed && !block_pool.spawn_failed());
+        let parallel_blocks_done = block_width > 1;
         if parallel_blocks_done {
-            parallel_dimension_blocks(&shared, &mut block_pool, block_policy.width,
+            #[cfg(test)]
+            if let Some(count) = &policy.block_phases { count.fetch_add(1, std::sync::atomic::Ordering::SeqCst); }
+            parallel_dimension_blocks(&shared, &mut block_pool, block_width,
                 &mut morning_due, &mut phases, &mut block_costs);
             if block_pool.spawn_failed() && !spawn_warning {
                 log_warn!("Не удалось создать помощника блочной части; задания выполнят доступные потоки");
@@ -556,12 +565,6 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
             phases.add(5, &mut clock);
         }
 
-        let previous_width = block_policy.width;
-        block_policy.observe(block_costs, plan.period, block_allowed && !block_pool.spawn_failed());
-        if parallel_enabled && previous_width != block_policy.width {
-            crate::log_info!("Блочная часть измерений: исполнителей {} (вместе с потоком такта)", block_policy.width);
-        }
-
         if let Some(reports) = tnt_reports {
             for report in reports { report.log(); }
         }
@@ -599,12 +602,23 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
         // публикации относятся уже к следующему концу такта [проверить].
         publish_finished_tick(&shared, ticks);
         let mob_work = mob_executor.stats();
-        let previous_mob_width = mob_executor.width();
-        let mob_allowed = mob_parallel_enabled && plan.run_world && !crate::plugins::active() && !mob_executor.spawn_failed();
-        mob_policy.observe(started.elapsed(), mob_work.cost,
-            if mob_work.comparisons >= 16_384 { mob_work.items } else { 0 }, mob_allowed);
-        if mob_parallel_enabled && mob_policy.width != previous_mob_width {
-            crate::log_info!("Расчёты окружения мобов: исполнителей {} (вместе с потоком такта)", mob_policy.width);
+        #[cfg(test)]
+        if let Some(count) = &policy.mob_jobs { count.fetch_add(mob_work.jobs, std::sync::atomic::Ordering::SeqCst); }
+        let previous_width = policy.width;
+        let mob_allowed = mob_parallel_enabled && !mob_executor.spawn_failed();
+        let mob_useful = mob_work.items >= 64 && mob_work.comparisons >= 16_384 && mob_work.cost >= Duration::from_millis(1);
+        previous_mob_useful = mob_useful;
+        // Фазы выполняются с барьерами по очереди: бюджет берём по максимуму, не складываем.
+        let block_cap = if block_allowed && !block_pool.spawn_failed() {
+            policy.cap_for_phase(shared.settings.dimension_tick_threads, 3, adaptive_mobs::block_useful(block_costs, enabled))
+        } else { 1 };
+        let mob_cap = if mob_allowed && mob_useful {
+            policy.cap_for_phase(shared.settings.mob_tick_threads, 8, 64)
+        } else { 1 };
+        policy.observe(started.elapsed(), block_cap.max(mob_cap),
+            plan.run_world && !crate::plugins::active() && (parallel_enabled || mob_parallel_enabled));
+        if policy.width != previous_width {
+            crate::log_info!("Общий бюджет независимых фаз: исполнителей {} (вместе с потоком такта)", policy.width);
         }
         if mob_executor.spawn_failed() && !mob_spawn_warning {
             log_warn!("Не удалось создать помощника для мобов; расчёты останутся последовательными");

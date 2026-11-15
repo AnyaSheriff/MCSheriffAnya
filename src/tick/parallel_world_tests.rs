@@ -136,21 +136,50 @@ fn serial_and_parallel_world_block_phases_keep_same_clock_and_event_order() {
     }
 }
 
-/// Настоящий цикл с включённой настройкой: форсируем лишь начальную ширину,
-/// чтобы тест не зависел от скорости CPU; тайминги политики проверяются отдельно.
+// Идентичная нагрузка для настоящего цикла и точного сравнения фаз.
+fn add_mixed_mob_fixture(shared: &Shared) {
+    shared.spawn_mobs.store(false, std::sync::atomic::Ordering::Relaxed);
+    for dimension in shared.enabled_dimensions() {
+        let mut items = shared.items_in(dimension).lock().unwrap();
+        for i in 0..512 {
+            let kind = match i % 4 {
+                0 => crate::mob::Kind::Villager,
+                1 => crate::mob::Kind::Zombie,
+                2 => crate::mob::Kind::Llama,
+                _ => crate::mob::Kind::Wolf,
+            };
+            let id = shared.next_entity_id();
+            let mut mob = crate::mob::Mob::new(id, kind, ((i % 16) as f64, 65.0, (i / 16) as f64));
+            mob.ticks = 200;
+            items.add_mob(mob);
+        }
+    }
+}
+
+/// Настоящий цикл с обеими настройками: форсируем начальную ширину и прошлую
+/// полезную нагрузку. Это проверка путей выполнения; порог времени проверяется отдельно.
 #[tokio::test(start_paused = true)]
 async fn enabled_real_tick_keeps_one_publication_and_freeze_stops_all_world_clocks() {
     let mut shared = server();
-    Arc::get_mut(&mut shared).unwrap().settings.parallel_dimension_ticks = true;
+    let settings = &mut Arc::get_mut(&mut shared).unwrap().settings;
+    settings.parallel_dimension_ticks = true;
+    settings.experimental_parallel_mobs = true;
+    add_mixed_mob_fixture(&shared);
     shared.spawn_mobs.store(false, std::sync::atomic::Ordering::Relaxed);
     let before = Dimension::ALL.map(|d| shared.world_in(d).lock().unwrap().tick());
-    let mut policy = parallel::Policy::new(3, 3);
+    let mut policy = adaptive_mobs::Policy::new(3);
     policy.width = 3;
+    let block_phases = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    policy.block_phases = Some(block_phases.clone());
+    let mob_jobs = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    policy.mob_jobs = Some(mob_jobs.clone());
     let task = tokio::spawn(run_with_block_policy(shared.clone(), policy));
     for _ in 0..5 {
         tokio::time::advance(Duration::from_millis(50)).await;
         tokio::task::yield_now().await;
     }
+    assert!(block_phases.load(std::sync::atomic::Ordering::SeqCst) > 0, "настоящий цикл прошёл параллельную блочную фазу");
+    assert!(mob_jobs.load(std::sync::atomic::Ordering::SeqCst) > 0, "настоящий цикл выполнял наблюдение мобов в помощниках");
     let finished = *shared.ticks.borrow();
     assert!(finished > 0);
     for dimension in Dimension::ALL {
@@ -158,12 +187,49 @@ async fn enabled_real_tick_keeps_one_publication_and_freeze_stops_all_world_cloc
     }
     shared.world_cmd.ticking.lock().unwrap().frozen = true;
     let clocks = Dimension::ALL.map(|d| shared.world_in(d).lock().unwrap().tick());
+    let frozen_mob_jobs = mob_jobs.load(std::sync::atomic::Ordering::SeqCst);
     for _ in 0..5 {
         tokio::time::advance(Duration::from_millis(50)).await;
         tokio::task::yield_now().await;
     }
+    assert_eq!(mob_jobs.load(std::sync::atomic::Ordering::SeqCst), frozen_mob_jobs, "заморозка не отправляет задания мобов");
     assert!(*shared.ticks.borrow() > finished);
     assert_eq!(Dimension::ALL.map(|d| shared.world_in(d).lock().unwrap().tick()), clocks);
     task.abort();
     assert!(task.await.unwrap_err().is_cancelled());
+}
+
+#[test]
+fn shared_world_block_barrier_then_mob_workers_keep_serial_state_and_rng() {
+    let serial = server();
+    let parallel = server();
+    prime(&serial); prime(&parallel);
+    for shared in [&serial, &parallel] { add_mixed_mob_fixture(shared); }
+    let mut pool = parallel::Pool::new();
+    parallel_dimension_blocks(&parallel, &mut pool, 3, &mut false,
+        &mut PhaseStats::default(), &mut [Duration::ZERO; 3]);
+    // Возврат из функции — барьер всех миров до начала любых заданий мобов.
+    for dimension in serial.enabled_dimensions() {
+        let world = serial.world_in(dimension).lock().unwrap();
+        let (mut world, chunks) = prepare_dimension_blocks(&serial, dimension, world, &mut false, &mut PhaseStats::default());
+        random_dimension_blocks(&mut world, &chunks, serial.properties.simulation_distance,
+            crate::farming::random_tick_speed(), &mut PhaseStats::default());
+    }
+    let mut a = crate::mob::Rng::new(12345);
+    let mut b = a.clone();
+    let mut executor = crate::mob::parallel::Executor::new(); executor.set_width(3); executor.begin_tick();
+    for dimension in serial.enabled_dimensions() {
+        assert_eq!(parallel.world_in(dimension).lock().unwrap().tick(), 1);
+        let mut world = serial.world_in(dimension).lock().unwrap();
+        step_mobs(&serial, dimension, &mut world, &mut a, 200);
+        drop(world);
+        let mut world = parallel.world_in(dimension).lock().unwrap();
+        step_mobs_with_executor(&parallel, dimension, &mut world, &mut b, 200, Some(&mut executor));
+        drop(world);
+        assert_eq!(format!("{:?}", serial.items_in(dimension).lock().unwrap().mobs()),
+            format!("{:?}", parallel.items_in(dimension).lock().unwrap().mobs()));
+    }
+    assert!(executor.stats().jobs > 0, "наблюдения действительно выполнялись помощниками");
+    // Последовательность RNG проверена через последующие выдачи, без доступа к закрытому состоянию.
+    for _ in 0..16 { assert_eq!(a.next_u64(), b.next_u64()); }
 }
