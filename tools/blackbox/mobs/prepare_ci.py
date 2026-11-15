@@ -16,9 +16,13 @@ DIGEST='eefcc6243b290878454ace76ab5351513d2e5f4fc50922e918da9af71fedaf26'
 API='https://api.github.com/repos/AnyaSheriff/MCSheriffAnya'
 
 def request(url, authenticated=False):
-    headers={'Accept':'application/vnd.github+json'}
-    if authenticated: headers['Authorization']='Bearer '+os.environ['GH_TOKEN']
-    with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=120) as r: return r.read()
+    if authenticated:
+        if not url.startswith(API+'/actions/'):
+            raise ValueError('authenticated request outside pinned repository API')
+        # gh управляет авторизацией; Go HTTP не переносит её на чужой blob-host.
+        # Не читаем токен и не создаём собственный Authorization header.
+        return subprocess.check_output(['gh','api','--method','GET',url], timeout=180)
+    with urllib.request.urlopen(urllib.request.Request(url),timeout=120) as r: return r.read()
 
 def sha(data): return hashlib.sha256(data).hexdigest()
 
