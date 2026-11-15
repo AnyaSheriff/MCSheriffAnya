@@ -34,7 +34,7 @@ android {
     sourceSets { androidTest { assets.srcDir generatedUpdateAssets }; main { jniLibs.srcDirs = [providers.gradleProperty('runtimeDir').getOrElse('../runtime')] } }
     packaging { jniLibs { useLegacyPackaging true; keepDebugSymbols += ['**/libmcsa.so', '**/libmcsa_core.so'] } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
-    lint { abortOnError true }
+    lint { abortOnError true; checkTestSources true }
 }
 tasks.register('checkRuntime') {
     doLast {

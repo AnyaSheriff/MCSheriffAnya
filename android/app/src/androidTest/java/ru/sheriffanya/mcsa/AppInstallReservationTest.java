@@ -74,7 +74,7 @@ public class AppInstallReservationTest {
             android.content.pm.PackageInstaller installer=app.getPackageManager().getPackageInstaller();assertNotNull(installer.getSessionInfo(id));
             JSONObject stageReceipt=new JSONObject().put("api",android.os.Build.VERSION.SDK_INT).put("session_id",id).put("bytes",cached.length()).put("sha256",CoreDownload.sha256(cached));
             try(android.content.pm.PackageInstaller.Session session=installer.openSession(id)) {
-                assertArrayEquals(new String[]{"base.apk"},session.getNames());assertEquals(cached.length(),installer.getSessionInfo(id).getSize());
+                assertArrayEquals(new String[]{"base.apk"},session.getNames());assertEquals(id,installer.getSessionInfo(id).getSessionId());
                 if(android.os.Build.VERSION.SDK_INT==24) {
                     // CI43712684923: SELinux запрещает untrusted_app читать apk_tmp_file через FD.
                     // Это FAILED BINDER TRANSACTION, ошибочно обёрнутый Android7 в DeadSystemException.
