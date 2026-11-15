@@ -19,15 +19,20 @@ fn fixture() -> Vec<Mob> {
 }
 #[test]
 fn whole_tick_keeps_rng_ids_saved_state_and_all_outcomes() {
-    let initial=fixture();
-    for width in [1,2,4] {
+    let mut initial=fixture();
+    initial.extend(alert_fixture(Kind::Bee,320,256));
+    let mut dolphins=alert_fixture(Kind::Dolphin,320,256);
+    for m in &mut dolphins {m.entity_id+=1000;m.uuid=super::uuid_for(m.entity_id);m.x+=1000.0;}
+    initial.extend(dolphins);
+    for width in [1,2,8,0] {
         let mut serial=crate::items::Items::new(); let mut candidate=crate::items::Items::new();
         for m in &initial { serial.add_mob(m.clone()); candidate.add_mob(m.clone()); }
         let mut a=Rng::new(8675309); let mut b=a.clone();
         let mut aid=10000; let mut bid=10000;
-        let mut executor=parallel::Executor::new(); executor.set_width(width);
+        let mut executor=parallel::Executor::new(); executor.set_width(width.max(1));
         let mut jobs=0;
         for tick in 200..204 {
+            if width==0 {executor.set_width([2,1,8,2][(tick-200) as usize]);}
             executor.begin_tick();
             let env=Env { difficulty:2, sky:15, sun_up:false, clock:6000, tick };
             let expected=step_all(&mut serial,&Floor,&[],env,&mut a,&mut || { aid+=1; aid });
@@ -39,7 +44,7 @@ fn whole_tick_keeps_rng_ids_saved_state_and_all_outcomes() {
             assert_eq!(aid,bid); assert_eq!(a.0,b.0);
             jobs+=executor.stats().jobs;
         }
-        assert_eq!(jobs>0,width>1);
+        assert_eq!(jobs>0,width!=1);
     }
 }
 #[test]
@@ -122,4 +127,158 @@ fn sensing_benchmark() {
     assert!(jobs>0);
     println!("{{\"benchmark\":\"mob_sensing_same_dimension\",\"llamas\":4096,\"wolves\":4096,\"repetitions\":3,\"available_cpus\":{},\"width\":{},\"helper_threads\":{},\"jobs\":{},\"serial_ns\":{},\"parallel_ns\":{}}}",
         std::thread::available_parallelism().map_or(1,|n|n.get()),executor.width(),executor.stats().workers,jobs,serial_ns,parallel_ns);
+}
+
+fn alert_fixture(kind: Kind, count: usize, calls: usize) -> Vec<Mob> {
+    (0..count).map(|i| {
+        let mut mob=Mob::new(20000+i as i32,kind,(0.0,1.0,0.0));
+        mob.wild.alert=i<calls;mob.wild.attacker=if i+1==calls {None}else{Some(i as i32)};mob.wild.anger=20+i as i32;
+        mob.water.alert=i<calls;mob.water.target=if i+1==calls {None}else{Some(i as i32)};mob.water.anger=3;
+        mob
+    }).collect()
+}
+
+#[test]
+fn alerts_match_original_formulas_boundaries_and_last_none() {
+    for kind in [Kind::Bee,Kind::Dolphin] {
+        let mut initial=alert_fixture(kind,320,256);
+        initial[0].no_ai=true;initial[1].wild.stung=true;
+        initial[300].no_ai=true;initial[301].wild.stung=true;
+        initial[302].vitals.dead=true;initial[302].vitals.health=0.0;
+        // Последний мёртвый источник остаётся источником пчёл, но не дельфинов.
+        initial[255].vitals.dead=true;initial[255].vitals.health=0.0;
+        initial[254].wild.attacker=None;initial[254].water.target=None;
+        initial[303].x=16.0;initial[303].y=11.0;initial[303].z=16.0;
+        initial[304].x=16.00000001;initial[304].y=11.0;initial[304].z=16.0;
+        initial[305].x=16.0;initial[306].x=15.99999999;
+        let mut expected=initial.clone();
+        let sources: Vec<_>=initial.iter().filter(|m|if kind==Kind::Bee {m.wild.alert}else{m.water.alert&&!m.is_dead()}).collect();
+        for mob in &mut expected {
+            if kind==Kind::Bee {
+                mob.wild.alert=false;
+                if mob.no_ai||mob.wild.stung {continue;}
+                for source in &sources {
+                    if (mob.x-source.x).abs()<=16.0&&(mob.y-source.y).abs()<=10.0&&(mob.z-source.z).abs()<=16.0 {
+                        mob.wild.attacker=source.wild.attacker;mob.wild.anger=source.wild.anger;
+                    }
+                }
+            } else {
+                mob.water.alert=false;
+                if mob.no_ai {continue;}
+                for source in &sources {
+                    if (mob.x-source.x).powi(2)+(mob.y-source.y).powi(2)+(mob.z-source.z).powi(2)<256.0 {mob.water.target=source.water.target;mob.water.anger=400;}
+                }
+            }
+        }
+        for width in [1,2,8] {
+            let mut actual=initial.clone();let mut executor=parallel::Executor::new();executor.set_width(width);
+            if kind==Kind::Bee {wildlife::pack_anger_with_executor(&mut actual,Some(&mut executor));}
+            else {water::pack_alerts_with_executor(&mut actual,Some(&mut executor));}
+            assert_eq!(format!("{expected:?}"),format!("{actual:?}"));assert_eq!(bytes(&expected),bytes(&actual));
+            assert_eq!(executor.stats().jobs>0,width>1);
+            if kind==Kind::Bee {
+                assert_eq!(actual[303].wild.attacker,None);assert_eq!(actual[303].wild.anger,275);
+                assert_eq!(actual[304].wild.anger,324);assert_eq!(actual[302].wild.anger,275);
+            } else {
+                assert_eq!(actual[305].water.anger,3);assert_eq!(actual[306].water.target,None);assert_eq!(actual[306].water.anger,400);
+                assert_eq!(actual[302].water.anger,400);
+            }
+            if kind==Kind::Bee {assert!(!actual[300].wild.alert);} else {assert!(!actual[300].water.alert);}
+        }
+    }
+}
+
+#[test]
+fn alert_empty_and_small_batches_clear_flags_without_worker_jobs() {
+    for kind in [Kind::Bee,Kind::Dolphin] {
+        let mut executor=parallel::Executor::new();executor.set_width(8);
+        for (count,calls) in [(0,0),(32,32),(127,127),(128,0),(128,1)] {
+            let initial=alert_fixture(kind,count,calls);let mut expected=initial.clone();let mut actual=initial;
+            executor.begin_tick();
+            if kind==Kind::Bee {wildlife::pack_anger(&mut expected);wildlife::pack_anger_with_executor(&mut actual,Some(&mut executor));}
+            else {water::pack_alerts_with_executor(&mut expected,None);water::pack_alerts_with_executor(&mut actual,Some(&mut executor));}
+            assert_eq!(format!("{expected:?}"),format!("{actual:?}"));assert_eq!(executor.stats().jobs,0);assert_eq!(executor.stats().items,0);
+        }
+    }
+}
+
+
+
+#[test]
+fn whole_tick_alert_only_fixture_uses_new_jobs_and_preserves_every_result() {
+    let mut initial=alert_fixture(Kind::Bee,128,128);
+    let mut dolphins=alert_fixture(Kind::Dolphin,128,128);
+    for mob in &mut dolphins {mob.entity_id+=1000;mob.uuid=super::uuid_for(mob.entity_id);mob.x+=1000.0;}
+    initial.extend(dolphins);
+    assert!(initial.iter().all(|mob|matches!(mob.kind,Kind::Bee|Kind::Dolphin)));
+    let mut serial=crate::items::Items::new();let mut candidate=crate::items::Items::new();
+    for mob in initial {serial.add_mob(mob.clone());candidate.add_mob(mob);}
+    let mut a=Rng::new(20261115);let mut b=a.clone();let mut aid=40000;let mut bid=40000;
+    let mut executor=parallel::Executor::new();
+    for (offset,width) in [2,1,8,2].into_iter().enumerate() {
+        // Новые сигналы каждый такт; старых получателей village/herd здесь вовсе нет.
+        for items in [&mut serial,&mut candidate] {
+            for mob in items.mobs_mut() {
+                if mob.kind==Kind::Bee {mob.wild.alert=true;} else {mob.water.alert=true;}
+            }
+        }
+        executor.set_width(width);executor.begin_tick();
+        let env=Env {difficulty:2,sky:15,sun_up:false,clock:6000,tick:200+offset as i64};
+        let expected=step_all(&mut serial,&Floor,&[],env,&mut a,&mut ||{aid+=1;aid});
+        let actual=step_all_with_executor(&mut candidate,&Floor,&[],env,&mut b,&mut ||{bid+=1;bid},Some(&mut executor));
+        assert_eq!(format!("{expected:?}"),format!("{actual:?}"));
+        assert_eq!(format!("{:?}",serial.mobs()),format!("{:?}",candidate.mobs()));
+        assert_eq!(bytes(serial.mobs()),bytes(candidate.mobs()));assert_eq!(a.0,b.0);assert_eq!(aid,bid);
+        // Оба новых участка достигли порога: 128*128 каждый, без старых поисков.
+        assert_eq!(executor.stats().items,256);assert_eq!(executor.stats().comparisons,32768);
+        assert_eq!(executor.stats().jobs>0,width>1);
+    }
+}
+
+#[test]
+fn alert_batch_exact_pressure_threshold_and_mixed_water_outcome() {
+    for kind in [Kind::Bee,Kind::Dolphin] {
+        let mut mobs=alert_fixture(kind,128,128);let mut executor=parallel::Executor::new();executor.set_width(2);
+        if kind==Kind::Bee {wildlife::pack_anger_with_executor(&mut mobs,Some(&mut executor));}
+        else {water::pack_alerts_with_executor(&mut mobs,Some(&mut executor));}
+        assert!(executor.stats().jobs>0);assert_eq!(executor.stats().items,128);assert_eq!(executor.stats().comparisons,16384);
+    }
+    let mut serial=alert_fixture(Kind::Dolphin,256,128);
+    let mut puffer=Mob::new(50000,Kind::Pufferfish,(0.0,1.0,0.0));puffer.water.puff=2;serial.push(puffer);
+    serial.push(Mob::new(50001,Kind::Axolotl,(0.0,1.0,0.0)));
+    serial.push(Mob::new(50002,Kind::Cow,(0.0,1.0,0.0)));
+    let mut candidate=serial.clone();let mut a=Rng::new(123);let mut b=a.clone();
+    let mut executor=parallel::Executor::new();
+    for width in [2,1,8,2] {
+        executor.set_width(width);executor.begin_tick();
+        // Источники меняются каждый такт; сравниваем не только чистый поиск.
+        for mobs in [&mut serial,&mut candidate] {for mob in mobs.iter_mut().filter(|m|m.kind==Kind::Dolphin) {mob.water.alert=true;}}
+        let mut expected=Outcome::default();let mut actual=Outcome::default();
+        water::interactions(&mut serial,&Floor,&[],&mut expected,&mut a);
+        water::interactions_with_executor(&mut candidate,&Floor,&[],&mut actual,&mut b,Some(&mut executor));
+        assert_eq!(format!("{expected:?}"),format!("{actual:?}"));assert_eq!(format!("{serial:?}"),format!("{candidate:?}"));assert_eq!(bytes(&serial),bytes(&candidate));assert_eq!(a.0,b.0);
+        assert_eq!(executor.stats().jobs>0,width>1);
+    }
+}
+
+#[test]
+#[ignore]
+fn alert_benchmark() {
+    for kind in [Kind::Bee,Kind::Dolphin] { for (count,calls) in [(32,16),(256,128),(2048,1024)] { for width in [1,2,8] {
+        let initial=alert_fixture(kind,count,calls);let mut executor=parallel::Executor::new();executor.set_width(width);
+        let mut warm=initial.clone();
+        if kind==Kind::Bee {wildlife::pack_anger_with_executor(&mut warm,Some(&mut executor));}
+        else {water::pack_alerts_with_executor(&mut warm,Some(&mut executor));}
+        let mut serial_ns=0u128;let mut parallel_ns=0u128;let mut jobs=0;
+        for _ in 0..3 {
+            let mut expected=initial.clone();let mut actual=initial.clone();
+            let start=std::time::Instant::now();
+            if kind==Kind::Bee {wildlife::pack_anger(&mut expected);} else {water::pack_alerts_with_executor(&mut expected,None);}
+            serial_ns+=start.elapsed().as_nanos();executor.begin_tick();let start=std::time::Instant::now();
+            if kind==Kind::Bee {wildlife::pack_anger_with_executor(&mut actual,Some(&mut executor));} else {water::pack_alerts_with_executor(&mut actual,Some(&mut executor));}
+            parallel_ns+=start.elapsed().as_nanos();jobs+=executor.stats().jobs;
+            assert_eq!(format!("{expected:?}"),format!("{actual:?}"));assert_eq!(bytes(&expected),bytes(&actual));
+        }
+        println!("MCSA_ALERT_BENCH_JSON {{\"type\":\"{:?}\",\"width\":{},\"items\":{},\"calls\":{},\"repetitions\":3,\"serial_ms\":{},\"parallel_ms\":{},\"equal\":true,\"available_cpus\":{},\"jobs\":{}}}",kind,width,count,calls,serial_ns as f64/1e6,parallel_ns as f64/1e6,std::thread::available_parallelism().map_or(1,|n|n.get()),jobs);
+    } } }
 }

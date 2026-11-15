@@ -544,8 +544,32 @@ pub fn apply_data(mob: &mut Mob,text: &str) {
     }
 }
 
-/// Контакт и охота: общий список позволяет учитывать реальный размер жертвы.
-pub fn interactions(mobs: &mut [Mob],view: &dyn View,players: &[ai::Watcher],outcome: &mut super::Outcome,rng: &mut Rng) {
+// Только начальная передача тревоги. Урон и эффекты interactions остаются последовательными.
+pub(super) fn pack_alerts_with_executor(mobs: &mut [Mob],mut executor: Option<&mut super::parallel::Executor>) {
+    if crate::plugins::active() { executor=None; }
+    let started=executor.as_ref().map(|_| std::time::Instant::now());
+    let targets=if executor.is_some() { mobs.iter().filter(|m|m.kind==Kind::Dolphin&&!m.no_ai).count() } else {0};
+    let sources=if executor.is_some() { mobs.iter().filter(|m|m.kind==Kind::Dolphin&&m.water.alert&&!m.is_dead()).count() } else {0};
+    let comparisons=targets.saturating_mul(sources);
+    if executor.as_ref().is_some_and(|e|e.should_parallel(targets,comparisons)) {
+        let alerts=std::sync::Arc::new(mobs.iter().filter(|m|m.kind==Kind::Dolphin&&m.water.alert&&!m.is_dead())
+            .map(|m|((m.x,m.y,m.z),m.water.target)).collect::<Vec<_>>());
+        let inputs=mobs.iter().enumerate().filter(|(_,m)|m.kind==Kind::Dolphin&&!m.no_ai)
+            .map(|(i,m)|(i,m.x,m.y,m.z)).collect();
+        let results=executor.as_deref_mut().expect("исполнитель тревоги").ordered_map(inputs,move |(i,x,y,z)| {
+            let mut selected=None;
+            for &(at,target) in alerts.iter() {
+                if (x-at.0).powi(2)+(y-at.1).powi(2)+(z-at.2).powi(2)<256.0 { selected=Some(target); }
+            }
+            (i,selected)
+        });
+        for mob in mobs.iter_mut().filter(|m|m.kind==Kind::Dolphin) { mob.water.alert=false; }
+        for (i,selected) in results { if let Some(target)=selected { mobs[i].water.target=target;mobs[i].water.anger=400; } }
+    } else { pack_alerts_serial(mobs); }
+    if let (Some(executor),Some(started))=(executor,started) { executor.record_work(started.elapsed(),targets,comparisons); }
+}
+
+fn pack_alerts_serial(mobs: &mut [Mob]) {
     let alerts: Vec<_>=mobs.iter().filter(|m| m.kind==Kind::Dolphin && m.water.alert && !m.is_dead()).map(|m| ((m.x,m.y,m.z),m.water.target)).collect();
     for mob in mobs.iter_mut().filter(|m| m.kind==Kind::Dolphin) {
         mob.water.alert=false;
@@ -553,6 +577,15 @@ pub fn interactions(mobs: &mut [Mob],view: &dyn View,players: &[ai::Watcher],out
             if distance(mob,*at)<256.0 && !mob.no_ai { mob.water.target = *target; mob.water.anger=400; }
         }
     }
+}
+
+/// Контакт и охота: общий список позволяет учитывать реальный размер жертвы.
+pub fn interactions(mobs: &mut [Mob],view: &dyn View,players: &[ai::Watcher],outcome: &mut super::Outcome,rng: &mut Rng) {
+    interactions_with_executor(mobs,view,players,outcome,rng,None);
+}
+
+pub fn interactions_with_executor(mobs: &mut [Mob],view: &dyn View,players: &[ai::Watcher],outcome: &mut super::Outcome,rng: &mut Rng,executor: Option<&mut super::parallel::Executor>) {
+    pack_alerts_with_executor(mobs,executor);
     for i in 0..mobs.len() {
         if mobs[i].is_dead() { continue; }
         let kind=mobs[i].kind;

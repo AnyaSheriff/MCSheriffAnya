@@ -147,7 +147,34 @@ pub fn on_hurt(mob: &mut Mob, cause: i32) {
     }
 }
 
-pub fn pack_anger(mobs: &mut [Mob]) {
+pub fn pack_anger(mobs: &mut [Mob]) { pack_anger_with_executor(mobs,None); }
+
+/// Снимок берётся после ударов; последний подходящий зов побеждает, включая None.
+pub fn pack_anger_with_executor(mobs: &mut [Mob], mut executor: Option<&mut super::parallel::Executor>) {
+    if crate::plugins::active() { executor=None; }
+    let started=executor.as_ref().map(|_| std::time::Instant::now());
+    let targets=if executor.is_some() { mobs.iter().filter(|m|m.kind==Kind::Bee&&!m.wild.stung&&!m.no_ai).count() } else {0};
+    let sources=if executor.is_some() { mobs.iter().filter(|m|m.kind==Kind::Bee&&m.wild.alert).count() } else {0};
+    let comparisons=targets.saturating_mul(sources);
+    if executor.as_ref().is_some_and(|e|e.should_parallel(targets,comparisons)) {
+        let calls=std::sync::Arc::new(mobs.iter().filter(|m|m.kind==Kind::Bee&&m.wild.alert)
+            .map(|m|((m.x,m.y,m.z),m.wild.attacker,m.wild.anger)).collect::<Vec<_>>());
+        let inputs=mobs.iter().enumerate().filter(|(_,m)|m.kind==Kind::Bee&&!m.wild.stung&&!m.no_ai)
+            .map(|(i,m)|(i,m.x,m.y,m.z)).collect();
+        let results=executor.as_deref_mut().expect("исполнитель тревоги").ordered_map(inputs,move |(i,x,y,z)| {
+            let mut selected=None;
+            for &(at,target,anger) in calls.iter() {
+                if (x-at.0).abs()<=16.0&&(y-at.1).abs()<=10.0&&(z-at.2).abs()<=16.0 { selected=Some((target,anger)); }
+            }
+            (i,selected)
+        });
+        for mob in mobs.iter_mut().filter(|m|m.kind==Kind::Bee) { mob.wild.alert=false; }
+        for (i,selected) in results { if let Some((target,anger))=selected { mobs[i].wild.attacker=target;mobs[i].wild.anger=anger; } }
+    } else { pack_anger_serial(mobs); }
+    if let (Some(executor),Some(started))=(executor,started) { executor.record_work(started.elapsed(),targets,comparisons); }
+}
+
+fn pack_anger_serial(mobs: &mut [Mob]) {
     let calls: Vec<_> = mobs.iter().filter(|m| m.kind == Kind::Bee && m.wild.alert).map(|m| ((m.x, m.y, m.z), m.wild.attacker, m.wild.anger)).collect();
     for mob in mobs.iter_mut().filter(|m| m.kind == Kind::Bee) {
         mob.wild.alert = false;

@@ -4158,7 +4158,7 @@ pub fn step_all_with_executor(
     // Синие овцы — для «вололо» заклинателя (mob/illager.rs).
     let blue_sheep: Vec<(i32, (f64, f64, f64))> = mobs.iter().filter(|mob| mob.kind == Kind::Sheep && mob.color == illager::WOLOLO_FROM && !mob.is_dead()).map(|mob| (mob.entity_id, (mob.x, mob.y, mob.z))).collect();
     let mut recolor: Vec<i32> = Vec::new();
-    if let Some(executor) = executor { land::herd_with_executor(&mut mobs, players, view, Some(executor)); }
+    if let Some(executor) = executor.as_deref_mut() { land::herd_with_executor(&mut mobs, players, view, Some(executor)); }
     else { land::herd(&mut mobs, players, view); }
 
     for (index, mob) in mobs.iter_mut().enumerate() {
@@ -4418,7 +4418,8 @@ pub fn step_all_with_executor(
     }
 
     water::predator_strikes(&mut mobs,&mut outcome);
-    water::interactions(&mut mobs,view,players,&mut outcome,rng);
+    if let Some(executor)=executor.as_deref_mut() { water::interactions_with_executor(&mut mobs,view,players,&mut outcome,rng,Some(executor)); }
+    else { water::interactions(&mut mobs,view,players,&mut outcome,rng); }
 
     // Волки хозяев: кого хозяин ударил и кто ударил хозяина; дикая стая;
     // поводки (mob/leash.rs).
@@ -4428,7 +4429,8 @@ pub fn step_all_with_executor(
 
     tame::orders(&mut mobs, &owner_hits);
     tame::pack_anger(&mut mobs);
-    wildlife::pack_anger(&mut mobs);
+    if let Some(executor)=executor { wildlife::pack_anger_with_executor(&mut mobs,Some(executor)); }
+    else { wildlife::pack_anger(&mut mobs); }
     leash::bind_knots(&mut mobs);
     leash::step_all(&mut mobs, &players.iter().map(|player| (player.id, (player.x, player.y, player.z))).collect::<Vec<_>>());
 

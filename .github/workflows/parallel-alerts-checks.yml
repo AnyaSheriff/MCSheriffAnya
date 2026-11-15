@@ -1,0 +1,108 @@
+name: Ordered parallel bee and dolphin alerts
+on:
+  push:
+    branches: ['feat/parallel-alerts-20261115']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Install tested dependency lock
+        run: |
+          mkdir -p alerts-evidence
+          python3 -B tools/fetch-release-lock.py
+          cp Cargo.lock alerts-evidence/Cargo.lock
+          rustc -vV > alerts-evidence/rustc.log
+          lscpu > alerts-evidence/cpu.log
+      - name: Check lifecycle probe helpers
+        run: python3 -B -m unittest discover -s tools -p test_check_adaptive_combined.py
+      - name: Check paired observation harness
+        run: python3 -B -m unittest discover -s tools/blackbox/mobs -p 'test_*.py'
+      - name: Prepare own plugin components
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output alerts-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 2>&1 | tee alerts-evidence/examples-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output alerts-evidence
+      - name: Strict Clippy
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee alerts-evidence/clippy.log
+      - name: Full default workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace 2>&1 | tee alerts-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features 2>&1 | tee alerts-evidence/no-default-tests.log
+      - name: Build ordinary native runtime
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee alerts-evidence/build.log
+          cp target/release/mcsheriffanya alerts-evidence/runtime-elf
+          git diff --exit-code
+      - name: Actual startup and reopening of four dimension configurations
+        timeout-minutes: 20
+        run: python3 -B tools/check-disabled-dimensions.py --binary alerts-evidence/runtime-elf --output "$RUNNER_TEMP/disabled-dimensions"
+      - name: Existing dispenser and jukebox runtime regressions
+        timeout-minutes: 8
+        run: python3 -B tools/protocol-bridge/probe_level_events_candidate.py --binary alerts-evidence/runtime-elf --output "$RUNNER_TEMP/level-events-candidate"
+      - name: Combined adaptive runtime configuration and lifecycle
+        timeout-minutes: 20
+        run: python3 -B tools/check-adaptive-combined.py --binary alerts-evidence/runtime-elf --output "$RUNNER_TEMP/adaptive-combined"
+      - name: Measured single-dimension sensing workload
+        run: |
+          set -o pipefail
+          cargo test --release --locked mob::parallel_tests::sensing_benchmark -- --ignored --nocapture 2>&1 | tee alerts-evidence/sensing-benchmark.log
+          test "$(grep -c 'test result: ok. 1 passed' alerts-evidence/sensing-benchmark.log)" -eq 1
+      - name: Measure complete alert snapshot and application work
+        run: |
+          set -o pipefail
+          cargo test --release --locked mob::parallel_tests::alert_benchmark -- --ignored --nocapture 2>&1 | tee alerts-evidence/alert-benchmark.log
+          test "$(grep -c 'test result: ok. 1 passed' alerts-evidence/alert-benchmark.log)" -eq 1
+      - name: Selected paired bee and dolphin observations
+        timeout-minutes: 25
+        run: python3 -B tools/blackbox/mobs/compare_parallel_alerts.py --binary alerts-evidence/runtime-elf --output "$RUNNER_TEMP/parallel-alerts"
+      - name: Preserve raw selected evidence
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          import hashlib,json,os,pathlib,shutil,subprocess
+          out=pathlib.Path('alerts-evidence');out.mkdir(exist_ok=True)
+          for name in ['disabled-dimensions','level-events-candidate','adaptive-combined','parallel-alerts']:
+              root=pathlib.Path(os.environ['RUNNER_TEMP'])/name
+              for p in root.rglob('*'):
+                  if p.is_file() and p.suffix in ['.json','.log']:
+                      dest=out/name/p.relative_to(root);dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,dest)
+          subprocess.run(['git','archive','--format=tar.gz','--output='+str(out/'source.tar.gz'),'HEAD'],check=True)
+          files={str(p.relative_to(out)):{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in out.rglob('*') if p.is_file()}
+          (out/'receipt.json').write_text(json.dumps({'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'files':files,'scope':'Shared >50ms adaptive budget plus ordered pure bee/dolphin alert scans. Selected paired observations do not prove automatic helper activation. Full world ticks and redstone remain serial. No physical ARM/Android execution.'},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alerts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: alerts-evidence/
+          retention-days: 7
+          if-no-files-found: error

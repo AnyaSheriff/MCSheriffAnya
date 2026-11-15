@@ -28,7 +28,7 @@ def port_free(port):
         return s.connect_ex(('127.0.0.1', port)) != 0
 
 
-def parse_args():
+def parse_args(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--side', choices=['reference','candidate'], required=True)
     p.add_argument('--output', type=Path, required=True)
@@ -39,12 +39,27 @@ def parse_args():
     p.add_argument('--source', required=True)
     p.add_argument('--java', default='java')
     p.add_argument('--port', type=int, required=True)
-    a = p.parse_args()
+    p.add_argument('--combined-parallel', action='store_true',
+                   help='candidate only: enable both opt-in parallel settings')
+    a = p.parse_args(argv)
     if os.environ.get('GITHUB_ACTIONS') != 'true': p.error('GitHub Actions only; local runtime forbidden')
+    if a.combined_parallel and a.side != 'candidate': p.error('--combined-parallel is candidate-only')
     if not 26400 <= a.port <= 65000: p.error('isolated port >=26400 required')
     if a.side == 'reference' and (not a.jar or not a.jar_sha256 or a.binary): p.error('reference requires --jar and --jar-sha256')
     if a.side == 'candidate' and (not a.binary or not a.binary_sha256 or a.jar): p.error('candidate requires --binary and --binary-sha256')
     return a
+
+
+def candidate_settings(combined_parallel=False):
+    settings = 'java-version=26.3\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\noffline-license-mode=disabled\nbedrock-port=0\nprefetch-chunks=0\n'
+    if combined_parallel:
+        settings += 'parallel-dimension-ticks=true\nexperimental-parallel-mobs=true\n'
+    return settings
+
+
+def parallel_flags_receipt(enabled):
+    return {'candidate_parallel_flags': {'parallel-dimension-ticks': True,
+                                         'experimental-parallel-mobs': True}} if enabled else {}
 
 
 def run(a):
@@ -78,8 +93,9 @@ def run(a):
     (config/'server.properties').write_text(properties)
     (folder/'eula.txt').write_text('eula=true\n')
     if a.side == 'candidate':
-        (config/'mcsa.properties').write_text('java-version=26.3\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\noffline-license-mode=disabled\nbedrock-port=0\nprefetch-chunks=0\n')
+        (config/'mcsa.properties').write_text(candidate_settings(getattr(a, 'combined_parallel', False)))
     report = dict(source=a.source,side=a.side,identities=identities,cases=[],commands=[],cleanup={})
+    report.update(parallel_flags_receipt(getattr(a, 'combined_parallel', False)))
     process = client = None
     logpath = a.output/'server.log'; commandpath = a.output/'commands.jsonl'
     barrier_index = 0
