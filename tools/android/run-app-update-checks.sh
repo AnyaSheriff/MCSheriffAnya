@@ -5,6 +5,7 @@ collect_app_debug() {
   timeout 20s adb logcat -b all -d -v threadtime > apk-device-evidence/app-update/logcat-after.txt 2>&1 || true
   timeout 20s adb shell ps > apk-device-evidence/app-update/processes-after.txt 2>&1 || true
   timeout 20s adb shell dumpsys package ru.sheriffanya.mcsa > apk-device-evidence/app-update/package-after.txt 2>&1 || true
+  timeout 20s adb shell run-as ru.sheriffanya.mcsa cat files/app-install-session-stage.json > apk-device-evidence/app-update/session-stage.json 2>/dev/null || true
 }
 trap collect_app_debug EXIT
 adb shell ps > apk-device-evidence/app-update/processes-before.txt

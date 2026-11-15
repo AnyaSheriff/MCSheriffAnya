@@ -20,7 +20,7 @@ def adb(*args):
 try:
     clicked = False
     for attempt in range(30):
-        focus = adb('shell', 'dumpsys', 'window', 'windows').decode(errors='replace')
+        focus = adb('shell', 'dumpsys', 'window').decode(errors='replace')
         (out / f'window-{attempt:02}.txt').write_text(focus)
         focused = re.findall(r'mCurrentFocus=.*? ([\w.]+)/', focus)
         if not focused:

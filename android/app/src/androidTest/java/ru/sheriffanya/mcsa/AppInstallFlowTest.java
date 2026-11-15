@@ -103,7 +103,7 @@ public class AppInstallFlowTest {
     }
     @Test public void prepareSystemInstall() throws Exception {
         AppUpdateManifest manifest=stageCandidate();Context app=context();PackageManager pm=app.getPackageManager();long target=manifest.code;
-        JSONObject before=new JSONObject().put("api",Build.VERSION.SDK_INT).put("target",target).put("installed",installed()).put("retained",retained());
+        JSONObject before=new JSONObject().put("api",Build.VERSION.SDK_INT).put("target",target).put("installed",installed()).put("candidate_sha256",manifest.sha256).put("retained",retained());
         write("install-flow-before.json",before);
         // Не закрываем ActivityScenario: установщик остаётся открыт после окончания instrumentation.
         ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class);
@@ -117,19 +117,35 @@ public class AppInstallFlowTest {
         assertFalse(HostState.idle());assertFalse(AppUpdateStore.canInstall());
         before.put("session_id",ticket.sessionId).put("session_present",pm.getPackageInstaller().getSessionInfo(ticket.sessionId)!=null).put("pending_code",AppUpdateStore.pending(app).getLong("code",0));
         assertTrue(before.getBoolean("session_present"));assertEquals(target,before.getLong("pending_code"));write("install-flow-before.json",before);
+        // STATUS_PENDING_USER_ACTION содержит Intent, но UI ещё может ждать refresh Activity.
+        // Не заканчиваем instrumentation, пока настоящий системный установщик не виден.
+        androidx.test.uiautomator.UiDevice device=androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        long uiDeadline=System.currentTimeMillis()+30000;String installerPackage=null;
+        while(System.currentTimeMillis()<uiDeadline) {
+            String visible=device.getCurrentPackageName();
+            if("com.android.packageinstaller".equals(visible)||"com.google.android.packageinstaller".equals(visible)||"com.android.permissioncontroller".equals(visible)||"com.google.android.permissioncontroller".equals(visible)) {
+                android.content.pm.ApplicationInfo installer=pm.getApplicationInfo(visible,0);
+                assertTrue("trusted system installer",(installer.flags&android.content.pm.ApplicationInfo.FLAG_SYSTEM)!=0);installerPackage=visible;break;
+            }
+            Thread.sleep(100);
+        }
+        assertNotNull("actual system installer foreground before instrumentation cleanup",installerPackage);
+        before.put("installer_foreground_before_finish",installerPackage);write("install-flow-before.json",before);
+
     }
     @Test public void postInstallRetainsDataAndReleasesReservation() throws Exception {
         JSONObject before=new JSONObject(ServerSettings.read(new File(context().getFilesDir(),"install-flow-before.json")));
         try(ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class)) {
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             JSONObject after=installed();assertEquals(before.getLong("target"),after.getLong("code"));
+            String installedApkSha=CoreDownload.sha256(new File(context().getApplicationInfo().sourceDir));assertEquals("system installed exact candidate bytes",before.getString("candidate_sha256"),installedApkSha);
             assertEquals(before.getJSONObject("installed").getLong("first_install_time"),after.getLong("first_install_time"));
             assertEquals(before.getJSONObject("installed").getJSONArray("signatures").toString(),after.getJSONArray("signatures").toString());
             JSONObject expected=before.getJSONObject("retained"),actual=retained();assertEquals(expected.length(),actual.length());
             java.util.Iterator<String> keys=expected.keys();while(keys.hasNext()) { String key=keys.next();assertEquals(key,expected.getString(key),actual.getString(key)); }
             assertTrue(HostState.idle());assertFalse(AppUpdateStore.hasInstallation());assertFalse(AppUpdateStore.busy);assertEquals(0,AppUpdateStore.pending(context()).getLong("code",0));
             assertTrue(context().getPackageManager().getPackageInstaller().getMySessions().isEmpty());
-            write("install-flow-after.json",new JSONObject().put("status","passed").put("api",Build.VERSION.SDK_INT).put("installed",after).put("retained",actual).put("reservation_cleared",true).put("host_idle",true));
+            write("install-flow-after.json",new JSONObject().put("status","passed").put("api",Build.VERSION.SDK_INT).put("installed",after).put("installed_apk_sha256",installedApkSha).put("retained",actual).put("reservation_cleared",true).put("host_idle",true));
         }
     }
 }

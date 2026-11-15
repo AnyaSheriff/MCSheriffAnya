@@ -56,6 +56,8 @@ assert interrupted['actual_retained_or_system_removed'] in {'session_retained_an
 assert interrupted['session_id']==interrupted_before['session_id'] and interrupted['pid']!=interrupted_before['pid']
 assert before['installed']['code']==6 and before['target']==after['installed']['code']==7
 assert before['session_present'] and before['pending_code']==7 and confirm['system_package']
+assert before['candidate_sha256']==after['installed_apk_sha256']
+assert before['installer_foreground_before_finish']==confirm['package']
 assert before['installed']['signatures']==after['installed']['signatures']
 assert before['installed']['first_install_time']==after['installed']['first_install_time']
 assert before['retained']==after['retained'] and after['reservation_cleared'] and after['host_idle']
