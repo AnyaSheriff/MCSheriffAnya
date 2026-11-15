@@ -1877,7 +1877,11 @@ fn step_mobs_with_executor(shared: &Shared, dimension: Dimension, world: &mut Wo
     };
     let riders: Vec<i32> = shared.riding.lock().expect("седоки").vehicles().flat_map(|(_, ids)| ids.iter().copied()).collect();
     crate::mob::movement_enchantments::step(world, &mut items, &watchers, &riders);
-    let outcome = crate::mob::step_all_with_executor(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id(), executor);
+    let outcome = if let Some(executor) = executor {
+        crate::mob::step_all_with_executor(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id(), Some(executor))
+    } else {
+        crate::mob::step_all(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id())
+    };
     rider_hurt.extend(crate::mob::horse::sync_riding(&mut items, &mut shared.riding.lock().expect("учёт седоков"), &owners, &MobView(world)));
     for (id, damage) in rider_hurt {
         world.note_mob_hurt(id, damage, crate::survival::Source::Fall, 0, "", None, (0.0, 0.0, 0.0));
