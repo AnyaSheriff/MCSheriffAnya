@@ -40,7 +40,8 @@ public class CoreUpdateTest {
     }
     private void openUpdates(ActivityScenario<MainActivity> activity) throws Exception {
         click(activity,R.id.tab_settings);
-        activity.onActivity(a->{ Button b=textButton(a.getWindow().getDecorView(),"Обновления ядра  ›");assertNotNull(b);assertTrue(b.performClick()); });
+        activity.onActivity(a->{ Button b=textButton(a.getWindow().getDecorView(),"Обновления  ›");assertNotNull(b);assertTrue(b.performClick()); });
+        activity.onActivity(a->{ Button b=textButton(a.getWindow().getDecorView(),"Ядро сервера  ›");assertNotNull(b);assertTrue(b.performClick()); });
     }
     private void confirm(String caption) {
         androidx.test.uiautomator.UiDevice ui=androidx.test.uiautomator.UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
@@ -86,6 +87,8 @@ public class CoreUpdateTest {
             stop(activity);openUpdates(activity);click(activity,R.id.core_apply_update);confirm("Обновить");
             await("actual HTTPS module verified and activated",()->HostState.idle()&&store.revision()==manifest.revision);
             assertEquals(copies+1,backups.list().size());retained(marker);assertTrue(store.hasPrevious());
+            assertEquals(manifest.settings.fields.size(),store.selectedSettings().fields.size());
+            assertEquals(manifest.settings.diagnostic,store.selectedSettings().diagnostic);
             CoreUpdateStore.Core selected=store.prepareLaunch();assertEquals(manifest.sha256,CoreDownload.sha256(selected.library));assertEquals(0,Os.stat(selected.library.getPath()).st_mode&0222);
             // prepareLaunch помечает попытку старта. Пользовательская отмена оставляет её повторяемой.
             assertFalse(store.failed(selected,true));assertEquals(manifest.revision,store.revision());
@@ -95,6 +98,8 @@ public class CoreUpdateTest {
             assertFalse(new File(context().getFilesDir(),"core-updates/pending.json").exists());
             openUpdates(activity);click(activity,R.id.core_rollback);confirm("Вернуть");
             await("UI rollback",()->HostState.idle()&&store.revision()==BuildConfig.BUNDLED_CORE_REVISION);assertEquals(copies+2,backups.list().size());retained(marker);
+            assertEquals("bundled",store.settingsSelection());
+            assertEquals(28,store.selectedSettings().fields.size());assertTrue(store.selectedSettings().diagnostic.isEmpty());
             start(activity,BuildConfig.BUNDLED_CORE_BUILD_ID);stop(activity);
             // Повторное применение сохранённого подписанного слота, затем имитация прерванного старта.
             CoreUpdateStore.Core candidate=store.stage(manifest,(done,total)->{});store.activate(candidate,copy.getName());store.prepareLaunch();

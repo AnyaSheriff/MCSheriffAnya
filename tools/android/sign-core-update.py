@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+from settings_schema import validate_settings
 
 ROOT = Path(__file__).resolve().parents[2]
 ABIS = ('armeabi-v7a', 'arm64-v8a', 'x86_64')
@@ -19,12 +20,21 @@ def main():
     parser.add_argument('--revision', type=int, help='Defaults to the highest verified candidate in the pin')
     parser.add_argument('--tag', help='Defaults to v + the verified pin version')
     parser.add_argument('--notes', required=True)
+    parser.add_argument('--settings-schema', type=Path, help='Optional new fields supported by this exact verified core')
+    parser.add_argument('--settings-source', help='Required with --settings-schema: exact audited core source SHA')
     args = parser.parse_args()
     pin = json.loads(args.pin.read_text())
     if args.tag is None:
         args.tag = 'v' + pin['version']
     if args.revision is None:
         args.revision = max(map(int, pin['updates']))
+    settings = None
+    if args.settings_schema is not None:
+        if args.settings_source != pin['head'] or not args.settings_source or len(args.settings_source) != 40:
+            parser.error('--settings-source must equal the exact verified native pin head')
+        settings = validate_settings(json.loads(args.settings_schema.read_text()))
+    elif args.settings_source is not None:
+        parser.error('--settings-source requires --settings-schema')
     receipt = json.loads((args.native / 'receipt.json').read_text())
     assert pin['format'] == receipt['format'] == 2
     assert receipt['source_head'] == pin['head']
@@ -52,7 +62,11 @@ def main():
                'revision': args.revision, 'min_app': 4, 'host_api': 1,
                'version': f'{pin["version"]} · Android #{args.revision}',
                'source': pin['head'], 'build_id': update['build_id'], 'notes': args.notes, 'packages': packages}
+    if settings is not None:
+        payload['settings'] = settings
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
+    if len(raw) > 48000:
+        raise ValueError('Signed payload exceeds the Android envelope limit')
     with tempfile.TemporaryDirectory(prefix='mcsa-sign-') as temporary:
         directory = Path(temporary)
         (directory / 'payload').write_bytes(raw)

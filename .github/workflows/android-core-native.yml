@@ -1,13 +1,20 @@
 name: Android OTA core native builds
 on:
   push:
-    branches: ['wip/apk-core-native-*']
+    branches: ['wip/apk-core-native-*', 'feat/android-app-updates-20261115']
+    paths:
+      - '**/*.rs'
+      - '**/Cargo.toml'
+      - '.github/release.lock'
+      - '.github/workflows/android-core-native.yml'
+      - 'android/native/**'
+      - 'tools/android/build-core-native.sh'
   workflow_dispatch:
     inputs:
       core_revision:
         description: 'First core revision (next revision is also built for OTA checks)'
         required: true
-        default: '1'
+        default: '9'
         type: string
 permissions:
   contents: read
@@ -17,7 +24,7 @@ jobs:
     timeout-minutes: 90
     env:
       CARGO_BUILD_JOBS: '4'
-      MCSA_ANDROID_CORE_REVISION: ${{ inputs.core_revision || '1' }}
+      MCSA_ANDROID_CORE_REVISION: ${{ inputs.core_revision || '9' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,7 +33,9 @@ jobs:
         with:
           key: android-core-dylib-api24
       - name: Check derived manifest rules
-        run: python3 -m unittest discover -s tools/android -p test_core_manifest.py -v
+        run: |
+          python3 -B -m unittest discover -s tools/android -p test_core_manifest.py -v
+          python3 -B tools/fetch-release-lock.py
       - name: Build stable hosts and two complete core revisions
         run: bash tools/android/build-core-native.sh
       - uses: actions/upload-artifact@v4

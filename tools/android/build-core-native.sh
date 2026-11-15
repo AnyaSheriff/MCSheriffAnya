@@ -11,6 +11,8 @@ next_revision="$((first_revision+1))"
 source_root="$(mktemp -d "${RUNNER_TEMP:-/tmp}/mcsa-core-source-XXXXXX")"
 git archive HEAD | tar -xf - -C "$source_root"
 python3 tools/android/core-manifest.py "$source_root"
+test -f Cargo.lock
+cp Cargo.lock "$source_root/Cargo.lock"
 mkdir -p android-core-native
 printf '{"bundled":%s,"update":%s}\n' "$first_revision" "$next_revision" > android-core-native/core-revisions.json
 printf '%s\n' "$source_head" > android-core-native/source-head.txt
@@ -35,7 +37,7 @@ for abi in armeabi-v7a arm64-v8a x86_64; do
   "$compilers/llvm-readelf" --file-header --program-headers --dynamic --dyn-syms "android-core-native/$abi/libmcsa.so" > "android-core-native/elf-host-$abi.txt"
   for revision in "$first_revision" "$next_revision"; do
     export MCSA_CORE_BUILD_ID="$source_head-r$revision"
-    cargo build --manifest-path "$source_root/Cargo.toml" --release --lib --target "$triple" "${features[@]}" 2>&1 | tee "android-core-native/build-$abi-r$revision.log"
+    cargo build --manifest-path "$source_root/Cargo.toml" --locked --release --lib --target "$triple" "${features[@]}" 2>&1 | tee "android-core-native/build-$abi-r$revision.log"
     if [ "$revision" = "$first_revision" ]; then destination="android-core-native/$abi"; else destination="android-core-native/updates/$next_revision/$abi"; fi
     mkdir -p "$destination"
     cp "$CARGO_TARGET_DIR/$triple/release/libmcsa_android_core.so" "$destination/libmcsa_core.so"

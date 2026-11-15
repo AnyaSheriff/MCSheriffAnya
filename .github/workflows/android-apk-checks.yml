@@ -1,13 +1,13 @@
 name: Android APK build and device checks
 on:
   push:
-    branches: ['wip/apk-checks-*']
+    branches: ['wip/apk-checks-*', 'feat/android-app-updates-20261115']
   workflow_dispatch:
     inputs:
       core_update_pin:
         description: 'Verified candidate native pin for OTA checks; bundled APK pin stays unchanged'
         required: false
-        default: 'android/runtime-pin.json'
+        default: 'android/ota-pins/r8.json'
         type: string
       test_manifest_url:
         description: 'Signed candidate channel for the emulator build only; phone APKs keep the public channel'
@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 30
     env:
       TEST_MANIFEST_URL: ${{ inputs.test_manifest_url || '' }}
-      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/runtime-pin.json' }}
+      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/ota-pins/r8.json' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,7 +48,9 @@ jobs:
             if [ "$abi" = x86_64 ]; then out=apk-test; else out=apk-phone; fi
             cp android/app/build/outputs/apk/debug/app-debug.apk "$out/app-$abi-debug.apk"
           done
-          (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 "${extra[@]}" :app:testDebugUnitTest :app:assembleDebugAndroidTest :app:lintDebug) 2>&1 | tee apk-build-evidence/checks.log
+          (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 -PappVersionCode=7 "${extra[@]}" :app:assembleDebug) 2>&1 | tee apk-build-evidence/upgrade-fixture-build.log
+          cp android/app/build/outputs/apk/debug/app-debug.apk apk-test/app-upgrade-x86_64.apk
+          (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 "${extra[@]}" :app:assembleDebug :app:testDebugUnitTest :app:assembleDebugAndroidTest :app:lintDebug) 2>&1 | tee apk-build-evidence/checks.log
           cp android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk apk-test/
           cp -r android/app/build/test-results apk-build-evidence/
           cp android/app/build/reports/lint-results-debug.* apk-build-evidence/
@@ -83,7 +85,7 @@ jobs:
     timeout-minutes: 30
     env:
       TEST_API: ${{ matrix.api }}
-      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/runtime-pin.json' }}
+      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/ota-pins/r8.json' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -103,7 +105,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash tools/android/run-emulator-checks.sh && bash tools/android/run-core-ota-checks.sh
+          script: bash tools/android/run-emulator-checks.sh && bash tools/android/run-app-update-checks.sh && bash tools/android/run-core-ota-checks.sh && bash tools/android/run-app-install-flow.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

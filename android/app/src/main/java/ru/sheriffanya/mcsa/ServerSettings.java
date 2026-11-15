@@ -1,6 +1,8 @@
 package ru.sheriffanya.mcsa;
 
 import android.util.AtomicFile;
+import android.content.Context;
+import java.util.LinkedHashSet;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,7 +24,7 @@ final class ServerSettings {
             this.group=group; this.mcsa=mcsa; this.key=key; this.title=title; this.help=help;
             this.fallback=fallback; this.min=min; this.max=max; this.choices=choices; this.labels=labels;
         }
-        boolean toggle() { return choices != null && choices.length == 2 && choices[0].equals("false"); }
+        boolean toggle() { return choices != null && choices.length == 2 && choices[0].equals("false") && choices[1].equals("true"); }
         void validate(String value) {
             if (value.length()>2048 || value.indexOf('\n')>=0 || value.indexOf('\r')>=0 || value.indexOf('\0')>=0)
                 throw new IllegalArgumentException(title+": недопустимое значение");
@@ -84,6 +86,21 @@ final class ServerSettings {
     final ConfigDocument server, mcsa;
     interface Writer { void write(File file,String text) throws IOException; }
     private final Writer writer;
+    private SettingsSchema schema=SettingsSchema.base();
+    private CoreUpdateStore schemaStore;
+    private String schemaSelection;
+    List<Field> fields() { return schema.fields; }
+    List<String> groups() { LinkedHashSet<String> groups=new LinkedHashSet<>(); for(Field f:fields()) groups.add(f.group); return new ArrayList<>(groups); }
+    String schemaDiagnostic() { return schema.diagnostic; }
+    ServerSettings(Context context,File root) throws IOException {
+        this(root);
+        try {
+            schemaStore=new CoreUpdateStore(context);schemaSelection=schemaStore.settingsSelection();
+            schema=schemaStore.selectedSettings();
+            if(!schemaSelection.equals(schemaStore.settingsSelection())) throw new IOException("Выбранное ядро изменилось");
+        } catch(IOException invalid) { schemaStore=null;schema=SettingsSchema.unavailable(); }
+    }
+    ServerSettings(File root,Writer writer,SettingsSchema schema) throws IOException { this(root,writer);this.schema=schema; }
     ServerSettings(File root) throws IOException {
         this(root,ServerSettings::write);
     }
@@ -97,17 +114,18 @@ final class ServerSettings {
     String value(Field field) { return (field.mcsa?mcsa:server).get(field.key,field.fallback); }
     Map<String,String> values() {
         Map<String,String> result=new LinkedHashMap<>();
-        for(Field field:FIELDS) result.put(field.key,value(field));
+        for(Field field:fields()) result.put(field.key,value(field));
         return result;
     }
     void save(Map<String,String> values) throws IOException {
         synchronized(HostState.LOCK) {
+            if(schemaStore!=null&&!schemaSelection.equals(schemaStore.settingsSelection())) throw new IOException("Ядро изменилось. Открой настройки заново.");
             if(!HostState.idle()) throw new IOException("Сначала останови сервер и дождись окончания работы с копией.");
             if(root.getName().equals("server")&&new File(root.getParentFile(),"import.transaction").exists()) throw new IOException("Сначала заверши восстановление: перезапусти приложение. Прежний мир сохранён.");
             File sp=new File(root,"config/server.properties"), mp=new File(root,"config/mcsa.properties");
             if(!read(sp).equals(serverOriginal)||!read(mp).equals(mcsaOriginal)) throw new IOException("Конфиги изменились. Открой настройки заново, чтобы не потерять изменения.");
             Map<String,String> a=new LinkedHashMap<>(),b=new LinkedHashMap<>();
-            for(Field f:FIELDS) {
+            for(Field f:fields()) {
                 String v=values.get(f.key); if(v==null) throw new IllegalArgumentException("Нет значения: "+f.title);
                 f.validate(v); (f.mcsa?b:a).put(f.key,v);
             }
