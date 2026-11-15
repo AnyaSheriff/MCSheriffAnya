@@ -26,8 +26,8 @@ def common_cases():
             ['position', 'rotation'], ['spawn_observed', 'position_changed'])
         # Это уход из области слежения, а не смерть. Возврат доказывает сохранение сущности.
         add('tracking_leave_return', [phase('before'),
-            phase('outside', ['tp {target} 2048.5 101 0.5'], 4),
-            phase('returned', ['tp {target} 4.5 101 0.5 37 0'], 4)],
+            phase('outside', ['tp {target} 128.5 101 0.5'], 4),
+            phase('returned', ['tp {target} {x} {y} {z} 37 0'], 4)],
             ['type', 'position', 'removed'],
             ['spawn_observed', 'removal_observed', 'respawn_observed'])
         if not mob['generic_damage_exclusion']:

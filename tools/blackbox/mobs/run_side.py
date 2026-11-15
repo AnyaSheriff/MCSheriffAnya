@@ -113,9 +113,12 @@ def run(a):
             time.sleep(.1)
         client = connect(a.port,protocol,MobObserver,version=777,username='MobProbe',view_distance=4)
         client.set_entity_types(entities);client.pump(5,lambda r:client.position is not None)
-        for text in ('tick freeze','gamerule minecraft:spawn_mobs false','time set 18000','weather clear','tp MobProbe 0.5 101 0.5 0 0'):
+        for text in ('tick freeze','gamerule minecraft:spawn_mobs false','time set 18000','weather clear','tp MobProbe 0.5 101 0.5 0 0',
+                     'forceload add 128 0','tick step 20'):
             command(text)
-        barrier()
+        pump(1.2);barrier()
+        if not client.loaded or client.position is None:
+            raise RuntimeError('observer login/position not confirmed')
         startup_log = logpath.read_text(errors='replace')
         if ERRORS.search(startup_log): raise RuntimeError('setup command rejected; see server.log')
         environment = None
@@ -126,9 +129,9 @@ def run(a):
             client.phase = case['id']+':cleanup'
             try:
                 # Убираем прежних испытуемых из области слежения до смерти.
-                command('tp @e[tag=mcsa_mob_subject] 4096.5 101 0.5')
+                command('tp @e[tag=mcsa_mob_subject] 128.5 101 0.5')
                 command('kill @e[tag=mcsa_mob_subject]')
-                pump(.1,deadline)
+                command('tick step 2');pump(.25,deadline);barrier(deadline)
                 client.events.clear();client.records.clear();client.entities.clear();client.max_events=4000
                 client.phase = case['id']+':setup'
                 env = case['environment']
@@ -146,11 +149,17 @@ def run(a):
                 nbt = case.get('nbt','').strip().strip('{}')
                 nbt += (',' if nbt else '')+f'Tags:["mcsa_mob_subject","{tag}"]'
                 command(f'summon minecraft:{case["mob"]} 4.5 {y} 0.5 {{{nbt}}}')
-                barrier(deadline)
+                # Консольный say не означает обновления сетевого слежения.
+                # Обе стороны получают одинаковые два установочных тика.
+                command('tick step 2');pump(.25,deadline);barrier(deadline)
                 def locate():
                     return [e for e,s in client.entities.items() if s.get('entity_type') == types.get(case['mob']) and 'position' in s and sum((a-b)**2 for a,b in zip(s['position'],point)) < 16 and not s.get('removed')]
                 found = locate()
-                if len(found) != 1: raise RuntimeError('missing or ambiguous subject spawn: '+str(found))
+                if len(found) != 1:
+                    row['observer_diagnostic']=dict(position=client.position,loaded=client.loaded,
+                        packet_counts=dict(__import__('collections').Counter(r['name'] for r in client.records)),
+                        entity_snapshots=list(client.entities.values()))
+                    raise RuntimeError('missing or ambiguous subject spawn: '+str(found))
                 entity = found[0];uid = client.entities[entity]['uuid'];row['entity']=entity;row['initial']=client.snapshot(entity)
                 for phase in case['phases']:
                     if phase.get('restart'): raise ValueError('restart phase unsupported; no persistence claim')

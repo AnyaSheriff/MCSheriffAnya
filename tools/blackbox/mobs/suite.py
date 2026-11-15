@@ -58,7 +58,17 @@ def main():
     if all(x.exists() for x in paths):
         parity=subprocess.run([sys.executable,'-B',str(HERE/'report.py'),'--reference',str(paths[0]),
              '--candidate',str(paths[1]),'--cases-file',str(a.output/'cases.json'),'--output',str(a.output/'comparison'),'--gate']).returncode
-    dump(a.output/'status.json',dict(recording_complete=all(v==0 for v in statuses.values()),parity_gate_exit=parity))
+    summary=dict(recording_complete=all(v==0 for v in statuses.values()),parity_gate_exit=parity)
+    comparison=a.output/'comparison/report.json'
+    if comparison.exists(): summary['comparison_counts']=json.loads(comparison.read_text())['counts']
+    for side,path in zip(('reference','candidate'),paths):
+        if path.exists():
+            side_report=json.loads(path.read_text())
+            summary[side]=dict(error=side_report.get('error'),cleanup=side_report.get('cleanup'),
+                recorded=sum(c['status']=='RECORDED' for c in side_report['cases']),
+                failed=[dict(id=c['id'],error=c.get('error')) for c in side_report['cases'] if c['status']!='RECORDED'])
+    dump(a.output/'status.json',summary)
+    print(json.dumps(summary,ensure_ascii=False,indent=2))
     if any(statuses.values()) or parity: raise SystemExit(1)
 
 if __name__=='__main__': main()
