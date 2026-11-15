@@ -1177,7 +1177,8 @@ fn clone(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
     if let ["from", name, tail @ ..] = rest {
         match Dimension::from_name(name) {
-            Some(dimension) => from_dimension = dimension,
+            Some(dimension) if shared.dimension_enabled(dimension) => from_dimension = dimension,
+            Some(_) => return fail("argument.dimension.invalid", &[s(*name)]),
             None => return fail("argument.dimension.invalid", &[s(*name)]),
         }
 
@@ -1198,7 +1199,8 @@ fn clone(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
     if let ["to", name, tail @ ..] = rest {
         match Dimension::from_name(name) {
-            Some(dimension) => to_dimension = dimension,
+            Some(dimension) if shared.dimension_enabled(dimension) => to_dimension = dimension,
+            Some(_) => return fail("argument.dimension.invalid", &[s(*name)]),
             None => return fail("argument.dimension.invalid", &[s(*name)]),
         }
 
@@ -1486,7 +1488,7 @@ pub fn forget_attributes(shared: &Shared, uuid: &[u8; 16]) {
 pub(crate) fn plugin_attribute(shared: &Shared, uuid: &[u8;16], attribute: i32) -> Option<crate::attributes::Attribute> {
     // Игрока ищем первым: такт мобов не должен задерживать чтение его атрибутов.
     if !shared.players.lock().expect("игроки").members().iter().any(|member|member.uuid==*uuid) {
-        for dimension in crate::dimension::Dimension::ALL {
+        for dimension in shared.enabled_dimensions() {
             let items=shared.items_in(dimension).lock().expect("сущности");
             if let Some(mob)=items.mobs().iter().find(|mob|mob.uuid==*uuid) {return mob.plugin_attribute(attribute);}
         }
@@ -1501,7 +1503,7 @@ pub(crate) fn plugin_attribute(shared: &Shared, uuid: &[u8;16], attribute: i32) 
 /// Поручение подключениям; вызывается только после проверки данных WIT.
 pub(crate) fn plugin_attribute_edit(shared: &Shared, uuid: &[u8;16], edit: AttributeEdit) -> Result<(), String> {
     if !shared.players.lock().expect("игроки").members().iter().any(|member|member.uuid==*uuid) {
-        for dimension in crate::dimension::Dimension::ALL {
+        for dimension in shared.enabled_dimensions() {
             let mut items=shared.items_in(dimension).lock().expect("сущности");
             if let Some(mob)=items.mobs_mut().iter_mut().find(|mob|mob.uuid==*uuid) {return mob.edit_plugin_attribute(&edit);}
         }

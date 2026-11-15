@@ -193,7 +193,7 @@ fn main() -> io::Result<()> {
     // работаем как придётся.
     let cores = tick::cores();
     let others = cores.saturating_sub(1).max(1);
-    let reserve_tick_core = !settings.parallel_dimension_ticks;
+    let reserve_tick_core = !settings.parallel_dimension_ticks && !settings.experimental_parallel_mobs;
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(others)
@@ -219,13 +219,13 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
     // Первые строки — как у обычного сервера: что за сервер, что грузим.
     log_info!("Запуск сервера MCSheriffAnya");
 
-    match tick::tick_core().filter(|_| !settings.parallel_dimension_ticks) {
+    match tick::tick_core().filter(|_| !settings.parallel_dimension_ticks && !settings.experimental_parallel_mobs) {
         Some(core) => log_info!(
             "Ядер: {}. Такту отведено ядро {}, остальные — сети и складыванию мира",
             tick::cores(),
             core
         ),
-        None if settings.parallel_dimension_ticks => log_info!("Доступно логических CPU: {}. Распределением потоков управляет ОС", tick::cores()),
+        None if settings.parallel_dimension_ticks || settings.experimental_parallel_mobs => log_info!("Доступно логических CPU: {}. Распределением потоков управляет ОС", tick::cores()),
         None => log_info!("Ядро всего одно: такт и всё прочее делят его"),
     }
 
@@ -303,16 +303,16 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
     if std::env::var_os("MCSA_NET_TIMING").is_some() {
         eprintln!("NET_TIMING stage=startup_progression us={}", warming.elapsed().as_micros());
     }
-    let nether = open_world(
+    let nether = if settings.enable_nether { open_world(
         &Dimension::Nether.folder(Path::new(WORLD_PATH)),
         Some(overworld.seed()),
         WorldKind::Nether,
-    )?;
-    let end = open_world(
+    )? } else { World::in_memory_with_catalog(catalog) };
+    let end = if settings.enable_end { open_world(
         &Dimension::End.folder(Path::new(WORLD_PATH)),
         Some(overworld.seed()),
         WorldKind::End,
-    )?;
+    )? } else { World::in_memory_with_catalog(catalog) };
 
     let mut skin_settings = skins::Settings::load(Path::new(skins::SETTINGS_FILE));
     settings.apply_skin_policy(properties.online_mode, &mut skin_settings);
@@ -328,6 +328,11 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
     );
     *shared.maps.lock().expect("карты") = maps::Maps::open(Path::new(WORLD_PATH))?;
     shared.settings = settings.clone();
+    for dimension in shared.enabled_dimensions() {
+        let mut world = shared.world_in(dimension).lock().expect("мир");
+        world.nether_portals_enabled = settings.enable_nether;
+        world.end_portals_enabled = settings.enable_end;
+    }
     if settings.auth_enabled && !properties.online_mode {
         shared.auth = Some(Arc::new(auth::Service::open(Path::new("auth.db"))?));
     }
@@ -441,7 +446,7 @@ async fn server(mut settings: config::mcsheriffanya::Settings, first_start: bool
     // Плагины выгружаются до записи мира: им есть что дописать.
     plugins::shutdown();
     log_info!("Сохранение мира");
-    for dimension in Dimension::ALL {
+    for dimension in shared.enabled_dimensions() {
         let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
         // Мобы ложатся в файл вместе со своими чанками.

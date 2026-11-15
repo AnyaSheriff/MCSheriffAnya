@@ -104,6 +104,7 @@ impl PluginCtx {
     // Синхронный Bukkit-запрос ждёт только нужный чанк; генерация и чтение
     // идут без замка мира, как при отправке чанков подключению.
     fn load_block_chunk(&self, dimension: Dimension, x: i32, z: i32) -> bool {
+        if !self.shared.dimension_enabled(dimension) { return false; }
         if x.abs_diff(0) > 30_000_000 || z.abs_diff(0) > 30_000_000 { return false; }
         let (cx, cz) = (x.div_euclid(16), z.div_euclid(16));
         for _ in 0..2 {
@@ -616,6 +617,7 @@ impl mcsa::api::world::Host for PluginCtx {
         self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир").plugin_monster_limits.last().map_or_else(|| (crate::mob::spawn::MONSTER_CAP as f64*self.shared.settings.monster_spawn_multiplier).round() as u32, |(_,limit)|*limit as u32)
     }
     fn set_monster_limit(&mut self, dimension: wit::Dimension, limit: i32) -> Result<(), String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(dimension)) { return Err("Измерение отключено".into()); }
         if !(-1..=10_000).contains(&limit) {return Err("Предел монстров должен быть от -1 до 10000".into());}
         let mut world=self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир");
         world.plugin_monster_limits.retain(|(owner,_)|owner!=&self.name);
@@ -643,12 +645,14 @@ impl mcsa::api::world::Host for PluginCtx {
     }
 
     fn spawn_particle(&mut self, at: wit::Location, name: String, count: u32, dx: f64, dy: f64, dz: f64) -> Result<(), String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(at.dimension)) { return Err("Измерение отключено".into()); }
         if ![at.x,at.y,at.z,dx,dy,dz].iter().all(|v| v.is_finite()) || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || [dx,dy,dz].iter().any(|v| !(0.0..=64.0).contains(v)) || count > 4096 {return Err("Недопустимые параметры частиц".into());}
         if !matches!(name.as_str(), "happy_villager" | "heart") {return Err("Частица вне поддерживаемого каталога".into());}
         let kind = crate::commands_admin::PARTICLES.iter().position(|n| *n == name).ok_or("Неизвестная частица")? as i32;
         self.shared.world_in(dimension_from_wit(at.dimension)).lock().expect("мир").note_particle(kind,None,(at.x,at.y,at.z),(dx as f32,dy as f32,dz as f32),0.0,count as i32);Ok(())
     }
     fn break_naturally(&mut self, pos: wit::BlockPos) -> Result<bool, String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(pos.dimension)) { return Err("Измерение отключено".into()); }
         let dimension = dimension_from_wit(pos.dimension);
         let drops = {
             let mut world = self.shared.world_in(dimension).lock().expect("мир");
@@ -676,6 +680,7 @@ impl mcsa::api::world::Host for PluginCtx {
     }
     fn random_tick_speed(&mut self) -> u32 { crate::farming::random_tick_speed() }
     fn block_details(&mut self, pos: wit::BlockPos) -> Result<mcsa::api::world::BlockState, String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(pos.dimension)) { return Err("Измерение отключено".into()); }
         if !self.load_block_chunk(dimension_from_wit(pos.dimension), pos.x, pos.z) { return Err("Не удалось загрузить чанк".into()); }
         let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир");
         if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
@@ -694,6 +699,7 @@ impl mcsa::api::world::Host for PluginCtx {
         Ok(mcsa::api::world::BlockState {data, sky, light: sky.max(light), liquid: matches!(world.catalog().name(crate::gameplay_catalog::Kind::State, state).ok(), Some("water" | "lava")), passable: !crate::blocks::has_box(state), age, max_age})
     }
     fn update_block(&mut self, pos: wit::BlockPos, data: String, force: bool, physics: bool) -> Result<bool, String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(pos.dimension)) { return Err("Измерение отключено".into()); }
         let state = self.shared.catalog().state_from_text(&data).map_err(|_| "неизвестное состояние блока")?.ok_or("неизвестное состояние блока")?;
         if !(-64..320).contains(&pos.y) {return Err("Высота блока вне мира".into());}
         let dimension = dimension_from_wit(pos.dimension);
@@ -707,6 +713,7 @@ impl mcsa::api::world::Host for PluginCtx {
         self.set_block(pos, data)?;Ok(true)
     }
     fn random_tick(&mut self, pos: wit::BlockPos) -> Result<(), String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(pos.dimension)) { return Err("Измерение отключено".into()); }
         let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир");
         if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {return Err("чанк не загружен".into());}
         if !(-64..320).contains(&pos.y) {return Err("Высота блока вне мира".into());}
@@ -714,6 +721,7 @@ impl mcsa::api::world::Host for PluginCtx {
         crate::farming::random_tick(&mut world, (pos.x, pos.y, pos.z), state);Ok(())
     }
     fn play_sound(&mut self, at: wit::Location, sound: String, volume: f32, pitch: f32) -> Result<(), String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(at.dimension)) { return Err("Измерение отключено".into()); }
         if !at.x.is_finite() || !at.y.is_finite() || !at.z.is_finite() || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || !volume.is_finite() || !(0.0..=16.0).contains(&volume) || !pitch.is_finite() || !(0.0..=2.0).contains(&pitch) {return Err("Недопустимые параметры звука".into());}
         if !sound.starts_with("minecraft:") || sound.len() > 256 || !sound.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"_:./-".contains(&b)) {return Err("Недопустимый ключ звука".into());}
         let sound = match sound.as_str() {
@@ -730,6 +738,7 @@ impl mcsa::api::world::Host for PluginCtx {
     }
 
     fn set_border(&mut self, dimension: wit::Dimension, value: mcsa::api::world::Border) -> Result<(), String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(dimension)) { return Err("Измерение отключено".into()); }
         if !value.size.is_finite() || !(1.0..=crate::commands_world::MAX_SIZE).contains(&value.size)
             || !value.center_x.is_finite() || value.center_x.abs() > crate::commands_world::MAX_CENTER
             || !value.center_z.is_finite() || value.center_z.abs() > crate::commands_world::MAX_CENTER {
@@ -755,6 +764,7 @@ impl mcsa::api::world::Host for PluginCtx {
 
     // Снимок 8³ без генерации: пустая строка означает отсутствующий чанк.
     fn block_cube(&mut self, start: wit::BlockPos) -> Result<Vec<String>,String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(start.dimension)) { return Err("Измерение отключено".into()); }
         if start.x.abs_diff(0)>30_000_000 || start.z.abs_diff(0)>30_000_000 || !(-2048..=2040).contains(&start.y) {return Err("Куб блоков вне границ мира".into());}
         let world=self.shared.world_in(dimension_from_wit(start.dimension)).lock().expect("мир");let mut result=Vec::with_capacity(512);
         for x in start.x..start.x+8 {for y in start.y..start.y+8 {for z in start.z..start.z+8 {result.push(if world.has_chunk(x.div_euclid(16),z.div_euclid(16)) {block_text(world.catalog(), world.get_block(x,y,z))}else {String::new()});}}}Ok(result)
@@ -772,6 +782,7 @@ impl mcsa::api::world::Host for PluginCtx {
     }
 
     fn set_block(&mut self, pos: wit::BlockPos, block: String) -> Result<(), String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(pos.dimension)) { return Err("Измерение отключено".into()); }
         let state = self.shared.catalog().state_from_text(&block).map_err(|_| format!("нет такого блока: {block}"))?.ok_or_else(|| format!("нет такого блока: {block}"))?;
         let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир захвачен другим потоком");
 
@@ -804,6 +815,7 @@ impl mcsa::api::world::Host for PluginCtx {
     }
 
     fn set_time(&mut self, dimension: wit::Dimension, ticks: u32) {
+        if !self.shared.dimension_enabled(dimension_from_wit(dimension)) { return; }
         self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят").set_time_of_day(i64::from(ticks));
     }
 
@@ -813,6 +825,7 @@ impl mcsa::api::world::Host for PluginCtx {
     }
 
     fn set_weather(&mut self, dimension: wit::Dimension, kind: String, duration: u32) -> Result<(), String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(dimension)) { return Err("Измерение отключено".into()); }
         let kind = crate::weather::Kind::from_name(&kind).ok_or("погода: clear, rain, thunder")?;
         if !(1..=2_400_000).contains(&duration) { return Err("срок: от 1 до 2400000 тактов".into()); }
         self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир занят").weather.set(kind, duration as i32);
@@ -820,6 +833,7 @@ impl mcsa::api::world::Host for PluginCtx {
     }
 
     fn spawn_location(&mut self, dimension: wit::Dimension) -> wit::Location {
+        let dimension = if self.shared.dimension_enabled(dimension_from_wit(dimension)) { dimension } else { wit::Dimension::Overworld };
         let (x, y, z) = self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир захвачен другим потоком").spawn_position();
 
         wit::Location { dimension, x, y, z, yaw: None, pitch: None }

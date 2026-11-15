@@ -203,6 +203,7 @@ fn fill(world: &mut World, opening: Opening) {
 /// портал. Возвращает true, если портал появился. `sizes` — какие проёмы
 /// зажигаются (`Settings::portal_sizes`).
 pub fn light(world: &mut World, at: (i32, i32, i32), sizes: Sizes) -> bool {
+    if !world.nether_portals_enabled { return false; }
     let sizes = sizes.sane();
 
     for axis in [Axis::X, Axis::Z] {
@@ -295,6 +296,7 @@ pub const END_PORTAL_SPAWN: i32 = 1038;
 /// Края (блоки внутри исчезают без выпадения). Возвращает центр открытого
 /// портала.
 pub fn open_end_portal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<(i32, i32, i32)> {
+    if !world.end_portals_enabled { return None; }
     for (offset, _) in FRAME_RING {
         let center = (x - offset.0, y, z - offset.1);
 
@@ -352,6 +354,7 @@ pub fn build_end_platform(world: &mut World) -> (f64, f64, f64) {
 /// Переход через портал из этого места: другое измерение и где там встать
 /// (у найденного или построенного парного портала).
 pub fn travel(shared: &crate::shared::Shared, from: Dimension, at: (f64, f64, f64)) -> (Dimension, (f64, f64, f64)) {
+    if !shared.dimension_enabled(from) { return (from, at); }
     if let Some(exit) = shared.world_in(from).lock().expect("мир захвачен другим потоком").gateway_exit(at) { return (from,exit); }
     // [проверить] Автоматическое построение парных врат без exit_portal.
     // Портал Края: из обычного мира и Незера — на площадку, из Края —
@@ -363,6 +366,7 @@ pub fn travel(shared: &crate::shared::Shared, from: Dimension, at: (f64, f64, f6
             return (Dimension::Overworld, spawn);
         }
 
+        if !shared.dimension_enabled(Dimension::End) { return (from, at); }
         let (px,_,pz)=crate::world::the_end::PLATFORM;
         for x in (px-2).div_euclid(16)..=(px+2).div_euclid(16) {for z in (pz-2).div_euclid(16)..=(pz+2).div_euclid(16) {shared.ensure_chunk(Dimension::End,x,z);}}
         let mut world = shared.world_in(Dimension::End).lock().expect("мир захвачен другим потоком");
@@ -373,6 +377,7 @@ pub fn travel(shared: &crate::shared::Shared, from: Dimension, at: (f64, f64, f6
     }
 
     let (dimension, rough) = destination(from, at);
+    if !shared.dimension_enabled(dimension) { return (from, at); }
     let (px,pz)=(rough.0.floor() as i32,rough.2.floor() as i32);
     let radius=search_radius(dimension);
     let known={let world=shared.world_in(dimension).lock().expect("мир");world.portals().iter().filter(|(x,_,z)|(*x-px).abs()<=radius&&(*z-pz).abs()<=radius).map(|(x,_,z)|(x.div_euclid(16),z.div_euclid(16))).collect::<Vec<_>>()};
@@ -538,6 +543,33 @@ mod tests {
             world.set_block(dx, 64, 0, obsidian);
             world.set_block(dx, 68, 0, obsidian);
         }
+    }
+
+    #[test]
+    fn disabled_destinations_do_not_generate_or_transfer() {
+        let mut shared = crate::shared::Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(),
+            Default::default(), crate::ops::Ops::open(std::path::Path::new("tmp/disabled-portals/no-ops.json")),
+            crate::skins::Settings::default());
+        shared.settings.enable_nether = false;
+        shared.settings.enable_end = false;
+        let at = (8.0, 70.0, 8.0);
+        assert_eq!(travel(&shared, Dimension::Overworld, at), (Dimension::Overworld, at));
+        assert!(!shared.world_in(Dimension::Nether).lock().unwrap().has_chunk(0, 0));
+        let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+        world.nether_portals_enabled = false;
+        world.end_portals_enabled = false;
+        wide_frame(&mut world, 2);
+        assert!(!light(&mut world, (1, 65, 0), VANILLA));
+        world.nether_portals_enabled = true;
+        assert!(light(&mut world, (1, 65, 0), VANILLA));
+        ring(&mut world, true);
+        assert_eq!(open_end_portal(&mut world, (11, 70, 8)), None);
+        world.end_portals_enabled = true;
+        assert_eq!(open_end_portal(&mut world, (11, 70, 8)), Some((10, 70, 10)));
+        drop(world);
+        let end_at = (10.5, 70.75, 10.5);
+        assert_eq!(travel(&shared, Dimension::Overworld, end_at), (Dimension::Overworld, end_at));
+        assert!(!shared.world_in(Dimension::End).lock().unwrap().has_chunk(6, 0));
     }
 
     #[test]

@@ -16,7 +16,7 @@ pub(crate) async fn chat_login(socket: &mut Connection, shared: &Shared,
     player.entity_id = 1;
     player.game_mode = GAME_MODE_SPECTATOR;
     let world = Mutex::new(World::in_memory_with_catalog(shared.catalog()));
-    send_login(&mut out, Dimension::Overworld, GAME_MODE_SPECTATOR, 1, 2, 2, false).await?;
+    send_login_with_options(&mut out, Dimension::Overworld, GAME_MODE_SPECTATOR, 1, (2, 2, false), shared.enabled_dimensions().collect()).await?;
     send_abilities(&mut out, GAME_MODE_SPECTATOR).await?;
     send_game_event_start_waiting(&mut out).await?;
     send_center_chunk(&mut out, (0, 0)).await?;

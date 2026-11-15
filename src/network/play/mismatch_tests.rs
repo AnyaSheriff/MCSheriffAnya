@@ -430,7 +430,7 @@ async fn play_login_sends_the_real_online_flag_before_secure_chat() {
         server.protocol = Some(Negotiated { client: JavaVersion::V26_3, native: wire::INTERNAL });
         client.enable_encryption(&[23; 16]); server.enable_encryption(&[23; 16]);
         let mut out = Outgoing::new(&mut server);
-        send_login(&mut out, Dimension::Overworld, GAME_MODE_SURVIVAL, 7, 10, 10, online).await.unwrap();
+        send_login_with_options(&mut out, Dimension::Overworld, GAME_MODE_SURVIVAL, 7, (10, 10, online), Dimension::ALL.to_vec()).await.unwrap();
         out.flush().await.unwrap();
         let received = read_packet(&mut client).await.unwrap();
         assert_eq!(received.id, 0x32);

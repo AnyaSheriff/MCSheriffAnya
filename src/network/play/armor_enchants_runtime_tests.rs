@@ -54,7 +54,7 @@ async fn breaking_chestplate_is_removed_before_same_hit_mitigation_and_self_even
         let (shared,mut p)=setup(Profile::Preview26_3);p.inventory.set(6,Some(chest(239)));
         vitals::update_equipment(&mut p,0);assert_eq!(p.attrs.value(crate::attributes::ARMOR),6.0);
         let mut out=Outgoing::capture_content(version,shared.catalog().content_codec());
-        send_login(&mut out,Dimension::Overworld,GAME_MODE_SURVIVAL,81,2,2,false).await.unwrap();
+        send_login_with_options(&mut out, Dimension::Overworld, GAME_MODE_SURVIVAL, 81, (2, 2, false), Dimension::ALL.to_vec()).await.unwrap();
         let mut changes=shared.world_in(p.dimension).lock().unwrap().watch_events(81);
         pvp::take_strike(&mut out,&shared,&mut p,&strike()).await.unwrap();
         assert_eq!(p.vit.health,13.0);assert!(p.inventory.slot(6).is_none());
@@ -107,7 +107,7 @@ async fn published_fire_starts_and_extinguishes_for_other_player_without_speed_r
     for version in [wire::INTERNAL,JavaVersion::V26_3] {
         let (shared,mut p)=setup(Profile::Preview26_3);let viewer=observer(&shared);let mut seen=Seen::new();
         publish(&shared,&p);let mut out=Outgoing::capture_content(version,shared.catalog().content_codec());
-        send_login(&mut out,Dimension::Overworld,GAME_MODE_SURVIVAL,82,2,2,false).await.unwrap();
+        send_login_with_options(&mut out, Dimension::Overworld, GAME_MODE_SURVIVAL, 82, (2, 2, false), Dimension::ALL.to_vec()).await.unwrap();
         send_other_moves(&mut out,&shared,&viewer,&mut seen,Phase::Moves).await.unwrap();
         for burning in [true,false] {
             p.net.fire_flag=burning;publish(&shared,&p);

@@ -34,7 +34,7 @@ async fn animation(yaw: f32, source: Source, expected: f32) {
     for version in [wire::INTERNAL,JavaVersion::V26_3] {
         let shared=shared();let mut p=player();p.yaw=yaw;
         let mut out=Outgoing::capture_content(version,shared.catalog().content_codec());
-        send_login(&mut out,Dimension::Overworld,GAME_MODE_SURVIVAL,81,2,2,false).await.unwrap();
+        send_login_with_options(&mut out, Dimension::Overworld, GAME_MODE_SURVIVAL, 81, (2, 2, false), Dimension::ALL.to_vec()).await.unwrap();
         pvp::take_strike(&mut out,&shared,&mut p,&strike(source)).await.unwrap();
         let packets=selected(&out,id(version,0x2a)).await;
         let mut target=encode_varint(81);push_f32(&mut target,expected);assert_eq!(packets,vec![target]);
@@ -60,7 +60,7 @@ async fn shield_axe_expiry_actual_tick_sends_recorded_zero_once() {
         let mut axe=strike(Source::PlayerAttack);axe.damage=9.0;axe.disables_shield_ticks=100;
         axe.weapon=Some(Stack::new(blocks::item_named("iron_axe").unwrap(),1));
         let mut out=Outgoing::capture_content(version,shared.catalog().content_codec());
-        send_login(&mut out,Dimension::Overworld,GAME_MODE_SURVIVAL,81,2,2,false).await.unwrap();
+        send_login_with_options(&mut out, Dimension::Overworld, GAME_MODE_SURVIVAL, 81, (2, 2, false), Dimension::ALL.to_vec()).await.unwrap();
         pvp::take_strike(&mut out,&shared,&mut p,&axe).await.unwrap();
         assert_eq!(p.net.shield_disabled_until,110);assert_eq!(p.vit.health,20.0);
         for now in [109,110,110,140] {shared.ticks.send_replace(now);vitals::tick(&mut out,&shared,&mut p).await.unwrap();

@@ -351,14 +351,32 @@ fn attack(plan: &mut Plan, ctx: &Ctx, id: i32, damage: f32, dir: (f64,f64)) {
 }
 // Вики, Llama: «up to nine llamas». Цепь без циклов, один хвост у головы.
 pub fn herd(mobs: &mut [Mob], _players: &[ai::Watcher], _view: &dyn View) {
+    herd_with_executor(mobs, _players, _view, None);
+}
+pub fn herd_with_executor(mobs: &mut [Mob], _players: &[ai::Watcher], _view: &dyn View, mut executor: Option<&mut super::parallel::Executor>) {
+    let sensing_started = executor.as_ref().map(|_| std::time::Instant::now());
     let wolves: Vec<_>=mobs.iter().filter(|m| m.kind==Kind::Wolf && !m.tame.tamed() && !m.is_dead()).map(|m| (m.entity_id,m.x,m.z)).collect();
     let hurt: Vec<_>=mobs.iter().filter_map(|m| m.land.target.map(|t| (m.kind,m.x,m.z,t))).collect();
+    let targets = if executor.is_some() { mobs.iter().filter(|m| llama(m.kind) || !m.is_baby() && (m.kind==Kind::PolarBear || m.kind==Kind::Panda && m.land.personality()==6)).count() } else { 0 };
+    let comparisons = targets.saturating_mul(wolves.len().saturating_add(hurt.len()));
+    if executor.as_ref().is_some_and(|e| e.should_parallel(targets, comparisons)) {
+        let inputs = mobs.iter().enumerate().filter(|(_,m)| llama(m.kind) || !m.is_baby() && (m.kind==Kind::PolarBear || m.kind==Kind::Panda && m.land.personality()==6))
+            .map(|(i,m)| (i,m.kind,m.x,m.z,m.land.target)).collect();
+        let values = executor.as_deref_mut().expect("исполнитель наблюдения").ordered_map(inputs, move |(i,kind,x,z,target)| {
+            let target = if llama(kind) && target.is_none() { wolves.iter().find(|w| (w.1-x).hypot(w.2-z)<10.0).map(|w|w.0) } else { target };
+            let target = if matches!(kind,Kind::PolarBear|Kind::Panda) { target.or_else(||hurt.iter().find(|h|h.0==kind && (h.1-x).hypot(h.2-z)<8.0).map(|h|h.3)) } else { target };
+            (i,target)
+        });
+        for (i,target) in values { mobs[i].land.target=target; }
+    } else {
     for m in mobs.iter_mut() {
         if llama(m.kind) && m.land.target.is_none() { m.land.target=wolves.iter().find(|w| (w.1-m.x).hypot(w.2-m.z)<10.0).map(|w| w.0); }
         if !m.is_baby() && (m.kind==Kind::PolarBear || m.kind==Kind::Panda && m.land.personality()==6) {
             m.land.target=m.land.target.or_else(|| hurt.iter().find(|h| h.0==m.kind && (h.1-m.x).hypot(h.2-m.z)<8.0).map(|h| h.3));
         }
     }
+    }
+    if let Some(executor) = executor { executor.record_work(sensing_started.expect("начало наблюдения").elapsed(), targets, comparisons); }
     let mut chains: Vec<(i32,(f64,f64,f64),usize)> = mobs.iter().filter(|m| llama(m.kind) && m.leash.is_some() && !m.is_dead()).map(|m| (m.entity_id,(m.x,m.y,m.z),0)).collect();
     for mob in mobs.iter_mut().filter(|m| llama(m.kind)) { mob.land.caravan = None; mob.land.caravan_at = None; }
     for _ in 0..9 {
