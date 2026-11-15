@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p apk-device-evidence/app-update
+collect_app_debug() {
+  timeout 20s adb logcat -b all -d -v threadtime > apk-device-evidence/app-update/logcat-after.txt 2>&1 || true
+  timeout 20s adb shell ps > apk-device-evidence/app-update/processes-after.txt 2>&1 || true
+  timeout 20s adb shell dumpsys package ru.sheriffanya.mcsa > apk-device-evidence/app-update/package-after.txt 2>&1 || true
+}
+trap collect_app_debug EXIT
+adb shell ps > apk-device-evidence/app-update/processes-before.txt
 adb push apk-test/app-upgrade-x86_64.apk /data/local/tmp/mcsa-upgrade.apk
 adb shell chmod 644 /data/local/tmp/mcsa-upgrade.apk
 adb shell am instrument -w -r \
