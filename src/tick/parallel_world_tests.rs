@@ -204,7 +204,14 @@ fn shared_world_block_barrier_then_mob_workers_keep_serial_state_and_rng() {
     let serial = server();
     let parallel = server();
     prime(&serial); prime(&parallel);
-    for shared in [&serial, &parallel] { add_mixed_mob_fixture(shared); }
+    add_mixed_mob_fixture(&serial);
+    parallel.spawn_mobs.store(false, std::sync::atomic::Ordering::Relaxed);
+    for dimension in serial.enabled_dimensions() {
+        for mob in serial.items_in(dimension).lock().unwrap().mobs().to_vec() {
+            assert_eq!(parallel.next_entity_id(), mob.entity_id);
+            parallel.items_in(dimension).lock().unwrap().add_mob(mob);
+        }
+    }
     let mut pool = parallel::Pool::new();
     parallel_dimension_blocks(&parallel, &mut pool, 3, &mut false,
         &mut PhaseStats::default(), &mut [Duration::ZERO; 3]);
