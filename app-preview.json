@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "package": "ru.sheriffanya.mcsa",
+  "version_code": 6,
+  "version_name": "0.2.4-preview",
+  "apks": {
+    "arm64-v8a": {
+      "bytes": 22542843,
+      "sha256": "be61af6a6e05cca9ee535f9c60485d7c492a1e4a03504de4b68235f409eff600",
+      "url": "https://github.com/AnyaSheriff/MCSheriffAnya/releases/download/v0.2.11-alpha/mcsa-android-arm64.apk"
+    },
+    "armeabi-v7a": {
+      "bytes": 15809023,
+      "sha256": "16437d20de86c39fc7d139f2c6934d50f109d286b87461c4d5dec3726426c3fc",
+      "url": "https://github.com/AnyaSheriff/MCSheriffAnya/releases/download/v0.2.11-alpha/mcsa-android-armv7.apk"
+    },
+    "x86_64": {
+      "bytes": 18274805,
+      "sha256": "f46624a2d7c17bd4f47cacc9c1f8b2d707d82e2e8f02d53dc77326d63922a635",
+      "url": "https://github.com/AnyaSheriff/MCSheriffAnya/releases/download/v0.2.11-alpha/mcsa-android-x64.apk"
+    }
+  }
+}
