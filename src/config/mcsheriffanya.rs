@@ -343,7 +343,7 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    pub(super) fn sections(&self) -> [(&'static str, String); 33] {
+    pub(super) fn sections(&self) -> [(&'static str, String); 37] {
         [
             ("monster-spawn-multiplier", format!("# Предел естественных монстров: множитель 0..16; 1 — обычный предел. Не влияет на спавнеры и команды.\nmonster-spawn-multiplier={}\n",self.monster_spawn_multiplier)),
             ("ore-retention-percent", format!("# Сколько процентов руды оставить в НОВЫХ чанках (0..100); 100 — обычная генерация.\nore-retention-percent={}\n",self.ore_retention_percent)),

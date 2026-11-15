@@ -24,7 +24,7 @@ async fn fixture() -> Value {
     } }
     let world = Mutex::new(world);
     let mut out = Outgoing::capture();
-    send_login(&mut out, Dimension::Overworld, GAME_MODE_SURVIVAL, 1, 2, 2, false).await.unwrap();
+    send_login_with_options(&mut out, Dimension::Overworld, GAME_MODE_SURVIVAL, 1, (2, 2, false), Dimension::ALL.to_vec()).await.unwrap();
     send_abilities(&mut out, GAME_MODE_SURVIVAL).await.unwrap();
     send_game_event_start_waiting(&mut out).await.unwrap();
     send_center_chunk(&mut out, (0, 0)).await.unwrap();

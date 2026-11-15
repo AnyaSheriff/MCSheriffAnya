@@ -101,7 +101,7 @@ async fn legacy_control_uses_the_actual_outgoing_and_inbound_transport() {
     });
     let legacy = server.legacy.clone();
     let mut outgoing = Outgoing::new(&mut server);
-    send_login(&mut outgoing, Dimension::Overworld, GAME_MODE_CREATIVE, 73, 2, 2, false).await.unwrap();
+    send_login_with_options(&mut outgoing, Dimension::Overworld, GAME_MODE_CREATIVE, 73, (2, 2, false), Dimension::ALL.to_vec()).await.unwrap();
     send_abilities(&mut outgoing, GAME_MODE_CREATIVE).await.unwrap();
     let mut body = vec![0x48, 9];
     for value in [0.5f64, 64.0, -1.5, 0.0, 0.0, 0.0] { body.extend(value.to_be_bytes()); }
@@ -141,7 +141,7 @@ async fn packets(version: JavaVersion) -> Vec<Vec<u8>> {
         bodies
     });
     let mut outgoing = Outgoing::new(&mut stream);
-    send_login(&mut outgoing, Dimension::Overworld, GAME_MODE_CREATIVE, 1, 2, 2, false).await.unwrap();
+    send_login_with_options(&mut outgoing, Dimension::Overworld, GAME_MODE_CREATIVE, 1, (2, 2, false), Dimension::ALL.to_vec()).await.unwrap();
     send_abilities(&mut outgoing, GAME_MODE_CREATIVE).await.unwrap();
     send_game_event_start_waiting(&mut outgoing).await.unwrap();
     send_center_chunk(&mut outgoing, (-1,-1)).await.unwrap();
@@ -379,7 +379,7 @@ async fn check_generated_palettes(radius: i32, export: Option<&std::path::Path>)
             if let Some(file) = &mut file {
                 let mut startup = Outgoing::capture_content(JavaVersion::V26_3, content);
                 let dimension = [Dimension::Overworld, Dimension::Nether, Dimension::End][dimension];
-                send_login(&mut startup, dimension, GAME_MODE_CREATIVE, 1, 16, 2, false).await.unwrap();
+                send_login_with_options(&mut startup, dimension, GAME_MODE_CREATIVE, 1, (16, 2, false), Dimension::ALL.to_vec()).await.unwrap();
                 send_abilities(&mut startup, GAME_MODE_CREATIVE).await.unwrap();
                 file.write_all(startup.queued()).unwrap();
             }

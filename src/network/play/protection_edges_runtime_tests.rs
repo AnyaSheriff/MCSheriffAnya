@@ -38,10 +38,10 @@ async fn real_attack(breaking: bool,version: JavaVersion) {
     let incoming=events.iter().find_map(|e|match e {WorldEvent::PlayerStrike(strike) if strike.victim==81=>Some(strike.clone()),_=>None}).unwrap();
     assert_eq!(incoming.thorns_slots,if breaking {Vec::new()} else {vec![6]});
     let mut target=Outgoing::capture_content(version,shared.catalog().content_codec());
-    send_login(&mut target,Dimension::Overworld,GAME_MODE_SURVIVAL,81,2,2,false).await.unwrap();
+    send_login_with_options(&mut target, Dimension::Overworld, GAME_MODE_SURVIVAL, 81, (2, 2, false), Dimension::ALL.to_vec()).await.unwrap();
     pvp::take_strike(&mut target,&shared,&mut victim,&incoming).await.unwrap();
     let mut actor=Outgoing::capture_content(version,shared.catalog().content_codec());
-    send_login(&mut actor,Dimension::Overworld,GAME_MODE_SURVIVAL,82,2,2,false).await.unwrap();
+    send_login_with_options(&mut actor, Dimension::Overworld, GAME_MODE_SURVIVAL, 82, (2, 2, false), Dimension::ALL.to_vec()).await.unwrap();
     vitals::tick(&mut actor,&shared,&mut attacker).await.unwrap();
     if breaking {
         assert_eq!(victim.vit.health,19.0);assert!(victim.inventory.slot(6).is_none());

@@ -1257,17 +1257,27 @@ async fn send_login(
     game_mode: i32,
     entity_id: i32,
 ) -> io::Result<()> {
-    let view = shared.properties.view_distance;
-    let simulation = shared.properties.simulation_distance;
-    let online_mode = shared.properties.online_mode;
+    send_login_with_options(stream, dimension, game_mode, entity_id,
+        (shared.properties.view_distance, shared.properties.simulation_distance, shared.properties.online_mode),
+        shared.enabled_dimensions().collect()).await
+}
+
+async fn send_login_with_options(
+    stream: &mut Outgoing<'_>,
+    dimension: Dimension,
+    game_mode: i32,
+    entity_id: i32,
+    (view, simulation, online_mode): (i32, i32, bool),
+    dimensions: Vec<Dimension>,
+) -> io::Result<()> {
     let mut body = encode_varint(LOGIN);
 
     push_i32(&mut body, entity_id); // Entity ID игрока
     body.push(0x00); // не хардкор
 
     // Список измерений сервера.
-    body.extend_from_slice(&encode_varint(shared.enabled_dimensions().count() as i32));
-    for known in shared.enabled_dimensions() {
+    body.extend_from_slice(&encode_varint(dimensions.len() as i32));
+    for known in dimensions {
         body.extend_from_slice(&encode_string(known.name()));
     }
 
