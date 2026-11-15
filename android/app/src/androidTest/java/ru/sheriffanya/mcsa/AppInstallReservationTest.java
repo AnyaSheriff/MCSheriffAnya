@@ -13,6 +13,24 @@ import static org.junit.Assert.*;
 
 /** Проверяет настоящую блокировку Store/HostState и durable marker, без запуска сервера. */
 public class AppInstallReservationTest {
+    /** abandonSession возвращается до фактического исчезновения SessionInfo. */
+    private void awaitSessionGoneThenRelease(Context app,int id) throws Exception {
+        android.content.pm.PackageInstaller installer=app.getPackageManager().getPackageInstaller();
+        long deadline=android.os.SystemClock.elapsedRealtime()+15000;
+        while(installer.getSessionInfo(id)!=null) {
+            assertFalse("Сервер остаётся заблокирован, пока системная сессия существует",HostState.idle());
+            assertTrue("APK остаётся зарезервирован до исчезновения сессии",AppUpdateStore.busy);
+            assertEquals(AppUpdateStore.INSTALL_OPERATION,HostState.operation);
+            if(android.os.SystemClock.elapsedRealtime()>=deadline) fail("Android не удалил отменённую сессию "+id+" за 15 секунд");
+            Thread.sleep(50);
+        }
+        assertNull(installer.getSessionInfo(id));AppInstallSession.reconcile(app);
+        assertTrue("Блокировка снята только после исчезновения сессии",HostState.idle());assertFalse(AppUpdateStore.busy);assertFalse(AppUpdateStore.hasInstallation());
+    }
+    private void cleanupInstallation(Context app) throws Exception {
+        AppUpdateStore.Installation ticket=AppUpdateStore.currentInstallation();if(ticket==null) return;
+        AppInstallSession.cancel(app,ticket,"test cleanup");awaitSessionGoneThenRelease(app,ticket.sessionId);
+    }
     private AppUpdateManifest description() throws Exception {
         JSONObject file=new JSONObject().put("bytes",1000000).put("sha256","0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef").put("url","https://github.com/AnyaSheriff/MCSheriffAnya/releases/download/test/test.apk");
         JSONObject json=new JSONObject().put("format",1).put("package","ru.sheriffanya.mcsa").put("version_code",BuildConfig.VERSION_CODE+1).put("version_name","test").put("apks",new JSONObject().put(BuildConfig.RUNTIME_ABI,file));
@@ -35,8 +53,8 @@ public class AppInstallReservationTest {
             assertEquals(0,app.getSharedPreferences("app-install-pending",Context.MODE_PRIVATE).getLong("code",0));
             ticket=AppUpdateStore.beginInstallation(app);
             try { AppInstallSession.prepare(app,ticket);fail("missing APK accepted"); }catch(IOException expected) { assertNotNull(expected.getMessage()); }
-            assertTrue(HostState.idle());assertFalse(AppUpdateStore.busy);assertTrue(app.getPackageManager().getPackageInstaller().getMySessions().isEmpty());
-        } finally { AppUpdateStore.finishInstallation(app,null,"test cleanup");AppUpdateStore.ready=previous;AppUpdateStore.readyManifest=oldReady;AppUpdateStore.available=oldAvailable; }
+            awaitSessionGoneThenRelease(app,ticket.sessionId);assertTrue(app.getPackageManager().getPackageInstaller().getMySessions().isEmpty());
+        } finally { cleanupInstallation(app);AppUpdateStore.ready=previous;AppUpdateStore.readyManifest=oldReady;AppUpdateStore.available=oldAvailable; }
     }
     @Test public void actualPackageInstallerSessionRetainsExactApkAndCancelDestroysIt() throws Exception {
         Context app=ApplicationProvider.getApplicationContext();assertTrue(HostState.idle());
@@ -60,11 +78,11 @@ public class AppInstallReservationTest {
                 StringBuilder hex=new StringBuilder();for(byte v:digest.digest()) hex.append(String.format(java.util.Locale.ROOT,"%02x",v&255));assertEquals(CoreDownload.sha256(cached),hex.toString());
             }
             AppUpdateStore.recoverInstallation(app);AppInstallSession.reconcile(app);assertFalse(HostState.idle());assertTrue(AppUpdateStore.busy);assertEquals(id,AppUpdateStore.currentInstallation().sessionId);
-            AppInstallSession.cancel(app,AppUpdateStore.currentInstallation(),"cancelled");assertNull(installer.getSessionInfo(id));assertTrue(HostState.idle());assertFalse(AppUpdateStore.busy);
+            AppInstallSession.cancel(app,AppUpdateStore.currentInstallation(),"cancelled");awaitSessionGoneThenRelease(app,id);
             // Пропавшая сессия после гибели процесса также снимает только нашу блокировку.
             AppUpdateStore.ready=cached;AppUpdateStore.Installation missing=AppUpdateStore.beginInstallation(app);int absent=AppInstallSession.prepare(app,missing);installer.abandonSession(absent);
-            AppUpdateStore.recoverInstallation(app);AppInstallSession.reconcile(app);assertTrue(HostState.idle());assertFalse(AppUpdateStore.hasInstallation());
-        } finally { AppInstallSession.cancel(app,AppUpdateStore.currentInstallation(),"test cleanup");cached.delete();AppUpdateStore.ready=previous;AppUpdateStore.readyManifest=oldReady; }
+            AppUpdateStore.recoverInstallation(app);awaitSessionGoneThenRelease(app,absent);
+        } finally { cleanupInstallation(app);cached.delete();AppUpdateStore.ready=previous;AppUpdateStore.readyManifest=oldReady; }
     }
     @Test public void processRecoveryRestoresReservationAndStaleTicketCannotReleaseIt() throws Exception {
         Context app=ApplicationProvider.getApplicationContext();assertTrue(HostState.idle());

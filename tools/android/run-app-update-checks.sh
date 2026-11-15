@@ -3,7 +3,7 @@ set -euo pipefail
 mkdir -p apk-device-evidence/app-update
 adb push apk-test/app-upgrade-x86_64.apk /data/local/tmp/mcsa-upgrade.apk
 adb shell chmod 644 /data/local/tmp/mcsa-upgrade.apk
-adb shell am instrument -w \
+adb shell am instrument -w -r \
   -e appUpgradeApk /data/local/tmp/mcsa-upgrade.apk \
   -e class ru.sheriffanya.mcsa.AppUpdateManifestTest,ru.sheriffanya.mcsa.AppUpdatePackageTest,ru.sheriffanya.mcsa.AppUpdateArchiveTest,ru.sheriffanya.mcsa.SettingsSchemaTest,ru.sheriffanya.mcsa.AppInstallReservationTest \
   ru.sheriffanya.mcsa.test/androidx.test.runner.AndroidJUnitRunner \
