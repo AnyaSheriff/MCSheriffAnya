@@ -22,7 +22,11 @@ api=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
 if (( api >= 26 )); then
   adb shell appops set ru.sheriffanya.mcsa REQUEST_INSTALL_PACKAGES allow
 else
+  # Global.INSTALL_NON_MARKET_APPS deprecated API21 → Secure; Secure deprecated API26.
+  # https://developer.android.com/reference/android/provider/Settings.Global#INSTALL_NON_MARKET_APPS
   adb shell settings put secure install_non_market_apps 1
+  adb shell settings get secure install_non_market_apps | tr -d '\r' > "$out/install-non-market-apps-secure.txt"
+  [[ $(cat "$out/install-non-market-apps-secure.txt") == 1 ]]
 fi
 # Сначала реальная гибель процесса с подготовленной, но НЕ подтверждённой сессией.
 adb shell am instrument -w -e class ru.sheriffanya.mcsa.AppInstallFlowTest#prepareInterruptedSession -e appUpgradeApk /data/local/tmp/mcsa-upgrade.apk ru.sheriffanya.mcsa.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/interruption-prepare-instrumentation.txt"
