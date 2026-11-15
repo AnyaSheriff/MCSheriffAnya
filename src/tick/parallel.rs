@@ -105,7 +105,8 @@ mod tests {
     #[test]
     fn failed_pool_stays_serial_even_with_existing_helpers() {
         let mut pool = Pool::new();
-        pool.run(2, vec![Box::new(|| 0), Box::new(|| 1)]);
+        pool.run(2, vec![Box::new(|| (0, true)), Box::new(|| (1, true))]);
+        assert_eq!(pool.workers.len(), 1);
         pool.failed = true;
         let main = thread::current().id();
         let results = pool.run(3, (0..3).map(|i| Box::new(move || (i, thread::current().id() == main)) as Job<_>).collect());
