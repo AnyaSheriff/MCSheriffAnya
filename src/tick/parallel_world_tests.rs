@@ -60,6 +60,53 @@ fn loaded_command_blocks_disable_parallel_phase_until_removed() {
 }
 
 #[test]
+fn disabled_dimensions_neither_advance_nor_publish_in_parallel_block_phase() {
+    for (nether, end) in [(false, false), (true, false), (false, true)] {
+        let mut shared = server();
+        let settings = &mut Arc::get_mut(&mut shared).unwrap().settings;
+        settings.enable_nether = nether;
+        settings.enable_end = end;
+        let cursors = prime(&shared);
+        let before = Dimension::ALL.map(|d| shared.world_in(d).lock().unwrap().tick());
+        let mut pool = parallel::Pool::new();
+        parallel_dimension_blocks(&shared, &mut pool, 3, &mut false, &mut PhaseStats::default(), &mut [Duration::ZERO; 3]);
+        publish_finished_tick(&shared, 1);
+        for dimension in Dimension::ALL {
+            let mut world = shared.world_in(dimension).lock().unwrap();
+            let enabled = shared.dimension_enabled(dimension);
+            assert_eq!(world.tick(), before[dimension.index()] + u64::from(enabled));
+            let events = world.published_events_since(cursors[dimension.index()], 91).0;
+            assert_eq!(events.iter().any(|event| matches!(event, crate::world::WorldEvent::Broadcast)), enabled);
+            if !enabled { assert!(world.take_block_event().is_some(), "даже отложенные события не выполнялись"); }
+        }
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn disabled_dimensions_remain_stopped_in_actual_tick_loop() {
+    let mut shared = server();
+    let settings = &mut Arc::get_mut(&mut shared).unwrap().settings;
+    settings.enable_nether = false;
+    settings.enable_end = false;
+    settings.experimental_parallel_mobs = true;
+    shared.spawn_mobs.store(false, std::sync::atomic::Ordering::Relaxed);
+    let before = Dimension::ALL.map(|d| shared.world_in(d).lock().unwrap().tick());
+    let task = tokio::spawn(run(shared.clone()));
+    for _ in 0..5 {
+        tokio::time::advance(Duration::from_millis(50)).await;
+        tokio::task::yield_now().await;
+    }
+    let published = *shared.ticks.borrow();
+    assert!(published > 0);
+    for dimension in Dimension::ALL {
+        assert_eq!(shared.world_in(dimension).lock().unwrap().tick(),
+            before[dimension.index()] + if dimension == Dimension::Overworld { published } else { 0 });
+    }
+    task.abort();
+    assert!(task.await.unwrap_err().is_cancelled());
+}
+
+#[test]
 fn serial_and_parallel_world_block_phases_keep_same_clock_and_event_order() {
     let serial = server();
     let concurrent = server();

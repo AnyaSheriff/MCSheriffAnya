@@ -6,7 +6,9 @@
 use std::time::Duration;
 use tokio::sync::watch;
 use tokio::time::{Instant, MissedTickBehavior};
-use crate::{dimension::Dimension, players::Presence, shared::Shared};
+use crate::{players::Presence, shared::Shared};
+#[cfg(test)]
+use crate::dimension::Dimension;
 
 fn empty_deadline(presence: Presence, seconds: i32) -> Instant {
     let grace = presence.changed + Duration::from_secs(seconds.max(0) as u64);
@@ -85,7 +87,7 @@ async fn wait_until_active(presence: &mut watch::Receiver<Presence>, seconds: i3
 /// Потом раз в секунду сохраняем только грязное/свежее: консоль и уже
 /// запущенная асинхронная загрузка ещё могут менять мир, но не его часы.
 fn save(shared: &Shared, entering: bool) {
-    for dimension in Dimension::ALL {
+    for dimension in shared.enabled_dimensions() {
         let mut world = shared.world_in(dimension).lock().expect("мир");
         if entering {
             let items = shared.items_in(dimension).lock().expect("предметы");

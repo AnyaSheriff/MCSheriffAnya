@@ -226,6 +226,9 @@ pub(crate) fn run_external(command: &str, source: &Source, shared: &Shared) -> A
 }
 
 fn run_inner(command: &str, source: &Source, shared: &Shared, live_query: bool) -> Answer {
+    if !shared.dimension_enabled(dimension_of(source, shared)) {
+        return Answer::saying("Это измерение отключено".into());
+    }
     if let Some(answer) = crate::auth::command(command, source, shared) { return answer; }
     // `/plugman` и команды плагинов (plugins/): раньше всего прочего, чтобы
     // права плагина проверял он сам, а не общая таблица уровней.
@@ -2182,7 +2185,7 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
         }
         ["doLimitedCrafting" | "limited_crafting" | "minecraft:limited_crafting"] => Answer::saying(format!("{}", shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed))),
         ["doFireTick" | "fire_tick" | "minecraft:fire_tick", value @ ("true" | "false")] => {
-            for dimension in crate::dimension::Dimension::ALL { shared.world_in(dimension).lock().expect("мир").fire_tick = *value == "true"; }
+            for dimension in shared.enabled_dimensions() { shared.world_in(dimension).lock().expect("мир").fire_tick = *value == "true"; }
             Answer::saying(format!("Правило doFireTick: {}", value))
         }
         ["doFireTick" | "fire_tick" | "minecraft:fire_tick"] => Answer::saying(format!("Правило doFireTick: {}", shared.world_in(crate::dimension::Dimension::Overworld).lock().expect("мир").fire_tick)),
@@ -3019,6 +3022,9 @@ fn time_by_name(value: &str) -> Option<i64> {
 /// Относительных координат (`~`) пока нет: они требуют знать, откуда считать,
 /// а это отдельная работа.
 fn teleport(parts: &[&str], source: &Source, shared: &Shared, into: Option<Dimension>) -> Answer {
+    if into.is_some_and(|dimension| !shared.dimension_enabled(dimension)) {
+        return Answer::saying("Это измерение отключено".into());
+    }
     let own = match source {
         Source::Player { uuid, name } => vec![(*uuid, name.clone())],
         Source::Console | Source::Block { .. } => Vec::new(),
@@ -3831,6 +3837,23 @@ mod tests {
         let member = players.members().iter().find(|member| member.uuid == [1; 16]).expect("игрок");
         assert_eq!((member.position.x, member.position.y, member.position.z), (5.5, 64.0, -6.5));
         assert_eq!(member.unsettled, crate::players::AWAITING_CONFIRM);
+    }
+
+    #[test]
+    fn commands_cannot_enter_or_clone_disabled_dimensions() {
+        let mut shared = server();
+        shared.settings.enable_nether = false;
+        shared.settings.enable_end = false;
+        let first = Source::Player { uuid: [1; 16], name: "Первый".into() };
+        for name in ["minecraft:the_nether", "minecraft:the_end"] {
+            assert!(run(&format!("execute in {name} run tp @s 0 70 0"), &first, &shared).reply.contains("отключено"));
+            assert!(orders_for(&shared, 1).is_empty());
+            let _ = run(&format!("clone from {name} 0 70 0 1 71 1 to minecraft:overworld 0 70 0"), &Source::Console, &shared);
+            let _ = run(&format!("clone from minecraft:overworld 0 70 0 1 71 1 to {name} 0 70 0"), &Source::Console, &shared);
+        }
+        for dimension in [Dimension::Nether, Dimension::End] {
+            assert!(!shared.world_in(dimension).lock().unwrap().has_chunk(0, 0));
+        }
     }
 
     /// Строка из F3+C: числа места и взгляда, в `execute in` — измерение.

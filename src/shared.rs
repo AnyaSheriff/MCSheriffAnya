@@ -258,7 +258,7 @@ impl Shared {
 
     /// Только при запуске, до такта и подключений. Ошибка файла не означает пустой мир.
     pub(crate) fn load_ground_items(&self) -> std::io::Result<()> {
-        for dimension in Dimension::ALL {
+        for dimension in self.enabled_dimensions() {
             if let Some(path) = self.ground_items_path(dimension) {
                 self.items_in(dimension).lock().expect("предметы")
                     .load_ground_items(&path, &mut || self.next_entity_id())
@@ -275,7 +275,7 @@ impl Shared {
     pub(crate) fn save_ground_items(&self) -> std::io::Result<()> {
         let _writer = self.ground_saves.lock().expect("запись выпавших предметов");
         let mut first_error = None;
-        for dimension in Dimension::ALL {
+        for dimension in self.enabled_dimensions() {
             if let Some(path) = self.ground_items_path(dimension) {
                 let checkpoint = {
                     let items = self.items_in(dimension).lock().expect("предметы");
@@ -291,12 +291,25 @@ impl Shared {
     }
 
     /// Мир этого измерения.
+    pub fn dimension_enabled(&self, dimension: Dimension) -> bool {
+        match dimension {
+            Dimension::Overworld => true,
+            Dimension::Nether => self.settings.enable_nether,
+            Dimension::End => self.settings.enable_end,
+        }
+    }
+
+    pub fn enabled_dimensions(&self) -> impl Iterator<Item = Dimension> + '_ {
+        Dimension::ALL.into_iter().filter(|dimension| self.dimension_enabled(*dimension))
+    }
+
     pub fn world_in(&self, dimension: Dimension) -> &Mutex<World> {
         &self.worlds[dimension.index()]
     }
 
     /// Подготовка с популяторами выполняется без замка мира и до публикации чанка.
     pub fn ensure_chunk(&self,dimension:Dimension,x:i32,z:i32)->bool {
+        if !self.dimension_enabled(dimension) { return false; }
         if !crate::plugins::active() {let mut world=self.world_in(dimension).lock().expect("мир");world.ensure(x,z);return world.has_chunk(x,z);}
         for _ in 0..2 {
             let source={let world=self.world_in(dimension).lock().expect("мир");if world.has_chunk(x,z) {return true;}world.source()};
@@ -305,6 +318,7 @@ impl Shared {
         }false
     }
     pub fn accept_chunk(&self,dimension:Dimension,x:i32,z:i32,ready:crate::world::ReadyChunk) {
+        if !self.dimension_enabled(dimension) { return; }
         let accepted=self.world_in(dimension).lock().expect("мир").accept_prepared(x,z,ready);
         if !accepted {self.ensure_chunk(dimension,x,z);}
     }
@@ -429,6 +443,23 @@ impl Shared {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn disabled_dimensions_never_prepare_chunks_and_overworld_stays_enabled() {
+        let mut shared = Shared::new(World::in_memory(), World::in_memory(), PathBuf::new(), PathBuf::new(),
+            Default::default(), crate::ops::Ops::open(std::path::Path::new("tmp/disabled-dimensions/no-ops.json")),
+            crate::skins::Settings::default());
+        shared.settings.enable_nether = false;
+        shared.settings.enable_end = false;
+        assert_eq!(shared.enabled_dimensions().collect::<Vec<_>>(), vec![Dimension::Overworld]);
+        for dimension in [Dimension::Nether, Dimension::End] {
+            assert!(!shared.ensure_chunk(dimension, 7, -8));
+            assert!(!shared.world_in(dimension).lock().unwrap().has_chunk(7, -8));
+            assert_eq!(shared.world_in(dimension).lock().unwrap().tick(), 0);
+        }
+        assert!(shared.ensure_chunk(Dimension::Overworld, 7, -8));
+        assert!(shared.world_in(Dimension::Overworld).lock().unwrap().has_chunk(7, -8));
+    }
+
     #[test]
     fn ground_items_checkpoint_uses_actual_dimension_folders_and_survives_reopen() {
         use crate::config::server_properties::WorldKind;

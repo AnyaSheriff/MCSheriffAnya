@@ -1,0 +1,89 @@
+name: Adaptive mob sensing and disabled dimensions
+on:
+  push:
+    branches: ['feat/adaptive-mobs-20261115']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '4'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Install tested dependency lock
+        run: |
+          mkdir -p adaptive-evidence
+          python3 -B tools/fetch-release-lock.py
+          cp Cargo.lock adaptive-evidence/Cargo.lock
+          rustc -vV > adaptive-evidence/rustc.log
+          lscpu > adaptive-evidence/cpu.log
+      - name: Prepare own plugin components
+        run: |
+          set -o pipefail
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output adaptive-evidence
+          rustup target add wasm32-wasip2
+          cargo build --manifest-path plugins-examples/Cargo.toml --workspace --locked --release --target wasm32-wasip2 2>&1 | tee adaptive-evidence/examples-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output adaptive-evidence
+      - name: Strict Clippy
+        run: |
+          set -o pipefail
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee adaptive-evidence/clippy.log
+      - name: Full default workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace 2>&1 | tee adaptive-evidence/default-tests.log
+      - name: Full no-default workspace tests
+        run: |
+          set -o pipefail
+          cargo test --release --locked --workspace --no-default-features 2>&1 | tee adaptive-evidence/no-default-tests.log
+      - name: Build ordinary native runtime
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee adaptive-evidence/build.log
+          cp target/release/mcsheriffanya adaptive-evidence/runtime-elf
+          git diff --exit-code
+      - name: Actual startup and reopening of four dimension configurations
+        timeout-minutes: 20
+        run: python3 -B tools/check-disabled-dimensions.py --binary adaptive-evidence/runtime-elf --output "$RUNNER_TEMP/disabled-dimensions"
+      - name: Existing dispenser and jukebox runtime regressions
+        timeout-minutes: 8
+        run: python3 -B tools/protocol-bridge/probe_level_events_candidate.py --binary adaptive-evidence/runtime-elf --output "$RUNNER_TEMP/level-events-candidate"
+      - name: Measured single-dimension sensing workload
+        run: |
+          set -o pipefail
+          cargo test --release --locked mob::parallel_tests::sensing_benchmark -- --ignored --nocapture 2>&1 | tee adaptive-evidence/sensing-benchmark.log
+          test "$(grep -c 'test result: ok. 1 passed' adaptive-evidence/sensing-benchmark.log)" -eq 1
+      - name: Preserve raw selected evidence
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          import hashlib,json,os,pathlib,shutil,subprocess
+          out=pathlib.Path('adaptive-evidence');out.mkdir(exist_ok=True)
+          for name in ['disabled-dimensions','level-events-candidate']:
+              root=pathlib.Path(os.environ['RUNNER_TEMP'])/name
+              for p in root.rglob('*'):
+                  if p.is_file() and p.suffix in ['.json','.log']:
+                      dest=out/name/p.relative_to(root);dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,dest)
+          subprocess.run(['git','archive','--format=tar.gz','--output='+str(out/'source.tar.gz'),'HEAD'],check=True)
+          files={str(p.relative_to(out)):{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in out.rglob('*') if p.is_file()}
+          (out/'receipt.json').write_text(json.dumps({'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'files':files,'scope':'Mob sensing only; complete redstone mechanisms remain serial. No physical ARM/Android execution.'},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adaptive-${{ github.run_id }}-${{ github.run_attempt }}
+          path: adaptive-evidence/
+          retention-days: 7
+          if-no-files-found: error

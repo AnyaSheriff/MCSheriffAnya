@@ -427,9 +427,10 @@ impl BedrockWorld {
             Ok(saved) => saved,
             Err(error) => { log_warn!("Вход Bedrock остановлен: {}", error); return None; }
         };
-        let dimension = saved.as_ref().map(|data| data.dimension).unwrap_or_default();
+        let saved_dimension = saved.as_ref().map(|data| data.dimension).unwrap_or_default();
+        let dimension = if shared.dimension_enabled(saved_dimension) { saved_dimension } else { Dimension::Overworld };
         let world_spawn = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").spawn_position();
-        let spawn = saved.as_ref().map_or(world_spawn, |data| (data.x, data.y, data.z));
+        let spawn = saved.as_ref().filter(|_| dimension == saved_dimension).map_or(world_spawn, |data| (data.x, data.y, data.z));
         let rotation = saved.as_ref().map_or((0.0, 0.0), |data| (data.yaw, data.pitch));
         let game_mode = saved.as_ref().map_or_else(crate::commands_admin::default_game_mode, |data| data.game_mode);
         let bag = Bag::new(saved.as_ref().map(|data| data.inventory.clone()).unwrap_or_else(crate::inventory::Inventory::new));
@@ -1214,6 +1215,7 @@ impl BedrockWorld {
     /// Перенос в этом же измерении (команда): клиенту — Move Player, за ним
     /// чанки на новом месте.
     fn teleport_to(&mut self, connection: &Connection, packets: &mut Vec<Vec<u8>>, (x, y, z): (f64, f64, f64)) {
+        if !self.shared.dimension_enabled(self.dimension) { return; }
         let target = (x as f32, y as f32 + EYES, z as f32);
 
         if !valid_position(target) {
@@ -1251,6 +1253,7 @@ impl BedrockWorld {
         dimension: Dimension,
         (x, y, z): (f64, f64, f64),
     ) {
+        if !self.shared.dimension_enabled(dimension) { return; }
         let target = (x as f32, y as f32 + EYES, z as f32);
 
         if !valid_position(target) {
@@ -3975,7 +3978,7 @@ impl BedrockWorld {
 
         // Чанк, заказанный ещё в старом измерении, ложится в свой мир —
         // прочитан, так пригодится, — но клиенту уже не нужен.
-        for dimension in Dimension::ALL {
+        for dimension in self.shared.enabled_dimensions() {
             if !arrived.iter().any(|chunk| chunk.0 == dimension) {
                 continue;
             }

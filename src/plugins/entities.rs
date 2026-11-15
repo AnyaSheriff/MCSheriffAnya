@@ -20,6 +20,7 @@ impl PluginCtx {
     }
 
     fn entity_snapshots(&self, dimension: Dimension) -> Result<Vec<entities::Snapshot>,String> {
+        if !self.shared.dimension_enabled(dimension) { return Err("Измерение отключено".into()); }
         let mut result=Vec::new();let mut ids=std::collections::HashMap::new();
         {let players=self.shared.players.lock().expect("игроки");for player in players.members().iter().filter(|p|p.dimension==dimension) {
             ids.insert(player.entity_id,crate::network::login::format_uuid(&player.uuid));
@@ -50,6 +51,7 @@ impl PluginCtx {
 }
 impl entities::Host for PluginCtx {
     fn create_mob(&mut self, at: types::Location, kind: String) -> Result<String,String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(at.dimension)) { return Err("Измерение отключено".into()); }
         if !valid_location(&at)||at.yaw.is_some_and(|v|!v.is_finite())||at.pitch.is_some_and(|v|!v.is_finite()) {return Err("Недопустимая позиция сущности".into());}
         if kind!="vex" {return Err("Создание этого вида через Bukkit пока не поддерживается".into());}
         if self.pending_mobs.len()>=64 {return Err("Слишком много не добавленных в мир сущностей (64)".into());}
@@ -170,6 +172,7 @@ impl entities::Host for PluginCtx {
         }}Err("Живая сущность больше не существует".into())
     }
     fn teleport(&mut self, uuid: String, at: types::Location) -> Result<bool,String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(at.dimension)) { return Err("Измерение отключено".into()); }
         if !valid_location(&at)||at.yaw.is_some_and(|v|!v.is_finite())||at.pitch.is_some_and(|v|!v.is_finite()) {return Err("Недопустимая позиция сущности".into());}
         let uuid=parse_uuid(&uuid).ok_or("UUID не разобрать")?;let dimension=dimension_from_wit(at.dimension);
         let mut items=self.shared.items_in(dimension).lock().expect("сущности");
@@ -238,6 +241,7 @@ impl entities::Host for PluginCtx {
         let mut thrown=self.shared.thrown.lock().expect("снаряды");thrown.flying.retain(|p|p.uuid!=uuid);thrown.clouds.retain(|p|p.uuid!=uuid);thrown.rockets.retain(|p|p.uuid!=uuid);Ok(())
     }
     fn drop_item(&mut self, at: types::Location, stack: inventory::Item, natural: bool) -> Result<String, String> {
+        if !self.shared.dimension_enabled(dimension_from_wit(at.dimension)) { return Err("Измерение отключено".into()); }
         if !valid_location(&at) {return Err("Недопустимая позиция предмета".into());}
         let stack = self.inventory_stack(Some(stack))?.ok_or("Пустой предмет")?;
         let dimension = dimension_from_wit(at.dimension);

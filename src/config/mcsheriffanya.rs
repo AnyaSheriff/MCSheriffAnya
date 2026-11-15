@@ -79,6 +79,13 @@ pub struct Settings {
 
     /// Параллельная блочная часть измерений; сущности и команды идут по очереди.
     pub parallel_dimension_ticks: bool,
+    /// Независимые расчёты окружения мобов внутри измерения при такте >50 мс.
+    pub experimental_parallel_mobs: bool,
+    /// Предел исполнителей расчётов мобов вместе с потоком такта; 0 — автоматически.
+    pub mob_tick_threads: usize,
+    /// Незер и Энд: изменение требует перезапуска, папки сохраняются.
+    pub enable_nether: bool,
+    pub enable_end: bool,
     /// Предел исполнителей блочной части, включая поток такта; 0 — автоматически.
     pub dimension_tick_threads: usize,
 
@@ -143,6 +150,10 @@ impl Settings {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
                 "config/mcsa.properties: dimension-tick-threads должен быть от 0 до 3"));
         }
+        if self.mob_tick_threads > 8 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                "config/mcsa.properties: mob-tick-threads должен быть от 0 до 8"));
+        }
         if self.offline_license_mode == OfflineLicenseMode::Invalid {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput,
                 "config/mcsa.properties: offline-license-mode должен быть cosmetics или disabled"));
@@ -191,6 +202,10 @@ impl Default for Settings {
             console_colors: crate::colors::ConsoleColors::Auto,
             tab_tps: true,
             parallel_dimension_ticks: false,
+            experimental_parallel_mobs: false,
+            mob_tick_threads: 0,
+            enable_nether: true,
+            enable_end: true,
             dimension_tick_threads: 0,
             prefetch_chunks: 3,
             prefetch_at_once: 4,
@@ -291,7 +306,11 @@ impl Settings {
             debug: take(&values, "debug", default.debug, path),
             console_colors: take(&values, "console-colors", default.console_colors, path),
             tab_tps: take(&values, "tab-tps", default.tab_tps, path),
+            enable_nether: take(&values, "enable-nether", default.enable_nether, path),
+            enable_end: take(&values, "enable-end", default.enable_end, path),
             parallel_dimension_ticks: take(&values, "parallel-dimension-ticks", default.parallel_dimension_ticks, path),
+            experimental_parallel_mobs: take(&values, "experimental-parallel-mobs", default.experimental_parallel_mobs, path),
+            mob_tick_threads: take(&values, "mob-tick-threads", default.mob_tick_threads, path),
             dimension_tick_threads: take(&values, "dimension-tick-threads", default.dimension_tick_threads, path),
             prefetch_chunks: take(&values, "prefetch-chunks", default.prefetch_chunks, path),
             prefetch_at_once: take(&values, "prefetch-at-once", default.prefetch_at_once, path),
@@ -342,8 +361,12 @@ impl Settings {
             ("auth-premium", format!("# Устаревшая настройка; используется только при отсутствии offline-license-mode.\nauth-premium={}\n", self.auth_premium)),
             ("offline-license-mode", format!("# Только для online-mode=false: cosmetics — проверять лицензию для скинов/плащей;\n# после неудачи можно войти повторно без лицензии. disabled — не проверять\n# лицензию и не искать профили/скины через Mojang. Парольная защита AuthMe независима.\n# Имеет приоритет над auth-premium; действует и при auth-enabled=false.\noffline-license-mode={}\n", self.offline_license_mode)),
             ("tab-tps", format!("# TPS и время такта внизу списка игроков Java; оформление плагина имеет приоритет.\ntab-tps={}\n", self.tab_tps)),
+            ("enable-nether", format!("# Загружать Незер. Перезапуск обязателен; существующая папка не удаляется.\nenable-nether={}\n", self.enable_nether)),
+            ("enable-end", format!("# Загружать Энд. Обычный мир включён всегда. Перезапуск обязателен.\nenable-end={}\n", self.enable_end)),
             ("parallel-dimension-ticks", format!("# Экспериментально: постепенно подключать потоки для блочной части измерений.\n# Сущности и команды идут по очереди; общий такт ждёт все измерения.\n# При загруженных командных блоках или активных плагинах — последовательный режим.\n# Изменение требует перезапуска сервера.\nparallel-dimension-ticks={}\n", self.parallel_dimension_ticks)),
             ("dimension-tick-threads", format!("# Предел исполнителей блочной части вместе с потоком такта: 1..3.\n# 0 — автоматически, не больше доступных логических CPU и трёх измерений.\ndimension-tick-threads={}\n", self.dimension_tick_threads)),
+            ("experimental-parallel-mobs", format!("# Экспериментально: независимый поиск угроз и целей мобов внутри одного измерения.\n# После такта >50 мс и заметной работы мобов подключается помощник; далее число растёт постепенно.\n# Движение, случайность, урон и изменения мира сохраняют последовательный порядок.\n# Не все этапы ИИ распараллелены; ускорение зависит от нагрузки. С плагинами отключается.\n# Изменение требует перезапуска сервера.\nexperimental-parallel-mobs={}\n", self.experimental_parallel_mobs)),
+            ("mob-tick-threads", format!("# Предел исполнителей расчётов мобов вместе с потоком такта: 1..8.\n# 0 — автоматически, не больше доступных логических CPU и восьми исполнителей.\nmob-tick-threads={}\n", self.mob_tick_threads)),
             ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
 # с клиентом. Нужен только для поиска неполадок; в обычной игре — false.
@@ -522,6 +545,34 @@ fn move_old_file(old: &Path, path: &Path) -> Settings {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn optional_dimensions_default_enabled_and_round_trip() {
+        let path = std::path::Path::new("mcsa.properties");
+        let defaults = super::Settings::parse("", path);
+        assert!(defaults.enable_nether && defaults.enable_end);
+        for (nether, end) in [(false, false), (false, true), (true, false), (true, true)] {
+            let settings = super::Settings::parse(&format!("enable-nether={nether}\nenable-end={end}\n"), path);
+            assert_eq!((settings.enable_nether, settings.enable_end), (nether, end));
+            assert_eq!(super::Settings::parse(&settings.to_file(), path), settings);
+        }
+    }
+
+    #[test]
+    fn adaptive_mob_settings_are_opt_in_bounded_and_round_trip() {
+        let path = std::path::Path::new("mcsa.properties");
+        let defaults = super::Settings::parse("", path);
+        assert!(!defaults.experimental_parallel_mobs);
+        assert_eq!(defaults.mob_tick_threads, 0);
+        for threads in 0..=8 {
+            let settings = super::Settings::parse(&format!("experimental-parallel-mobs=true\nmob-tick-threads={threads}\n"), path);
+            assert!(settings.experimental_parallel_mobs);
+            assert!(settings.validate().is_ok());
+            assert_eq!(super::Settings::parse(&settings.to_file(), path), settings);
+        }
+        let invalid = super::Settings::parse("mob-tick-threads=9\n", path);
+        assert!(invalid.validate().unwrap_err().to_string().contains("mob-tick-threads"));
+    }
+
     #[test]
     fn dimension_threads_are_opt_in_bounded_and_round_trip() {
         let path = std::path::Path::new("mcsa.properties");

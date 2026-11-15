@@ -2763,7 +2763,7 @@ fn save_all(ctx: &mut Ctx, rd: &mut Rd) -> R<()> {
     rd.finish()?;
     ctx.ok(translate("commands.save.saving", vec![]));
 
-    for dimension in crate::dimension::Dimension::ALL {
+    for dimension in ctx.shared.enabled_dimensions() {
         let mut world = ctx.shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
         crate::tick::store_mobs(ctx.shared, dimension, &mut world);

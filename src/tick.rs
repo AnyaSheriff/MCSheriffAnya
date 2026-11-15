@@ -10,6 +10,7 @@
 // пока её никто не трогает, проверять нечего.
 
 mod idle;
+mod adaptive_mobs;
 mod parallel;
 mod tnt_diagnostics;
 
@@ -79,7 +80,7 @@ pub fn start(shared: Arc<Shared>) {
         .name("world tick".to_string())
         .spawn(move || {
             // Ядро для такта — последнее: первые обычно занимают прерывания.
-            if !shared.settings.parallel_dimension_ticks && let Some(core) = tick_core() {
+            if !shared.settings.parallel_dimension_ticks && !shared.settings.experimental_parallel_mobs && let Some(core) = tick_core() {
                 pin_to_core(core);
             }
 
@@ -189,10 +190,17 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
     // концом прошлого.
     let mut morning_due = false;
     let parallel_enabled = shared.settings.parallel_dimension_ticks;
+    let mob_parallel_enabled = shared.settings.experimental_parallel_mobs;
+    let mut mob_policy = adaptive_mobs::Policy::new(cores(), shared.settings.mob_tick_threads);
+    let mut mob_executor = crate::mob::parallel::Executor::new();
     let mut block_pool: parallel::Pool<(Dimension, PhaseStats, Duration)> = parallel::Pool::new();
     let mut block_costs = [Duration::ZERO; 3];
     let mut last_fallback = None;
     let mut spawn_warning = false;
+    let mut mob_spawn_warning = false;
+    if mob_parallel_enabled {
+        crate::log_info!("Экспериментальный поиск угроз и целей мобов включён: 1 исполнитель; помощники после такта >50 мс, движение и изменения мира последовательные");
+    }
     if parallel_enabled {
         crate::log_info!("Параллельная блочная часть измерений включена: начинаем с 1 исполнителя; сущности и команды идут по очереди");
     }
@@ -202,6 +210,7 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
         // входа игрока; функции и плагины тоже не тикают в пустом мире.
         if let Some(paused) = idle::wait_tick(&shared, &mut presence, next).await {
             block_policy.reset();
+            mob_policy.reset();
             next = tokio::time::Instant::now();
             shared.world_cmd.ticking.lock().expect("такт").resumed_after_idle(paused);
         }
@@ -220,6 +229,9 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
         // Скорость, заморозка, шаги и разгон — команда `tick`
         // (commands_world.rs). При 20 тактах в секунду — те же 50 мс.
         let plan = crate::commands_world::next_tick(&shared);
+        if !plan.run_world || crate::plugins::active() { mob_policy.reset(); }
+        mob_executor.set_width(mob_policy.width);
+        mob_executor.begin_tick();
 
         if plan.period.is_zero() {
             // Разгон: без ожидания и без догонялок по сетке.
@@ -235,7 +247,7 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
 
         // Где лежат предметы к началу такта — по этим местам их подбирают
         // игроки, как у оригинала, где подбор идёт раньше шага предметов.
-        for dimension in Dimension::ALL {
+        for dimension in shared.enabled_dimensions() {
             shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").note_tick_start();
         }
 
@@ -271,7 +283,7 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
         // блок появится после неё, вся подготовка закончится до рабочих заданий.
         let fallback = if crate::plugins::active() { "активны плагины" } else { "есть командные блоки" };
         let block_allowed = parallel_enabled && plan.run_world && !crate::plugins::active()
-            && !Dimension::ALL.into_iter().any(|d| shared.world_in(d).lock().expect("мир").has_command_blocks());
+            && !shared.enabled_dimensions().any(|d| shared.world_in(d).lock().expect("мир").has_command_blocks());
         if parallel_enabled && plan.run_world && last_fallback != Some(!block_allowed) {
             if !block_allowed { crate::log_info!("Блочная часть измерений идёт последовательно: {}", fallback); }
             else if last_fallback.is_some() { crate::log_info!("Параллельная блочная часть снова доступна; начинаем с 1 исполнителя"); }
@@ -290,7 +302,7 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
 
         // Не более одного снимка на измерение; вывод только после освобождения замков.
         let mut tnt_reports: Option<Vec<tnt_diagnostics::Batch>> = None;
-        for dimension in Dimension::ALL.into_iter().filter(|_| plan.run_world) {
+        for dimension in shared.enabled_dimensions().filter(|_| plan.run_world) {
             let diagnostic_due = tnt_diagnostics.as_ref().is_some_and(|diagnostics| diagnostics.due(ticks, dimension));
             let world_wait = diagnostic_due.then(std::time::Instant::now);
             let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
@@ -330,7 +342,8 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
             step_frames(&shared, dimension, &mut world);
 
             // Мобы: мысли, движение, разведение, добыча погибших.
-            step_mobs(&shared, dimension, &mut world, &mut mob_rng, ticks);
+            let executor = (mob_parallel_enabled && !crate::plugins::active()).then_some(&mut mob_executor);
+            step_mobs_with_executor(&shared, dimension, &mut world, &mut mob_rng, ticks, executor);
 
             if crate::plugins::active() {
                 drop(world);
@@ -553,7 +566,7 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
             for report in reports { report.log(); }
         }
 
-        for dimension in Dimension::ALL {
+        for dimension in shared.enabled_dimensions() {
             let deaths=std::mem::take(&mut shared.items_in(dimension).lock().expect("сущности").plugin_deaths);
             for (uuid,at,stand,drops) in deaths {
                 let drops=crate::plugins::entity_death(None,&uuid,false,drops);
@@ -585,6 +598,18 @@ async fn run_with_block_policy(shared: Arc<Shared>, mut block_policy: parallel::
         // Сначала фиксируем рассылку, потом будим подключения. Их поздние
         // публикации относятся уже к следующему концу такта [проверить].
         publish_finished_tick(&shared, ticks);
+        let mob_work = mob_executor.stats();
+        let previous_mob_width = mob_executor.width();
+        let mob_allowed = mob_parallel_enabled && plan.run_world && !crate::plugins::active() && !mob_executor.spawn_failed();
+        mob_policy.observe(started.elapsed(), mob_work.cost,
+            if mob_work.comparisons >= 16_384 { mob_work.items } else { 0 }, mob_allowed);
+        if mob_parallel_enabled && mob_policy.width != previous_mob_width {
+            crate::log_info!("Расчёты окружения мобов: исполнителей {} (вместе с потоком такта)", mob_policy.width);
+        }
+        if mob_executor.spawn_failed() && !mob_spawn_warning {
+            log_warn!("Не удалось создать помощника для мобов; расчёты останутся последовательными");
+            mob_spawn_warning = true;
+        }
     }
 }
 
@@ -608,7 +633,7 @@ pub(crate) async fn wait_for_player_packets(shared: &Shared, tick: u64) -> bool 
 /// и наблюдателя. Поздние записи остаются следующему такту.
 pub(crate) fn publish_finished_tick(shared: &Shared, tick: u64) {
     let _publication = shared.publication.lock().expect("публикация такта");
-    for dimension in Dimension::ALL {
+    for dimension in shared.enabled_dimensions() {
         shared.world_in(dimension).lock().expect("мир").publish_events();
     }
     shared.players.lock().expect("игроки").publish_tick();
@@ -619,16 +644,16 @@ fn parallel_dimension_blocks(shared: &Arc<Shared>, block_pool: &mut parallel::Po
     width: usize, morning_due: &mut bool, phases: &mut PhaseStats, block_costs: &mut [Duration; 3],
 ) {
     let mut jobs = Vec::new();
-    let mut dimensions = Dimension::ALL;
+    let mut dimensions: Vec<_> = shared.enabled_dimensions().collect();
     dimensions.sort_by_key(|d| std::cmp::Reverse(block_costs[d.index()]));
     // Сначала вся подготовка по прежнему порядку измерений, включая
     // команды; только потом запускаем независимые вычисления.
-    let mut chunks = Vec::new();
-    for dimension in Dimension::ALL {
+    let mut chunks: Vec<_> = (0..3).map(|_| None).collect();
+    for dimension in shared.enabled_dimensions() {
         let world = shared.world_in(dimension).lock().expect("мир");
         let (world, player_chunks) = prepare_dimension_blocks(shared, dimension, world, morning_due, phases);
         drop(world);
-        chunks.push(Some(player_chunks));
+        chunks[dimension.index()] = Some(player_chunks);
     }
     let random_tick_speed = crate::farming::random_tick_speed();
     for dimension in dimensions {
@@ -1288,7 +1313,14 @@ fn mob_projectiles(fired: &crate::mob::Fired, dimension: Dimension, difficulty: 
 /// погибших, удары, стрелы и взрывы крипера, а то, что мобы делают с блоками
 /// (овца съела траву) и предметами (курица снесла яйцо), исполняется здесь.
 /// Раз в 200 тактов моб записывается в свой чанк.
+#[cfg(test)]
 fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut crate::mob::Rng, ticks: u64) {
+    step_mobs_with_executor(shared, dimension, world, rng, ticks, None);
+}
+
+fn step_mobs_with_executor(shared: &Shared, dimension: Dimension, world: &mut World,
+    rng: &mut crate::mob::Rng, ticks: u64, executor: Option<&mut crate::mob::parallel::Executor>,
+) {
     let loaded = world.take_loaded_mobs();
     crate::archaeology::decay(world,*shared.ticks.borrow());
     let fresh = world.take_new_chunks();
@@ -1845,7 +1877,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     };
     let riders: Vec<i32> = shared.riding.lock().expect("седоки").vehicles().flat_map(|(_, ids)| ids.iter().copied()).collect();
     crate::mob::movement_enchantments::step(world, &mut items, &watchers, &riders);
-    let outcome = crate::mob::step_all(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id());
+    let outcome = crate::mob::step_all_with_executor(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id(), executor);
     rider_hurt.extend(crate::mob::horse::sync_riding(&mut items, &mut shared.riding.lock().expect("учёт седоков"), &owners, &MobView(world)));
     for (id, damage) in rider_hurt {
         world.note_mob_hurt(id, damage, crate::survival::Source::Fall, 0, "", None, (0.0, 0.0, 0.0));

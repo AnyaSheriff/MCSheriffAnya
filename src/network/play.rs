@@ -780,6 +780,7 @@ pub async fn play_session(
         shared.catalog(),
     );
 
+    restore_enabled_dimension(shared, &mut player, spawn);
     player.restart_attrs_tracking(*shared.ticks.borrow());
     player.entity_id = limbo_entity.unwrap_or(0);
     player.main_hand = look.main_hand;
@@ -1074,12 +1075,10 @@ async fn enter_world(
         } else {
         send_login(
             stream,
+            shared,
             player.dimension,
             player.game_mode,
             player.entity_id,
-            shared.properties.view_distance,
-            shared.properties.simulation_distance,
-            shared.properties.online_mode,
         )
         .await?;
         }
@@ -1253,21 +1252,22 @@ async fn enter_world(
 /// им этого игрока.
 async fn send_login(
     stream: &mut Outgoing<'_>,
+    shared: &Shared,
     dimension: Dimension,
     game_mode: i32,
     entity_id: i32,
-    view: i32,
-    simulation: i32,
-    online_mode: bool,
 ) -> io::Result<()> {
+    let view = shared.properties.view_distance;
+    let simulation = shared.properties.simulation_distance;
+    let online_mode = shared.properties.online_mode;
     let mut body = encode_varint(LOGIN);
 
     push_i32(&mut body, entity_id); // Entity ID игрока
     body.push(0x00); // не хардкор
 
     // Список измерений сервера.
-    body.extend_from_slice(&encode_varint(Dimension::ALL.len() as i32));
-    for known in Dimension::ALL {
+    body.extend_from_slice(&encode_varint(shared.enabled_dimensions().count() as i32));
+    for known in shared.enabled_dimensions() {
         body.extend_from_slice(&encode_string(known.name()));
     }
 
@@ -4638,6 +4638,16 @@ async fn send_game_event_start_waiting(stream: &mut Outgoing<'_>) -> io::Result<
     write_body(stream, body).await
 }
 
+/// Сохранённое место отключённого мира заменяется точкой обычного мира.
+/// Инвентарь и личная точка возрождения остаются у игрока.
+fn restore_enabled_dimension(shared: &Shared, player: &mut PlayerState, spawn: (f64, f64, f64)) {
+    if !shared.dimension_enabled(player.dimension) {
+        player.dimension = Dimension::Overworld;
+        (player.x, player.y, player.z) = spawn;
+        player.spawn_point = spawn;
+    }
+}
+
 /// Отправляет Set Center Chunk — центральный чанк для клиента.
 async fn send_center_chunk(stream: &mut Outgoing<'_>, chunk: (i32, i32)) -> io::Result<()> {
     let mut body = encode_varint(SET_CENTER_CHUNK);
@@ -4695,6 +4705,10 @@ fn step_portal(shared: &Shared, player: &mut PlayerState) {
 
     let (mut dimension, (mut x, mut y, mut z)) = crate::portal::travel(shared, player.dimension, (player.x, player.y, player.z));
 
+    if dimension == player.dimension && (x, y, z) == (player.x, player.y, player.z) {
+        player.portal_trip = false;
+        return;
+    }
     if gateway { player.progress.trigger("end/enter_end_gateway"); }
     // Из Энда — к точке возрождения игрока (кровать), а не к общей.
     if !gateway && player.dimension == Dimension::End && dimension == Dimension::Overworld {
@@ -6982,6 +6996,13 @@ async fn read_and_log_play_packets(
                     let to = crate::plugins::respawn(&who, &to, found.bed_spawn, found.anchor_spawn);
                     found.dimension = to.dimension;found.at = (to.x, to.y, to.z);found.yaw = Some(to.yaw);player.pitch = to.pitch;
                 }
+                if !shared.dimension_enabled(found.dimension) {
+                    found.dimension = Dimension::Overworld;
+                    found.at = on_the_ground(shared, player.spawn_point);
+                    found.deplete = None;
+                    found.bed_spawn = false;
+                    found.anchor_spawn = false;
+                }
                 let (dimension, (x, y, z)) = (found.dimension, found.at);
 
                 target = Some(found);
@@ -7126,6 +7147,7 @@ async fn read_and_log_play_packets(
                 // забывает всё, что видел, — чанки, предметы и игроков
                 // присылаем заново из нового мира.
                 Order::ChangeDimension { dimension, x, y, z } => {
+                    if !shared.dimension_enabled(dimension) { continue; }
                     let reader = player.reader;
 
                     if respawning {
@@ -13489,6 +13511,31 @@ mod tests {
         };
 
         PlayerState::new([7; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN)
+    }
+
+    #[test]
+    fn disabled_saved_dimension_returns_to_overworld_without_losing_inventory_or_respawn() {
+        let mut shared = Shared::new(crate::world::World::in_memory(), crate::world::World::in_memory(), Default::default(), Default::default(),
+            Default::default(), crate::ops::Ops::open(std::path::Path::new("tmp/disabled-login/no-ops.json")),
+            crate::skins::Settings::default());
+        shared.settings.enable_nether = false;
+        shared.settings.enable_end = false;
+        for dimension in [Dimension::Nether, Dimension::End] {
+            let mut player = settled_player();
+            player.dimension = dimension;
+            let point = crate::bed::RespawnPoint { dimension, pos: (10, 70, 10), yaw: 45.0, forced: true };
+            player.respawn = Some(point);
+            player.x = 1000.0;
+            let before = player.inventory.clone();
+            restore_enabled_dimension(&shared, &mut player, SPAWN);
+            assert_eq!(player.dimension, Dimension::Overworld);
+            assert_eq!((player.x, player.y, player.z), SPAWN);
+            assert_eq!(player.inventory.slots(), before.slots());
+            assert_eq!(player.respawn, Some(point));
+            assert_eq!(sleep::respawn_target(&shared, &mut player).dimension, Dimension::Overworld);
+            assert_eq!(player.respawn, Some(point));
+            assert!(!shared.world_in(dimension).lock().unwrap().has_chunk(0, 0));
+        }
     }
 
     /// Куда складывать файлы в тестах: своя директория, чтобы тесты не мешали

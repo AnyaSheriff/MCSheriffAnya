@@ -15,6 +15,7 @@
 // Что не сверено, помечено «[проверить]».
 
 pub mod ai;
+pub mod parallel;
 pub mod plugin_attributes;
 pub mod plugin_targets;
 pub mod armor_stand;
@@ -4102,6 +4103,14 @@ pub fn step_all(
     rng: &mut Rng,
     next_id: &mut dyn FnMut() -> i32,
 ) -> Outcome {
+    step_all_with_executor(items, view, players, env, rng, next_id, None)
+}
+
+pub fn step_all_with_executor(
+    items: &mut crate::items::Items, view: &dyn View, players: &[ai::Watcher], env: Env,
+    rng: &mut Rng, next_id: &mut dyn FnMut() -> i32, mut executor: Option<&mut parallel::Executor>,
+) -> Outcome {
+    if crate::plugins::active() { executor = None; }
     let mut outcome = Outcome::default();
     let mut plugin_targets=Vec::new();
 
@@ -4133,7 +4142,9 @@ pub fn step_all(
     let drowned_ctx = ai::Ctx { players: &drowned_targets, ..ctx };
     let mut mobs = std::mem::take(items.mobs_vec());
     let mut breeds: Vec<(i32, i32)> = Vec::new();
-    let mut born = village_golems::step(&mut mobs, view, env.tick, env.clock.rem_euclid(24_000), rng, next_id);
+    let mut born = if let Some(executor) = executor.as_deref_mut() {
+        village_golems::step_with_executor(&mut mobs, view, env.tick, env.clock.rem_euclid(24_000), rng, next_id, Some(executor))
+    } else { village_golems::step(&mut mobs, view, env.tick, env.clock.rem_euclid(24_000), rng, next_id) };
 
     // Занятые жителями рабочие блоки: второй их не займёт.
     let mut claimed: Vec<(i32, i32, i32)> = mobs.iter().filter_map(|mob| mob.villager.job_site).collect();
@@ -4147,7 +4158,8 @@ pub fn step_all(
     // Синие овцы — для «вололо» заклинателя (mob/illager.rs).
     let blue_sheep: Vec<(i32, (f64, f64, f64))> = mobs.iter().filter(|mob| mob.kind == Kind::Sheep && mob.color == illager::WOLOLO_FROM && !mob.is_dead()).map(|mob| (mob.entity_id, (mob.x, mob.y, mob.z))).collect();
     let mut recolor: Vec<i32> = Vec::new();
-    land::herd(&mut mobs, players, view);
+    if let Some(executor) = executor { land::herd_with_executor(&mut mobs, players, view, Some(executor)); }
+    else { land::herd(&mut mobs, players, view); }
 
     for (index, mob) in mobs.iter_mut().enumerate() {
         mob.tame.clock = env.clock;
@@ -4708,3 +4720,7 @@ mod catalog_collision_tests {
         assert_eq!(catalog_clip(&base,(0.2,2.0,0.2),0.2,0.2,-3.0,1),None);
     }
 }
+
+#[cfg(test)]
+#[path = "parallel_tests.rs"]
+mod parallel_tests;

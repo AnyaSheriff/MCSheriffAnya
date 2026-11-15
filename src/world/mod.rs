@@ -1275,6 +1275,9 @@ pub struct World {
     pub plugin_monster_limits: Vec<(String, usize)>,
     pub maps: std::sync::Arc<std::sync::Mutex<crate::maps::Maps>>,
     pub fire_tick: bool,
+    /// Разрешения открытия порталов, установленные при запуске сервера.
+    pub nether_portals_enabled: bool,
+    pub end_portals_enabled: bool,
     pub fire_difficulty: u8,
     /// Ноты для тихонь и вылупившиеся нюхачи (mob/small_world.rs).
     pub allay_notes: Vec<(i32, i32, i32)>,
@@ -1635,6 +1638,8 @@ impl World {
             plugin_events_enabled: false,
             maps: Default::default(),
             fire_tick: true,
+            nether_portals_enabled: true,
+            end_portals_enabled: true,
             fire_difficulty: 2,
             noise: 0x9E37_79B9,
             allay_notes: Vec::new(),
@@ -1809,6 +1814,8 @@ impl World {
             plugin_events_enabled: false,
             maps: Default::default(),
             fire_tick: true,
+            nether_portals_enabled: true,
+            end_portals_enabled: true,
             fire_difficulty: 2,
             allay_notes: Vec::new(),
             ominous_births:Vec::new(),

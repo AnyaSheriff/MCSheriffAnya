@@ -394,7 +394,7 @@ fn deplete_sound((x, y, z): bed::Pos) -> Vec<u8> {
 pub(super) fn respawn_target(shared: &Shared, player: &mut PlayerState) -> Target {
     let mut missing = false;
 
-    if let Some(point) = player.respawn {
+    if let Some(point) = player.respawn.filter(|point| shared.dimension_enabled(point.dimension)) {
         shared.ensure_chunk(point.dimension,point.pos.0.div_euclid(CHUNK_SIZE),point.pos.2.div_euclid(CHUNK_SIZE));
         let mut world = shared.world_in(point.dimension).lock().expect("мир захвачен другим потоком");
 
