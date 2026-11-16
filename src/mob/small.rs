@@ -846,7 +846,7 @@ mod tests {
     #[test]
     fn no_ai_allay_heals_without_movement_goals_or_random_draws() {
         let mut m=mob(Kind::Allay); m.no_ai=true; m.vitals.health=10.0;
-        m.vx=0.3; m.vy=0.2; m.vz=-0.1;
+        m.vx = 0.3; m.vy = 0.2; m.vz = -0.1;
         let place=(m.x,m.y,m.z); let speed=(m.vx,m.vy,m.vz); let goal=m.small.goal;
         let mut rng=Rng::new(19); let mut untouched=rng.clone();
         for _ in 0..20 {
