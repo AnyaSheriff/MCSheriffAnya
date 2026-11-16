@@ -243,6 +243,7 @@ def generate(side, seed, binary, scratch, evidence, port):
             raise ValueError('target chunks already generated before controlled request: '+repr(sorted(preexisting)))
         (evidence / f'{side}-control.json').write_text(json.dumps({'ready_line':ready.strip(),
             'freeze_response':frozen,'random_tick_response':speed,'spawn_mobs_response':mobs,
+            'seed_response':response,
             'density_env':os.environ.get('MCSA_A6_DENSITY'),'preexisting_targets':[]},indent=2)+'\n')
         print(f'{side} seed={seed}: requesting {len(CHUNKS)} fresh chunks', flush=True)
         for cx,cz in CHUNKS:

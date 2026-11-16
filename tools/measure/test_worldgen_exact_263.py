@@ -175,7 +175,7 @@ class ExactTests(unittest.TestCase):
             result['recording_valid'] = False
             with patch('sys.argv', args): self.assertEqual(exact.main(), 1)
 
-    def actual_fixture(self, status='minecraft:full'):
+    def actual_fixture(self, status='minecraft:full', separate_seed=None):
         def text(value):
             value = value.encode(); return struct.pack('>H', len(value)) + value
         def tag(kind, name, payload): return bytes([kind]) + text(name) + payload
@@ -194,6 +194,12 @@ class ExactTests(unittest.TestCase):
         (self.vanilla / 'region/r.0.0.mca').write_bytes(header + record.ljust(4096, b'\0'))
         metadata = b'\x0a\0\0' + compound(tag(10, 'Data', compound(tag(10, 'WorldGenSettings', compound(tag(4, 'seed', struct.pack('>q', 42)))), tag(10, 'Version', compound(string('Name', '26.3'))), number('DataVersion', 5023))))
         (self.vanilla / 'level.dat').write_bytes(gzip.compress(metadata))
+        if separate_seed is not None:
+            metadata = b'\x0a\0\0' + compound(tag(10, 'Data', compound(tag(10, 'Version', compound(string('Name', '26.3'))), number('DataVersion', 5023))))
+            (self.vanilla / 'level.dat').write_bytes(gzip.compress(metadata))
+            folder = self.vanilla / 'data/minecraft'; folder.mkdir(parents=True, exist_ok=True)
+            seed_data = b'\x0a\0\0' + compound(tag(10, 'data', compound(tag(4, 'seed', struct.pack('>q', separate_seed)))), number('DataVersion', 5023))
+            (folder / 'world_gen_settings.dat').write_bytes(gzip.compress(seed_data))
         reader = exact.Reader()
         raw = b'\x04' + b'\0' * 24 + (b'\x01' + struct.pack('>H', reader.biomes.index('plains'))) * 24
         lib = ctypes.CDLL(ctypes.util.find_library('zstd'))
@@ -216,6 +222,30 @@ class ExactTests(unittest.TestCase):
         result = self.actual_fixture('minecraft:empty')
         self.assertFalse(result['recording_valid'])
         self.assertIn('incomplete coverage', result['errors'][0])
+
+    def test_actual_saved_separate_seed_without_world_file_changes(self):
+        result = self.actual_fixture(separate_seed=42)
+        self.assertTrue(result['recording_valid'], result['errors'])
+        self.assertTrue(result['parity'])
+        self.assertEqual(result['seed_sources']['vanilla'], 'data/minecraft/world_gen_settings.dat:data.seed')
+        path = self.vanilla / 'data/minecraft/world_gen_settings.dat'
+        self.assertIn(str(path), result['input_sha256'])
+        self.assertEqual(result['input_sha256'][str(path)], exact.fingerprints([path])[str(path)])
+
+    def test_conflicting_actual_saved_seed_never_uses_expected_plan(self):
+        result = self.actual_fixture(separate_seed=43)
+        self.assertFalse(result['recording_valid'])
+        self.assertIn('saved seed differs', result['errors'][0])
+        metadata = dict(seed=42)
+        with self.assertRaisesRegex(ValueError, 'Conflicting'):
+            exact.saved_seed(self.vanilla, metadata, 42)
+
+    def test_missing_saved_seed_not_filled_from_plan_or_console_sidecar(self):
+        with self.assertRaisesRegex(ValueError, 'saved seed differs'):
+            exact.saved_seed(self.vanilla, dict(seed=None), 42)
+        (self.vanilla.parent / 'observed-seed.json').write_text(json.dumps(dict(seed=42)))
+        with self.assertRaisesRegex(ValueError, 'sidecar'):
+            exact.saved_seed(self.vanilla, dict(seed=42), 42)
 
     def test_wrong_region_format_rejected(self):
         path = self.ours / 'region/r.0.0.mcs'

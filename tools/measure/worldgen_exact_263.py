@@ -5,6 +5,7 @@
 """
 import argparse
 from collections import Counter
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -13,6 +14,7 @@ import re
 import numpy as np
 
 from genaudit_263_io import Reader, level, region_dir
+import census_263 as nbt
 
 
 def canonical(value):
@@ -43,6 +45,36 @@ def parse_plan(plan):
 
 def fingerprints(paths):
     return {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
+
+
+def saved_seed(directory, metadata, expected):
+    """Только идентичность сохранения: seed, без параметров генерации."""
+    seed_file = directory / 'data/minecraft/world_gen_settings.dat'
+    value = metadata.get('seed')
+    source = 'level.dat'
+    paths = []
+    if seed_file.is_file():
+        raw = seed_file.read_bytes()
+        if raw.startswith(b'\x1f\x8b'):
+            raw = gzip.decompress(raw)
+        if len(raw) < 3 or raw[0] != 10:
+            raise ValueError('Invalid saved seed metadata')
+        root, end = nbt.nbt(raw, 3 + int.from_bytes(raw[1:3], 'big'), 10)
+        # Это обычные данные сохранённого мира, не JAR или отчёт генератора.
+        actual = root.get('data', {}).get('seed')
+        if end != len(raw) or root.get('DataVersion') != 5023 or type(actual) is not int:
+            raise ValueError('Invalid saved seed/DataVersion')
+        if value is not None and (type(value) is not int or value != actual):
+            raise ValueError('Conflicting saved seed identities')
+        value, source, paths = actual, 'data/minecraft/world_gen_settings.dat:data.seed', [seed_file]
+        observation = directory.parent / 'observed-seed.json'
+        if observation.is_file():
+            paths.append(observation)
+    elif (directory.parent / 'observed-seed.json').exists():
+        raise ValueError('Console seed sidecar cannot replace saved seed identity')
+    if type(value) is not int or not -(1 << 63) <= value < (1 << 63) or value != expected:
+        raise ValueError('saved seed differs from explicit plan')
+    return source, paths
 
 
 def chunk_data(reader, blocks, biomes):
@@ -80,7 +112,7 @@ def compare_worlds(ours, vanilla, plan, example_limit=20):
                   full_state_parity='unknown', registry_identity_verified=False,
                   scope='Exact block NAMES and quart biome cells in requested saved chunks only; not full-state or whole-generator parity.',
                   block_y_range=[-64, 319], biome_resolution=[4, 4, 4],
-                  coverage={}, chunks=[], examples={'block_names': [], 'biome_cells': [], 'heights': []}, errors=[],
+                  coverage={}, seed_sources={}, chunks=[], examples={'block_names': [], 'biome_cells': [], 'heights': []}, errors=[],
                   totals={key: {'compared': 0, 'mismatches': 0} for key in ('block_names', 'biome_cells', 'top_non_air_heights')})
     report['comparison_on_union_nonair'] = {'excluded_name': 'air', 'compared': 0, 'mismatches': 0, 'diagnostic_only': True}
     report['height_definition'] = 'Top block other than air/cave_air/void_air; includes fluids and leaves; empty column=-65.'
@@ -94,8 +126,9 @@ def compare_worlds(ours, vanilla, plan, example_limit=20):
         worlds, paths = {}, []
         for label, directory in [('ours', Path(ours)), ('vanilla', Path(vanilla))]:
             metadata = level(directory)
-            if type(metadata.get('seed')) is not int or metadata['seed'] != seed:
-                raise ValueError(f'{label}: level seed differs from explicit plan')
+            seed_source, seed_paths = saved_seed(directory, metadata, seed)
+            report['seed_sources'][label] = seed_source
+            paths += seed_paths
             paths.append(directory / 'level.dat')
             if label == 'vanilla':
                 version = metadata.get('version')
