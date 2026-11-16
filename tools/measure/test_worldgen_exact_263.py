@@ -65,9 +65,77 @@ class ExactTests(unittest.TestCase):
         self.assertTrue(r['recording_valid']); self.assertFalse(r['parity'])
         self.assertEqual(r['totals']['block_names']['mismatches'], 1)
         self.assertEqual(r['examples']['block_names'], [dict(block=[3, 0, 2], ours='stone', vanilla='air')])
-        self.assertEqual(r['examples']['heights'], [dict(column=[3, 2], ours=0, vanilla=-65)])
+        self.assertEqual(r['examples']['heights'], [dict(column=[3, 2], ours=0, vanilla=-65,
+                                                       top_block_name_ours='stone', top_block_name_vanilla=None)])
         self.assertEqual(r['block_name_pairs'], [dict(ours='stone', vanilla='air', count=1)])
         self.assertEqual(r['comparison_on_union_nonair']['exact_cells'], 0)
+        self.assertEqual(r['top_non_air_abs_error_sum'], 65)
+        self.assertEqual(r['top_non_air_abs_error_max'], 65)
+        self.assertEqual(r['chunks'][0]['height_abs_error_sum'], 65)
+
+    def test_biome_y_slices_have_exact_denominators_and_reconcile_full_total(self):
+        result = self.run_compare()
+        diagnostic = result['biome_y_diagnostics']
+        self.assertTrue(diagnostic['diagnostic_only'])
+        self.assertEqual(diagnostic['planned_quart_origin_y'], [-48, 64, 224])
+        rows = diagnostic['slices']
+        self.assertEqual([r['quart_origin_y'] for r in rows], list(range(-64, 320, 4)))
+        self.assertEqual(len(rows), 96)
+        for row in rows:
+            self.assertEqual(row['compared'], 16)
+            self.assertEqual(row['mismatches'], 0)
+            self.assertEqual(row['horizontal_interior']['compared'], 4)
+            self.assertEqual(row['horizontal_unknown']['compared'], 12)
+            self.assertEqual(row['horizontal_boundary']['compared'], 0)
+        self.assertEqual(sum(r['compared'] for r in rows), result['totals']['biome_cells']['compared'])
+        self.assertEqual(sum(r['mismatches'] for r in rows), result['totals']['biome_cells']['mismatches'])
+        self.assertTrue(result['parity'])
+
+    def test_biome_y_axis_uses_qy_not_horizontal_axes_and_has_no_tolerance(self):
+        for y, qz, qx in [(-48, 0, 1), (64, 1, 0), (224, 2, 3), (228, 3, 2)]:
+            sy, qy = divmod(y + 64, 16)
+            self.records['ours'][0][3][sy][(qy // 4) * 16 + qz * 4 + qx] = 'forest'
+        result = self.run_compare(limit=0)
+        self.assertTrue(result['recording_valid']); self.assertFalse(result['parity'])
+        rows = result['biome_y_diagnostics']['slices']
+        self.assertEqual([(r['quart_origin_y'], r['mismatches']) for r in rows if r['mismatches']], [(-48, 1), (64, 1), (224, 1), (228, 1)])
+        self.assertEqual(result['totals']['biome_cells'], dict(compared=1536, mismatches=4, exact_cells=1532))
+        self.assertEqual(result['totals']['block_names']['mismatches'], 0)
+        for row in rows:
+            self.assertEqual(sum(row[k]['compared'] for k in ('horizontal_boundary', 'horizontal_interior', 'horizontal_unknown')), row['compared'])
+            self.assertEqual(sum(row[k]['mismatches'] for k in ('horizontal_boundary', 'horizontal_interior', 'horizontal_unknown')), row['mismatches'])
+
+    def test_reference_boundary_partition_and_target_edges_are_separate(self):
+        self.records['vanilla'][0][3][18][5] = 'forest'  # Y224, внутренний qz1/qx1.
+        result = self.run_compare()
+        row = next(r for r in result['biome_y_diagnostics']['slices'] if r['quart_origin_y'] == 224)
+        self.assertEqual(row['horizontal_boundary'], dict(compared=5, mismatches=1))
+        self.assertEqual(row['horizontal_interior'], dict(compared=1, mismatches=0))
+        self.assertEqual(row['horizontal_unknown'], dict(compared=10, mismatches=0))
+        # Разница только у кандидата не меняет разбиение по карте эталона.
+        self.records['vanilla'][0][3][18][5] = 'plains'
+        self.records['ours'][0][3][18][5] = 'forest'
+        row = next(r for r in self.run_compare()['biome_y_diagnostics']['slices'] if r['quart_origin_y'] == 224)
+        self.assertEqual(row['horizontal_boundary']['compared'], 0)
+        self.assertEqual(row['horizontal_interior'], dict(compared=4, mismatches=1))
+
+    def test_biome_boundary_neighbors_cross_negative_chunk_edges(self):
+        self.plan['chunks'] = [[-1, 0], [0, 0]]
+        for label in ('ours', 'vanilla'):
+            base = self.records[label][0]
+            extra = (-1, 0, base[2].copy(), [['forest'] * 64 for _ in range(24)], {})
+            self.records[label] = [extra, base]
+        # Оба чанка лежат в отдельных region; FakeReader возвращает плановые
+        # записи из одного файла, чтобы проверить именно кварт-координаты.
+        result = self.run_compare()
+        self.assertTrue(result['recording_valid'], result['errors'])
+        row = result['biome_y_diagnostics']['slices'][0]
+        self.assertEqual(row['compared'], 32)
+        self.assertEqual(row['horizontal_boundary']['compared'], 8)
+        self.assertEqual(row['horizontal_interior']['compared'], 8)
+        self.assertEqual(row['horizontal_unknown']['compared'], 16)
+        self.assertEqual(row['mismatches'], 0)
+        self.assertTrue(result['parity'])
 
     def test_quart_coordinates_and_negative_chunk(self):
         self.plan['chunks'] = [[-1, -1]]
@@ -93,7 +161,11 @@ class ExactTests(unittest.TestCase):
         self.records['ours'][0][2][383, 0, 0] = 2
         r = self.run_compare()
         self.assertEqual(r['examples']['heights'][0]['ours'], 319)
+        self.assertEqual(r['examples']['heights'][0]['top_block_name_ours'], 'water')
+        self.assertIsNone(r['examples']['heights'][0]['top_block_name_vanilla'])
         self.assertIn('includes fluids', r['height_definition'])
+        self.assertEqual(r['top_non_air_abs_error_sum'], 384)
+        self.assertEqual(r['top_non_air_abs_error_max'], 384)
 
     def test_limited_examples_do_not_limit_mismatch_counts(self):
         self.records['ours'][0][2][:] = 1
@@ -101,6 +173,8 @@ class ExactTests(unittest.TestCase):
         self.assertEqual(r['totals']['block_names']['mismatches'], 98304)
         self.assertEqual(len(r['examples']['block_names']), 3)
         self.assertEqual(r['block_name_pairs'][0]['count'], 98304)
+        self.assertEqual(r['top_non_air_abs_error_sum'], 256 * 384)
+        self.assertEqual(r['top_non_air_abs_error_max'], 384)
         self.assertTrue(self.run_compare(0)['recording_valid'])
 
     def test_seed_and_version_guards(self):

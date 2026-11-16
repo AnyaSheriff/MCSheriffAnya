@@ -107,6 +107,46 @@ def array_hash(array, header):
     return digest.hexdigest()
 
 
+def biome_y_diagnostics(ours, vanilla):
+    """Срезы всех quart-Y; границы считаются только по карте эталона.
+
+    Неизвестный сосед за планом не становится interior. Если хотя бы один
+    известный сосед другой, факт границы уже установлен независимо от края.
+    """
+    rows = []
+    for sy in range(24):
+        for qy in range(4):
+            row = {'quart_origin_y': -64 + sy * 16 + qy * 4, 'compared': 0, 'mismatches': 0,
+                   'horizontal_boundary': {'compared': 0, 'mismatches': 0},
+                   'horizontal_interior': {'compared': 0, 'mismatches': 0},
+                   'horizontal_unknown': {'compared': 0, 'mismatches': 0}}
+            for (cx, cz), reference in sorted(vanilla.items()):
+                expected = reference[1][sy, qy]
+                actual = ours[cx, cz][1][sy, qy]
+                row['compared'] += 16
+                row['mismatches'] += int(np.count_nonzero(actual != expected))
+                for qz in range(4):
+                    for qx in range(4):
+                        x, z = cx * 4 + qx, cz * 4 + qz
+                        neighbors = []
+                        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                            neighbor = vanilla.get(((x + dx) // 4, (z + dz) // 4))
+                            if neighbor is not None:
+                                neighbors.append(neighbor[1][sy, qy, (z + dz) % 4, (x + dx) % 4])
+                        if any(name != expected[qz, qx] for name in neighbors):
+                            category = 'horizontal_boundary'
+                        elif len(neighbors) == 4:
+                            category = 'horizontal_interior'
+                        else:
+                            category = 'horizontal_unknown'
+                        row[category]['compared'] += 1
+                        row[category]['mismatches'] += int(actual[qz, qx] != expected[qz, qx])
+            rows.append(row)
+    return {'diagnostic_only': True, 'planned_quart_origin_y': [-48, 64, 224],
+            'partition_basis': 'Reference horizontal quart neighbors at same Y; boundary=any known different, interior=four known equal, unknown=other plan edges.',
+            'slices': rows}
+
+
 def compare_worlds(ours, vanilla, plan, example_limit=20):
     report = dict(schema=1, recording_valid=False, parity=False, props_not_compared=True,
                   full_state_parity='unknown', registry_identity_verified=False,
@@ -116,6 +156,8 @@ def compare_worlds(ours, vanilla, plan, example_limit=20):
                   totals={key: {'compared': 0, 'mismatches': 0} for key in ('block_names', 'biome_cells', 'top_non_air_heights')})
     report['comparison_on_union_nonair'] = {'excluded_name': 'air', 'compared': 0, 'mismatches': 0, 'diagnostic_only': True}
     report['height_definition'] = 'Top block other than air/cave_air/void_air; includes fluids and leaves; empty column=-65.'
+    report['top_non_air_abs_error_sum'] = 0
+    report['top_non_air_abs_error_max'] = 0
     pairs = Counter()
     try:
         seed, dimension, wanted = parse_plan(plan)
@@ -175,6 +217,11 @@ def compare_worlds(ours, vanilla, plan, example_limit=20):
         for coord in sorted(wanted):
             a, b = worlds['ours'][coord], worlds['vanilla'][coord]
             row = {'chunk': list(coord)}
+            height_error = np.abs(a[2] - b[2])
+            row['height_abs_error_sum'] = int(height_error.sum())
+            row['height_abs_error_max'] = int(height_error.max())
+            report['top_non_air_abs_error_sum'] += row['height_abs_error_sum']
+            report['top_non_air_abs_error_max'] = max(report['top_non_air_abs_error_max'], row['height_abs_error_max'])
             union = (a[0] != 'air') | (b[0] != 'air')
             report['comparison_on_union_nonair']['compared'] += int(np.count_nonzero(union))
             report['comparison_on_union_nonair']['mismatches'] += int(np.count_nonzero((a[0] != b[0]) & union))
@@ -206,10 +253,14 @@ def compare_worlds(ours, vanilla, plan, example_limit=20):
                         position = {'quart': quart, 'block_origin': [v * 4 for v in quart]}
                     else:
                         z, x = index
-                        position = {'column': [coord[0] * 16 + x, coord[1] * 16 + z]}
+                        ours_y, vanilla_y = int(a[2][index]), int(b[2][index])
+                        position = {'column': [coord[0] * 16 + x, coord[1] * 16 + z],
+                                    'top_block_name_ours': a[0][ours_y + 64, z, x] if ours_y >= -64 else None,
+                                    'top_block_name_vanilla': b[0][vanilla_y + 64, z, x] if vanilla_y >= -64 else None}
                     examples.append({**position, 'ours': int(a[i][index]) if i == 2 else a[i][index],
                                      'vanilla': int(b[i][index]) if i == 2 else b[i][index]})
             report['chunks'].append(row)
+        report['biome_y_diagnostics'] = biome_y_diagnostics(worlds['ours'], worlds['vanilla'])
         if report['input_sha256'] != fingerprints(paths):
             raise ValueError('Inputs changed during comparison')
         report['recording_valid'] = True
