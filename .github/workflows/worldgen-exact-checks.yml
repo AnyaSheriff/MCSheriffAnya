@@ -1,0 +1,60 @@
+name: World generation paired exact baseline
+on:
+  push:
+    branches: ['test/worldgen-exact-ci-20261116']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  observe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Install read-only world reader dependency
+        run: python -m pip install 'numpy==2.2.6'
+      - name: Comparator and orchestrator tests
+        run: |
+          python -B -m unittest discover -s tools/measure -p 'test_worldgen_exact_263.py'
+          python -B -m unittest discover -s tools/measure -p 'test_worldgen_exact_ci_263.py'
+      - name: Paired recording, without requiring parity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -B tools/measure/worldgen_exact_ci_263.py "$RUNNER_TEMP/worldgen-exact-evidence"
+      - name: Copy only explicit diagnostic files
+        if: always()
+        run: |
+          python -B - <<'PY'
+          import hashlib,json,os,pathlib,shutil,subprocess
+          source=pathlib.Path(os.environ['RUNNER_TEMP'])/'worldgen-exact-evidence'
+          out=pathlib.Path('worldgen-exact-evidence');out.mkdir(exist_ok=True)
+          names=['inputs.json','summary.json']
+          for i in (1,2):
+              names += [f'seed-{i}/{name}' for name in ('plan.json','comparison.json','vanilla.log','ours.log','vanilla-commands.txt','ours-commands.txt','vanilla-cleanup.json','ours-cleanup.json','vanilla-preexisting.json','ours-preexisting.json')]
+          for name in names:
+              path=source/name
+              if path.is_file() and not path.is_symlink():
+                  target=out/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(path,target)
+          files={str(p.relative_to(out)):{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in out.rglob('*') if p.is_file()}
+          (out/'receipt.json').write_text(json.dumps({'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'files':files,'scope':'Controlled chunk observations; parity separately reported; worlds and executable excluded.'},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: worldgen-exact-${{ github.run_id }}-${{ github.run_attempt }}
+          path: worldgen-exact-evidence/
+          retention-days: 14
+          if-no-files-found: error
