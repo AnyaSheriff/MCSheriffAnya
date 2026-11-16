@@ -99,8 +99,8 @@ pub fn tick(mob: &mut Mob, rng: &mut Rng) {
         mob.small.pickup_wait = (mob.small.pickup_wait - 1).max(0);
         mob.small.note_ticks = (mob.small.note_ticks - 1).max(0);
         if mob.small.note_ticks == 0 { mob.small.note = None; }
-        if mob.ticks.is_multiple_of(20) {
-            mob.vitals.health = (mob.vitals.health + 2.0).min(mob.vitals.max_health);
+        if mob.ticks.is_multiple_of(10) {
+            mob.vitals.health = (mob.vitals.health + 1.0).min(mob.vitals.max_health);
         }
     }
 }
@@ -765,9 +765,97 @@ mod tests {
     #[test]
     fn allay_regenerates_and_cooldowns_expire_without_underflow() {
         let mut m=mob(Kind::Allay); m.vitals.health=10.0; m.small.duplicate=2; m.small.note_ticks=1; m.small.note=Some((1,2,3));
-        m.ticks=20; tick(&mut m,&mut Rng::new(1)); assert_eq!(m.vitals.health,12.0); assert_eq!(m.small.note,None);
+        m.ticks=20; tick(&mut m,&mut Rng::new(1)); assert_eq!(m.vitals.health,11.0); assert_eq!(m.small.note,None);
         m.ticks=21; tick(&mut m,&mut Rng::new(1)); assert_eq!(m.small.duplicate,0);
         tick(&mut m,&mut Rng::new(1)); assert_eq!(m.small.duplicate,0);
+    }
+    #[test]
+    fn allay_heals_on_its_own_tenth_tick_with_and_without_ai() {
+        for no_ai in [false,true] {
+            let mut m=mob(Kind::Allay); m.no_ai=no_ai; m.vitals.health=10.0;
+            let mut rng=Rng::new(7);
+            for age in 1..=20 {
+                m.tick(&Ground,&context(),&mut rng);
+                assert_eq!(m.ticks,age);
+                assert_eq!(m.vitals.health,10.0+(age/10) as f32,"NoAI={no_ai}, age={age}");
+            }
+        }
+    }
+    #[test]
+    fn allay_damage_near_healing_boundary_does_not_restart_its_period() {
+        for no_ai in [false,true] {
+            for damage_age in [9,10,19] {
+                let mut m=mob(Kind::Allay); m.no_ai=no_ai; m.ticks=damage_age;
+                let hit=m.hurt(4.0,crate::survival::Source::Generic,None).expect("урон принят");
+                assert!(!hit.died); assert_eq!(m.vitals.health,16.0);
+                let mut rng=Rng::new(3);
+                let next_heal=(damage_age/10+1)*10;
+                while m.ticks<next_heal {
+                    m.tick(&Ground,&context(),&mut rng);
+                    assert_eq!(m.vitals.health,if m.ticks==next_heal {17.0} else {16.0},"NoAI={no_ai}, damage_age={damage_age}, age={}",m.ticks);
+                }
+            }
+        }
+    }
+    #[test]
+    fn allay_healing_caps_at_current_max_health() {
+        for no_ai in [false,true] {
+            for (health,max_health,expected) in [(19.5,20.0,20.0),(20.0,20.0,20.0),(6.5,7.0,7.0),(7.0,7.0,7.0)] {
+                let mut m=mob(Kind::Allay); m.no_ai=no_ai; m.ticks=9;
+                m.vitals.health=health; m.vitals.max_health=max_health;
+                m.tick(&Ground,&context(),&mut Rng::new(2));
+                assert_eq!(m.vitals.health,expected,"NoAI={no_ai}, initial={health}, max={max_health}");
+                assert_eq!(m.vitals.max_health,max_health);
+            }
+        }
+    }
+    #[test]
+    fn allay_does_not_heal_during_existing_death_animation_or_after_lethal_hit() {
+        for no_ai in [false,true] {
+            let mut dying=mob(Kind::Allay); dying.no_ai=no_ai; dying.ticks=9;
+            dying.dead_for=1; dying.vitals.health=3.0;
+            dying.tick(&Ground,&context(),&mut Rng::new(4));
+            assert_eq!(dying.vitals.health,3.0); assert_eq!(dying.dead_for,2);
+            let mut dead=mob(Kind::Allay); dead.no_ai=no_ai; dead.ticks=9;
+            let hit=dead.hurt(30.0,crate::survival::Source::Generic,None).expect("смертельный урон принят");
+            assert!(hit.died && dead.is_dead());
+            let health=dead.vitals.health;
+            dead.tick(&Ground,&context(),&mut Rng::new(4));
+            assert!(dead.is_dead()); assert_eq!(dead.vitals.health,health);
+        }
+    }
+    #[test]
+    fn allay_skips_healing_in_unloaded_chunk_and_keeps_its_age_phase() {
+        struct Unloaded;
+        impl View for Unloaded {
+            fn block(&self,_x:i32,_y:i32,_z:i32)->i32 { panic!("нет чтений блоков выгруженного чанка") }
+            fn loaded(&self,_x:i32,_z:i32)->bool { false }
+        }
+        for no_ai in [false,true] {
+            let mut m=mob(Kind::Allay); m.no_ai=no_ai; m.ticks=9; m.vitals.health=10.0;
+            let mut rng=Rng::new(8);
+            m.tick(&Unloaded,&context(),&mut rng);
+            assert_eq!(m.ticks,10); assert_eq!(m.vitals.health,10.0);
+            for age in 11..=20 {
+                m.tick(&Ground,&context(),&mut rng);
+                assert_eq!(m.ticks,age);
+                assert_eq!(m.vitals.health,if age==20 {11.0} else {10.0});
+            }
+        }
+    }
+    #[test]
+    fn no_ai_allay_heals_without_movement_goals_or_random_draws() {
+        let mut m=mob(Kind::Allay); m.no_ai=true; m.vitals.health=10.0;
+        m.vx=0.3; m.vy=0.2; m.vz=-0.1;
+        let place=(m.x,m.y,m.z); let speed=(m.vx,m.vy,m.vz); let goal=m.small.goal;
+        let mut rng=Rng::new(19); let mut untouched=rng.clone();
+        for _ in 0..20 {
+            m.tick(&Ground,&context(),&mut rng);
+            assert_eq!((m.x,m.y,m.z),place); assert_eq!((m.vx,m.vy,m.vz),speed);
+            assert_eq!(m.small.goal,goal); assert!(m.h.target.is_none());
+        }
+        assert_eq!(m.vitals.health,12.0);
+        assert_eq!(rng.next_u64(),untouched.next_u64());
     }
     #[test]
     fn new_mob_records_round_trip_without_consuming_the_next_record() {

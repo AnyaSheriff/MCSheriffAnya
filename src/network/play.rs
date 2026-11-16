@@ -2477,7 +2477,8 @@ fn other_item_change_id(change: &items::Change) -> Option<i32> {
         items::Change::Frame(frame) => Some(frame.entity_id),
         items::Change::Orb(orb) => Some(orb.entity_id),
         items::Change::FrameItem { entity_id, .. } | items::Change::FrameRotation { entity_id, .. }
-            | items::Change::MobEvent { entity_id, .. } => Some(*entity_id),
+            | items::Change::MobEvent { entity_id, .. }
+            | items::Change::AllayHealth { entity_id, .. } => Some(*entity_id),
         _ => None,
     }
 }
@@ -2623,6 +2624,9 @@ async fn send_pending_item_changes(
             }
             items::Change::MobEvent { entity_id, at, event } => {
                 mobs::send_mob_event(stream, entity_id, at, &event, mobs, listener).await?;
+            }
+            items::Change::AllayHealth { entity_id, health } => {
+                mobs::send_allay_health(stream, entity_id, health, mobs).await?;
             }
             items::Change::Orb(orb) => {
                 // Слежение подхватит шарик само, если он не рядом.
@@ -14183,6 +14187,8 @@ mod tests {
 
 #[cfg(test)]
 mod tails_tests;
+#[cfg(test)]
+mod allay_health_tests;
 
 #[cfg(test)]
 mod chunk_compat_tests;

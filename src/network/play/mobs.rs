@@ -169,6 +169,19 @@ fn float(value: f32) -> Vec<u8> {
     value.to_be_bytes().to_vec()
 }
 
+/// Только уже показанная тихоня: HP доставляются до обычного слежения,
+/// без внеочередной сверки движения из-за одного изменения здоровья.
+pub(super) async fn send_allay_health(stream: &mut Outgoing<'_>, entity_id: i32, health: f32, shown: &mut HashMap<i32, ShownMob>) -> io::Result<()> {
+    if !health.is_finite() || health <= 0.0 { return Ok(()); }
+    let Some(mob) = shown.get_mut(&entity_id) else { return Ok(()); };
+    let Some(index) = mob.properties.iter().position(|entry| entry.0 == 9 && entry.1 == TYPE_FLOAT) else { return Ok(()); };
+    let property = (9, TYPE_FLOAT, float(health));
+    if mob.properties[index] == property { return Ok(()); }
+    send_properties(stream, entity_id, &[&property]).await?;
+    mob.properties[index] = property;
+    Ok(())
+}
+
 /// Свойства моба, которые мы ведём, — все, с текущими значениями.
 /// Номера — из minecraft-data 26.1 (entities.json, metadataKeys): 0 флаги,
 /// 4 тишина, 6 поза, 9 здоровье, 15 флаги моба (NoAI — 1, «агрессивен» — 4),

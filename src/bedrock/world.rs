@@ -1604,6 +1604,8 @@ impl BedrockWorld {
                 },
                 // Опыт показывается снимком things, журнал не дублирует AddActor.
                 crate::items::Change::Orb(_) => {}
+                // Отдельная Java-рассылка HP тихони; Bedrock-пакет здесь не создаётся.
+                crate::items::Change::AllayHealth { .. } => {}
                 crate::items::Change::Gone { entity_id } => {
                     self.carts_at.remove(&entity_id);
                     self.carts_data.remove(&entity_id);

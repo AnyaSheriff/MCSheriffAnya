@@ -25,6 +25,8 @@ mod merging;
 mod persistence;
 use crate::journal::{Journal, Reader};
 
+type AllayViewIndex = std::collections::HashMap<(i32, [u8; 16]), usize>;
+
 /// Докуда дотягивается игрок: его рамка (0.6 × 1.8), раздвинутая на блок
 /// по сторонам и на полблока вверх и вниз, должна задеть рамку предмета
 /// (0.25 × 0.25) — вики, Item (entity), «Pickup». По сторонам это
@@ -269,6 +271,10 @@ pub enum Change {
     /// уходит в порядке записи, вперемешку с прочими событиями.
     MobEvent { entity_id: i32, at: (f64, f64, f64), event: crate::mob::Event },
 
+    /// Фактическое здоровье живой тихони 26.3: отдельно от событий моба,
+    /// чтобы не менять их число и зависящий от него порядок случайности.
+    AllayHealth { entity_id: i32, health: f32 },
+
     /// Появился шарик опыта (xp.rs). Пропадает записью `Gone`, а подобранный —
     /// `Taken`.
     Orb(crate::xp::XpOrb),
@@ -406,6 +412,7 @@ impl Items {
     /// был как у оригинала: удар, звук, добыча, смерть. Зовётся после такта,
     /// удара игрока и команд.
     pub fn flush_mob_events(&mut self, next_id: &mut dyn FnMut() -> i32, rng: &mut crate::mob::Rng) {
+        let mut allay_view = None;
         for index in 0..self.mobs.len() {
             let (entity_id, silent) = (self.mobs[index].entity_id, self.mobs[index].silent);
             let at = (self.mobs[index].x, self.mobs[index].y, self.mobs[index].z);
@@ -471,7 +478,27 @@ impl Items {
                     }
                 }
             }
+            self.publish_allay_health(index, &mut allay_view);
         }
+    }
+
+    /// Обновляет только HP прежнего снимка после фактических изменений.
+    /// Индекс строится лениво один раз на flush; без живых тихонь его нет.
+    fn publish_allay_health(&mut self, index: usize, view: &mut Option<AllayViewIndex>) {
+        let mob = &self.mobs[index];
+        if self.catalog.profile() != crate::gameplay_catalog::Profile::Preview26_3
+            || mob.kind != crate::mob::Kind::Allay || mob.is_dead()
+            || !mob.vitals.health.is_finite() || mob.vitals.health <= 0.0 {
+            return;
+        }
+        let lookup = view.get_or_insert_with(|| self.mob_view.iter().enumerate()
+            .filter(|(_, seen)| seen.kind == crate::mob::Kind::Allay)
+            .map(|(index, seen)| ((seen.entity_id, seen.uuid), index)).collect());
+        let Some(&shown_index) = lookup.get(&(mob.entity_id, mob.uuid)) else { return; };
+        let shown = &mut self.mob_view[shown_index];
+        if shown.vitals.health == mob.vitals.health { return; }
+        shown.vitals.health = mob.vitals.health;
+        self.changes.push(Change::AllayHealth { entity_id: mob.entity_id, health: mob.vitals.health });
     }
 
     /// Снимок мобов на начало их такта: клиентам рассылка идёт по нему, как
@@ -1562,6 +1589,9 @@ pub(crate) fn uuid_for(entity_id: i32) -> [u8; 16] {
 
     uuid
 }
+
+#[cfg(test)]
+mod allay_health_tests;
 
 #[cfg(test)]
 mod tests {
