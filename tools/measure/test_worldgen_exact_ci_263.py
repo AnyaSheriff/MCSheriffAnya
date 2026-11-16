@@ -1,4 +1,5 @@
 import io
+import queue
 import json
 import unittest
 import tempfile
@@ -60,6 +61,7 @@ class SourceTests(unittest.TestCase):
         class FakeConsole:
             closed=False
             def __init__(self,*args): pass
+            def wait_ready(self,*args): return 'Готово (0.1 с)! Чтобы узнать команды, набери help'
             def command(self,*args,**kwargs): return 'unknown response'
             def close(self):
                 FakeConsole.closed=True
@@ -84,6 +86,36 @@ class SourceTests(unittest.TestCase):
     def test_github_only_guard(self):
         with patch.dict(ci.os.environ,{'GITHUB_ACTIONS':'false'}):
             with self.assertRaises(SystemExit):ci.main()
+
+    def console_without_process(self):
+        console=ci.Console.__new__(ci.Console)
+        console.lines=queue.Queue()
+        console.process=SimpleNamespace(poll=lambda:None,stdin=io.StringIO())
+        console.commands=io.StringIO();console.serial=0
+        return console
+
+    def test_readiness_requires_complete_marker_without_sending_commands(self):
+        for side, marker in [('vanilla','Done (2.5s)! For help, type "help"'),
+                             ('ours','Готово (0.1 с)! Чтобы узнать команды, набери help')]:
+            console=self.console_without_process()
+            console.lines.put('Starting Minecraft server')
+            console.lines.put('Сервер запущен на *:27861')
+            console.lines.put(marker)
+            self.assertEqual(console.wait_ready(side),marker)
+            self.assertEqual(console.process.stdin.getvalue(),'')
+            self.assertEqual(console.commands.getvalue(),'')
+
+    def test_readiness_fails_for_exited_server_and_deadline(self):
+        console=self.console_without_process()
+        console.process.poll=lambda:1
+        with self.assertRaises(RuntimeError):console.wait_ready('vanilla')
+        console.process.poll=lambda:None
+        with self.assertRaises(TimeoutError):console.wait_ready('vanilla',timeout=0)
+
+    def test_unexpected_command_error_fails_before_marker_timeout(self):
+        console=self.console_without_process()
+        console.lines.put('System chat: An unexpected error occurred while trying to execute that command')
+        with self.assertRaisesRegex(RuntimeError,'command rejected'):console.command('tick freeze')
 
 
 if __name__=='__main__':unittest.main()

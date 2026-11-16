@@ -106,6 +106,24 @@ class Console:
                 self.log.write(line); self.log.flush(); self.lines.put(line)
         self.thread = threading.Thread(target=drain, daemon=True); self.thread.start()
 
+    def wait_ready(self, side, timeout=120):
+        # Команды до инициализации мира могут получить ошибочный контекст.
+        markers = {'vanilla': ('Done (', 'For help, type'),
+                   'ours': ('Готово (', 'Чтобы узнать команды')}[side]
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(side + ': startup readiness not observed')
+            if self.process.poll() is not None:
+                raise RuntimeError(side + ': exited before startup readiness')
+            try:
+                line = self.lines.get(timeout=min(1.0, remaining))
+            except queue.Empty:
+                continue
+            if all(marker in line for marker in markers):
+                return line
+
     def command(self, command, timeout=300):
         self.serial += 1
         marker = 'MCSA_EXACT_SYNC_%d_END' % self.serial
@@ -121,10 +139,10 @@ class Console:
             except queue.Empty:
                 continue
             received.append(line)
+            if any(s in line.lower() for s in ('unknown command', 'incorrect argument', 'неизвестная команда', 'неверный аргумент', 'unexpected error occurred while trying to execute')):
+                raise RuntimeError('command rejected: '+command)
             if marker in line:
                 response = ''.join(received)
-                if any(s in response.lower() for s in ('unknown command', 'incorrect argument', 'неизвестная команда', 'неверный аргумент')):
-                    raise RuntimeError('command rejected: '+command)
                 return response
         raise TimeoutError('console marker timed out: '+command)
 
@@ -205,8 +223,10 @@ def generate(side, seed, binary, scratch, evidence, port):
     server = Console(command, cwd, evidence / f'{side}.log', evidence / f'{side}-commands.txt', port)
     cleanup = None
     try:
-        # The console processes the marker only after its command loop starts.
-        frozen = server.command('tick freeze', timeout=360)
+        print(f'{side} seed={seed}: waiting for startup readiness', flush=True)
+        ready = server.wait_ready(side)
+        print(f'{side} seed={seed}: ready, freezing before target generation', flush=True)
+        frozen = server.command('tick freeze', timeout=60)
         if 'frozen' not in frozen.lower():
             raise ValueError('freeze was not confirmed')
         speed = server.command('gamerule random_tick_speed 0')
@@ -221,6 +241,10 @@ def generate(side, seed, binary, scratch, evidence, port):
         (evidence / f'{side}-preexisting.json').write_text(json.dumps({'requested': [list(x) for x in CHUNKS], 'preexisting': [list(x) for x in sorted(preexisting)]}, indent=2)+'\n')
         if preexisting:
             raise ValueError('target chunks already generated before controlled request: '+repr(sorted(preexisting)))
+        (evidence / f'{side}-control.json').write_text(json.dumps({'ready_line':ready.strip(),
+            'freeze_response':frozen,'random_tick_response':speed,'spawn_mobs_response':mobs,
+            'density_env':os.environ.get('MCSA_A6_DENSITY'),'preexisting_targets':[]},indent=2)+'\n')
+        print(f'{side} seed={seed}: requesting {len(CHUNKS)} fresh chunks', flush=True)
         for cx,cz in CHUNKS:
             server.command(f'forceload add {cx*16} {cz*16}')
         deadline = time.monotonic()+1200
@@ -231,6 +255,7 @@ def generate(side, seed, binary, scratch, evidence, port):
                 have = saved_chunks(cwd/'world', CHUNKS)
                 last_error = None
                 if have == set(CHUNKS):
+                    print(f'{side} seed={seed}: all requested full chunks saved', flush=True)
                     break
             except (OSError, ValueError, IndexError) as exc:
                 last_error = repr(exc)
@@ -248,6 +273,8 @@ def generate(side, seed, binary, scratch, evidence, port):
 def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true':
         raise SystemExit('GitHub only')
+    if os.environ.get('MCSA_A6_DENSITY') != '0':
+        raise SystemExit('Explicit default density path MCSA_A6_DENSITY=0 required')
     output = Path(sys.argv[1]).resolve(); output.mkdir(parents=True, exist_ok=False)
     head = subprocess.check_output(['git','rev-parse','HEAD'], cwd=ROOT, text=True).strip()
     changes = subprocess.check_output(['git','diff','--no-renames','--name-status',SOURCE,head], cwd=ROOT, text=True)
@@ -264,7 +291,7 @@ def main():
         raise ValueError('official JAR pin mismatch')
     (output/'inputs.json').write_text(json.dumps({'source':SOURCE,'orchestration_head':head,'allowed_added_files':added_files,'run':RUN,'artifact':ARTIFACT,'archive_sha256':ARCHIVE_SHA,
         'elf_sha256':ELF_SHA,'source_receipt':receipt,'jar_pin':pin,'candidate_jobs':jobs,'candidate_run':source_run,
-        'runtime_options':{'java-version':'26.3','bedrock-port':0,'autumn-forests':False,'pink-cherry-groves':False,'viaproxy':False,'freeze':True,'random_tick_speed':0,'spawn_mobs':False}},indent=2)+'\n')
+        'runtime_options':{'java-version':'26.3','bedrock-port':0,'autumn-forests':False,'pink-cherry-groves':False,'viaproxy':False,'freeze':True,'random_tick_speed':0,'spawn_mobs':False,'MCSA_A6_DENSITY':os.environ['MCSA_A6_DENSITY']}},indent=2)+'\n')
     results=[]
     with tempfile.TemporaryDirectory(prefix='mcsa-worldgen-', dir=os.environ['RUNNER_TEMP']) as temp:
         temp=Path(temp); elf=temp/'server';elf.write_bytes(data);elf.chmod(0o700); jarpath=temp/'official.jar';jarpath.write_bytes(jar)

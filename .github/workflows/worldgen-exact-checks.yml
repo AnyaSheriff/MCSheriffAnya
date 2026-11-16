@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 90
     env:
       PYTHONDONTWRITEBYTECODE: '1'
+      MCSA_A6_DENSITY: '0'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,7 +44,7 @@ jobs:
           out=pathlib.Path('worldgen-exact-evidence');out.mkdir(exist_ok=True)
           names=['inputs.json','summary.json']
           for i in (1,2):
-              names += [f'seed-{i}/{name}' for name in ('plan.json','comparison.json','vanilla.log','ours.log','vanilla-commands.txt','ours-commands.txt','vanilla-cleanup.json','ours-cleanup.json','vanilla-preexisting.json','ours-preexisting.json')]
+              names += [f'seed-{i}/{name}' for name in ('plan.json','comparison.json','vanilla.log','ours.log','vanilla-commands.txt','ours-commands.txt','vanilla-cleanup.json','ours-cleanup.json','vanilla-preexisting.json','ours-preexisting.json','vanilla-control.json','ours-control.json')]
           for name in names:
               path=source/name
               if path.is_file() and not path.is_symlink():
