@@ -22,7 +22,17 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: '1.99.1'
           components: clippy
+      - name: Record the exact previously tested compiler
+        run: |
+          mkdir -p parallel-evidence
+          rustc -vV | tee parallel-evidence/rustc.log
+          cargo clippy --version | tee parallel-evidence/clippy-version.log
+          python3 -B - <<'PY'
+          import pathlib
+          assert 'release: 1.99.1\n' in pathlib.Path('parallel-evidence/rustc.log').read_text()
+          PY
       - name: Install the previously verified public lock
         run: python3 -B tools/fetch-release-lock.py
       - uses: Swatinem/rust-cache@v2

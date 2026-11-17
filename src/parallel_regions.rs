@@ -74,15 +74,15 @@ impl Plan {
     /// сторона забыла поменять epoch. Не читает World и не доказывает полноту
     /// описания; реальные изменения мира обязан отразить его владелец.
     pub fn validate(&self, stamp: Stamp, tasks: &[Task], policy: Policy) -> Result<(), StalePlan> {
-        if self.stamp != stamp { return Err(StalePlan::StampChanged); }
-        if self.policy != policy { return Err(StalePlan::PolicyChanged); }
-        if self.tasks != tasks { return Err(StalePlan::TasksChanged); }
+        if self.stamp != stamp { return Err(StalePlan::Stamp); }
+        if self.policy != policy { return Err(StalePlan::Policy); }
+        if self.tasks != tasks { return Err(StalePlan::Tasks); }
         Ok(())
     }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum StalePlan { StampChanged, PolicyChanged, TasksChanged }
+pub enum StalePlan { Stamp, Policy, Tasks }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PlanError {

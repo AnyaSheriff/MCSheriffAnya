@@ -107,15 +107,15 @@ fn validation_rejects_changed_stamp_policy_order_or_ownership() {
     let plan = build(STAMP, &tasks, POLICY).unwrap();
     assert_eq!(plan.validate(STAMP, &tasks, POLICY), Ok(()));
     for stamp in [Stamp { tick: 71, ..STAMP }, Stamp { epoch: 10, ..STAMP }] {
-        assert_eq!(plan.validate(stamp, &tasks, POLICY), Err(StalePlan::StampChanged));
+        assert_eq!(plan.validate(stamp, &tasks, POLICY), Err(StalePlan::Stamp));
     }
-    assert_eq!(plan.validate(STAMP, &tasks, Policy::ForceSerial), Err(StalePlan::PolicyChanged));
+    assert_eq!(plan.validate(STAMP, &tasks, Policy::ForceSerial), Err(StalePlan::Policy));
     let mut moved = tasks.clone();
     moved[0].footprint = Footprint::Known(vec![Access::Write(B)]);
-    assert_eq!(plan.validate(STAMP, &moved, POLICY), Err(StalePlan::TasksChanged));
+    assert_eq!(plan.validate(STAMP, &moved, POLICY), Err(StalePlan::Tasks));
     let mut reordered = tasks.clone(); reordered.reverse();
-    assert_eq!(plan.validate(STAMP, &reordered, POLICY), Err(StalePlan::TasksChanged));
-    assert_eq!(plan.validate(STAMP, &tasks[..1], POLICY), Err(StalePlan::TasksChanged));
+    assert_eq!(plan.validate(STAMP, &reordered, POLICY), Err(StalePlan::Tasks));
+    assert_eq!(plan.validate(STAMP, &tasks[..1], POLICY), Err(StalePlan::Tasks));
 }
 
 #[test]
@@ -128,7 +128,7 @@ fn new_tick_can_split_after_bridge_disappears_without_retained_ownership() {
     let stamp = Stamp { tick: STAMP.tick + 1, epoch: STAMP.epoch + 1 };
     let new = build(stamp, &next, POLICY).unwrap();
     assert_eq!(new.groups(), [vec![10], vec![1]]);
-    assert_eq!(old.validate(stamp, &next, POLICY), Err(StalePlan::StampChanged));
+    assert_eq!(old.validate(stamp, &next, POLICY), Err(StalePlan::Stamp));
     assert_eq!(new.validate(stamp, &next, POLICY), Ok(()));
 }
 
