@@ -261,6 +261,8 @@ def compare_worlds(ours, vanilla, plan, example_limit=20):
                                      'vanilla': int(b[i][index]) if i == 2 else b[i][index]})
             report['chunks'].append(row)
         report['biome_y_diagnostics'] = biome_y_diagnostics(worlds['ours'], worlds['vanilla'])
+        from worldgen_stage_263 import height_argmax_diagnostics
+        report['height_argmax_diagnostics'] = height_argmax_diagnostics(worlds['ours'], worlds['vanilla'])
         if report['input_sha256'] != fingerprints(paths):
             raise ValueError('Inputs changed during comparison')
         report['recording_valid'] = True

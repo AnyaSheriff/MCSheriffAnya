@@ -69,6 +69,7 @@ public final class Entry {
   }
   if(kind==1){MainScoreboard.INSTANCE.sync(p);}if(kind==2)ArmorChanges.leave(p);
   RuntimeState.fire(e);
+  if(kind==2)RemoteBossBar.leave(p);
   if(e instanceof Cancellable&&((Cancellable)e).isCancelled())return 1;
   if(kind==5&&!((BlockPlaceEvent)e).canBuild())return 1;
   if(kind==10||kind==18){Host.call(22,""+((org.bukkit.event.entity.EntityDamageEvent)e).getDamage());return 2;}

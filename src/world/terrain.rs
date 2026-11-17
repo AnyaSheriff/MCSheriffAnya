@@ -1396,6 +1396,12 @@ impl Terrain {
         density.min(relief.cap - fy)
     }
 
+    #[cfg(all(test, not(seedmap_core)))]
+    pub(super) fn stage_trace_relief(&self, x: i32, z: i32) -> [f64; 4] {
+        let relief = self.relief_at(&self.climate_at(x, z), x, z);
+        [relief.surface, relief.cap, relief.wobble, relief.rugged]
+    }
+
     /// Опора рельефа «Обычного» мира в столбце: где лежит поверхность,
     /// насколько её раскачивает объёмный шум и выше чего камня быть не может.
     ///

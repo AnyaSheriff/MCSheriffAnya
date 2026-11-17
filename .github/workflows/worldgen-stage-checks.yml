@@ -1,0 +1,116 @@
+name: World generation own stages and final paired saves
+on:
+  push:
+    branches: ['feat/independent-generation-20261116']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mcsa-independent-heavy-checks
+  cancel-in-progress: false
+jobs:
+  stages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      MCSA_A6_DENSITY: '0'
+      CARGO_TERM_COLOR: never
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+          components: clippy
+          targets: wasm32-wasip2
+      - name: Install exact previously verified public locks
+        run: |
+          mkdir -p worldgen-stage-build-logs
+          rustc -vV | tee worldgen-stage-build-logs/rustc.log
+          cargo clippy --version | tee worldgen-stage-build-logs/clippy-version.log
+          python3 -B tools/fetch-release-lock.py
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output worldgen-stage-build-logs
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Reader dependency
+        run: python -m pip install 'numpy==2.2.6'
+      - name: Light measurement tests
+        run: |
+          python -B -m unittest discover -s tools/measure -p 'test_worldgen_exact*.py'
+          python -B -m unittest discover -s tools/measure -p 'test_worldgen_stage*.py'
+      - name: Strict source checks and NEW runtime build
+        run: |
+          set -o pipefail
+          cargo clippy --locked --release --workspace --all-targets -- -D warnings 2>&1 | tee worldgen-stage-build-logs/clippy.log
+          cargo build --locked --release --workspace --manifest-path plugins-examples/Cargo.toml --target wasm32-wasip2 2>&1 | tee worldgen-stage-build-logs/guest-build.log
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output worldgen-stage-build-logs
+          cargo test --locked --release --workspace 2>&1 | tee worldgen-stage-build-logs/default-tests.log
+          cargo test --locked --release --workspace --no-default-features 2>&1 | tee worldgen-stage-build-logs/no-default-tests.log
+          cargo build --locked --release --bin mcsheriffanya 2>&1 | tee worldgen-stage-build-logs/build.log
+      - name: Export own stages and assert ordinary identity
+        env:
+          MCSA_WORLDGEN_STAGE_OUTPUT: ${{ runner.temp }}/worldgen-own-stages.jsonl.gz
+        run: |
+          set -o pipefail
+          cargo test --locked --release --bin mcsheriffanya world::worldgen_stage_tests::worldgen_stage_trace_263_export -- --ignored --exact 2>&1 | tee worldgen-stage-build-logs/export.log
+          python -B - <<'PY'
+          import hashlib,json,os,pathlib,re,subprocess
+          root=pathlib.Path('.');temp=pathlib.Path(os.environ['RUNNER_TEMP'])
+          log=(root/'worldgen-stage-build-logs/export.log').read_text()
+          assert re.search(r'^test world::worldgen_stage_tests::worldgen_stage_trace_263_export \.\.\. ok$',log,re.M)
+          assert re.search(r'^test result: ok\. 1 passed; 0 failed; 0 ignored;',log,re.M)
+          sha=lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          receipt={'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+            'elf_sha256':sha(root/'target/release/mcsheriffanya'),
+            'trace_sha256':sha(temp/'worldgen-own-stages.jsonl.gz'),
+            'cargo_lock_sha256':sha(root/'Cargo.lock')}
+          (temp/'worldgen-stage-build.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY
+      - name: Ordinary final saves, argmax and stage links
+        run: |
+          python -B tools/measure/worldgen_stage_ci_263.py --binary target/release/mcsheriffanya --trace "$RUNNER_TEMP/worldgen-own-stages.jsonl.gz" --build-receipt "$RUNNER_TEMP/worldgen-stage-build.json" --output "$RUNNER_TEMP/worldgen-stage-evidence"
+      - name: Keep explicit diagnostics and own trace only
+        if: always()
+        run: |
+          python -B - <<'PY'
+          import hashlib,json,os,pathlib,shutil,subprocess
+          temp=pathlib.Path(os.environ['RUNNER_TEMP']);source=temp/'worldgen-stage-evidence'
+          out=pathlib.Path('worldgen-stage-evidence');out.mkdir(exist_ok=True)
+          names=['inputs.json','summary.json']
+          for i in range(1,5):
+              names += [f'seed-{i}/{n}' for n in ('plan.json','comparison.json','stage-link.json','vanilla.log','ours.log','vanilla-commands.txt','ours-commands.txt','vanilla-cleanup.json','ours-cleanup.json','vanilla-preexisting.json','ours-preexisting.json','vanilla-control.json','ours-control.json')]
+          for name in names:
+              p=source/name
+              if p.is_file() and not p.is_symlink():
+                  target=out/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,target)
+          for name in ('worldgen-own-stages.jsonl.gz','worldgen-stage-build.json'):
+              p=temp/name
+              if p.is_file() and not p.is_symlink(): shutil.copyfile(p,out/name)
+          logs=pathlib.Path('worldgen-stage-build-logs')
+          if logs.is_dir():
+              for p in logs.iterdir():
+                  if p.is_file() and not p.is_symlink() and p.suffix in ('.log','.json','.lock'):
+                      target=out/'build-logs'/p.name;target.parent.mkdir(exist_ok=True);shutil.copyfile(p,target)
+          lock=pathlib.Path('Cargo.lock')
+          if lock.is_file(): shutil.copyfile(lock,out/'worldgen-stage-Cargo.lock')
+          files={str(p.relative_to(out)):{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in out.rglob('*') if p.is_file()}
+          (out/'receipt.json').write_text(json.dumps({'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'files':files,'scope':'Own full stage data and explicit paired diagnostics; no worlds or official internals.'},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: worldgen-stages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: worldgen-stage-evidence/
+          retention-days: 14
+          if-no-files-found: error

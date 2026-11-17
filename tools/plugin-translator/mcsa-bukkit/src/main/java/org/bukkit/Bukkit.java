@@ -10,6 +10,7 @@ public final class Bukkit {
   public World getWorld(String n){return Bukkit.getWorld(n);}public java.util.List<World> getWorlds(){return Bukkit.getWorlds();}
  };
  public static org.bukkit.inventory.Inventory createInventory(org.bukkit.inventory.InventoryHolder holder,int size,net.kyori.adventure.text.Component title){return new ChestInventory(holder,size,title);}
+ public static org.bukkit.boss.BossBar createBossBar(String title,org.bukkit.boss.BarColor color,org.bukkit.boss.BarStyle style,org.bukkit.boss.BarFlag... flags){return new RemoteBossBar(title,color,style,flags);}
  public static Player getPlayerExact(String name){for(Player p:getOnlinePlayers())if(p.getName().equalsIgnoreCase(name))return p;return null;}
  public static org.bukkit.scoreboard.ScoreboardManager getScoreboardManager(){return ()->MainScoreboard.INSTANCE;}
  public static int getCurrentTick(){return (int)Long.parseLong(Host.text(60));}

@@ -719,6 +719,14 @@ impl Chunk {
     }
 
     fn generated(generator: &Generator, chunk_x: i32, chunk_z: i32) -> Self {
+        Self::generated_observed(generator, chunk_x, chunk_z, |_, _| {})
+    }
+
+    // Наблюдатель только читает готовый этап: порядок и источники случайности общие.
+    fn generated_observed(
+        generator: &Generator, chunk_x: i32, chunk_z: i32,
+        mut observe: impl FnMut(&'static str, &Self),
+    ) -> Self {
         // У Незера пол и потолок — он складывается целиком своим путём.
         if let Generator::Nether(nether) = generator {
             let mut chunk = nether.chunk(chunk_x, chunk_z);
@@ -743,6 +751,7 @@ impl Chunk {
             }
 
             chunk.light_up();
+            observe("final", &chunk);
             return chunk;
         }
 
@@ -750,10 +759,12 @@ impl Chunk {
         if let Generator::End(end) = generator {
             let mut chunk = end.chunk(chunk_x, chunk_z);
             chunk.light_up();
+            observe("final", &chunk);
             return chunk;
         }
 
         let mut chunk = (*underground::base_chunk(generator, chunk_x, chunk_z)).clone();
+        observe("base_underground", &chunk);
         let (from_x, from_z) = (chunk_x * CHUNK_SIZE - 1, chunk_z * CHUNK_SIZE - 1);
         let grid = generator.relief_grid(from_x, from_z, from_x + CHUNK_SIZE + 1, from_z + CHUNK_SIZE + 1);
         let mut columns = Vec::with_capacity(((CHUNK_SIZE + 2) * (CHUNK_SIZE + 2)) as usize);
@@ -763,43 +774,63 @@ impl Chunk {
             }
         }
         underground::build_dungeons(generator, &mut chunk, chunk_x, chunk_z);
+        observe("dungeons", &chunk);
         // Заброшенные шахты — после пещер: проходы режут камень и пещеры,
         // над пустотой — мосты (mineshaft.rs).
         mineshaft::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("mineshaft", &chunk);
         stronghold::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("stronghold", &chunk);
         // Разрушенные порталы — до деревьев: у оригинала строения раньше
         // растительности (ruined_portal.rs).
         ruined_portal::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("ruined_portal", &chunk);
         // Кораблекрушения и зарытые сокровища (shipwreck.rs).
         shipwreck::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("shipwreck", &chunk);
         // Руины в океане (ocean_ruin.rs).
         ocean_ruin::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("ocean_ruin", &chunk);
         // Руины тропы (trail_ruins.rs).
         trail_ruins::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("trail_ruins", &chunk);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
+        observe("trees", &chunk);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
+        observe("vegetation", &chunk);
         structure_terrain::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("structure_terrain", &chunk);
         // Заброшенные лагеря кладутся после подгонки рельефа, чтобы она не стёрла пол и добычу.
         abandoned_camp::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("abandoned_camp", &chunk);
         village::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("village", &chunk);
         // Лесные особняки — после деревьев: воздух комнат вырезает деревья
         // в рамке, фундамент заливает стволы под полом (mansion.rs).
         mansion::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("mansion", &chunk);
         // Храмы пустыни и джунглей, хижины ведьм (temples.rs).
         temples::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("temples", &chunk);
         // Аванпосты разбойников (pillager_outpost.rs).
         pillager_outpost::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("pillager_outpost", &chunk);
         ocean::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
+        observe("ocean", &chunk);
         // Подводные крепости — после украшений океана: в рамке всё уходит под
         // воду и призмарин (monument.rs).
         monument::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("monument", &chunk);
         cave_biomes::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns, grid.as_ref());
+        observe("cave_biomes", &chunk);
         // Древние города — после украшений глубокой тьмы: в кусках города
         // порода и скалк уступают залам (ancient_city.rs).
         ancient_city::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("ancient_city", &chunk);
         // Испытательные камеры — последними: в своих кусках они важнее и
         // породы, и пещерных украшений (trial_chambers.rs).
         trial_chambers::build(generator, &mut chunk, chunk_x, chunk_z);
+        observe("trial_chambers", &chunk);
 
         // Спавнеры и хранилища камер — со своими данными по замеру (trial.rs).
         if let Generator::Normal(terrain) = generator {
@@ -816,6 +847,7 @@ impl Chunk {
 
         // Свет — когда все блоки на местах.
         chunk.light_up();
+        observe("final", &chunk);
 
         chunk
     }
@@ -8905,3 +8937,6 @@ mod plugin_population_tests {
         let (palette,runs)=chunk.population_snapshot(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2));assert_eq!(runs.as_chunks::<2>().0.iter().map(|r|r[0]).sum::<u32>(),98304);assert_eq!(palette[runs[1] as usize],"diamond_block");
     }
 }
+
+#[cfg(test)]
+mod worldgen_stage_tests;

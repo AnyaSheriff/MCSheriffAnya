@@ -1,0 +1,72 @@
+# Причинный срез генерации 26.3
+
+Это измеритель, не исправление генерации и не обещание 1:1. Значения SEA62,
+climate, relief/density, порядок генерации и вызовы случайных источников не меняются.
+Original JAR используется только для непрозрачного запуска; сохраняются только
+конечные наблюдения блоков/биомов, без извлечения кода, параметров, reports/datapacks.
+
+В общем пути `Chunk::generated_observed` callback получает только `&Chunk`.
+Обычный `Chunk::generated` вызывает тот же путь с пустым callback. Все старые
+вызовы остаются на своих местах. 22 стадии: base_underground, dungeons,
+mineshaft, stronghold, ruined_portal, shipwreck, ocean_ruin, trail_ruins, trees,
+vegetation, structure_terrain, abandoned_camp, village, mansion, temples,
+pillager_outpost, ocean, monument, cave_biomes, ancient_city, trial_chambers, final.
+`base_underground` УЖЕ содержит пещеры/руды/подземную обработку; это не чистая density.
+
+Test-only helper сохраняет каждый собственный blockstate на всех Y−64..319
+в 256 полных RLE-столбцах, все 1536 биомов и независимые SHA256. Сравниваются все
+98304 состояния и 1536 native biome IDs инструментированного и обычного чанка,
+плюс их хеши. Финальный профиль затем строго сверяется с полным обычным
+сохранённым чанком сервера по именам блоков и биомам. Свойства оригинала всё
+ещё не сравниваются; сохранённые собственные state IDs не являются сравнением
+состояний оригинала.
+
+Семена закреплены ДО результатов: 1792932773345722119, 100554032945340;
+holdout42 и−20261116. На каждом снимаются стадии чанков512,512 и512,513.
+Парное конечное сравнение использует прежний полный план12чанков/seed/side.
+Если максимум holdout вне двух трассируемых чанков, отчёт явно говорит
+`argmax_column_in_trace=false`, а не приписывает ему чужую трассу.
+
+Полный argmax считается по ВСЕМ3072столбцам плана, не первым20примерам.
+Сохраняются число равных максимумов, фиксированно первый по(worldX,worldZ),
+полная вертикальная колонка и8соседей; соседи вне плана помечены неизвестными.
+`top_non_air` включает воду/растения/листву. Дополнительный `top_substrate`
+использует опубликованный прежний natural() whitelist frozen analyzer,
+но полный диапазон−64..319/empty−65: материал строений тоже может попасть
+в whitelist; это не доказательство высоты чистого грунта или density оригинала.
+Основные gates exact comparator не меняются. argmax обязан согласоваться с
+прежними sum/max/count по всем столбцам.
+
+## Проверки
+
+Локально допустимы только лёгкие Python:
+
+```
+/usr/bin/python -B -m unittest discover -s tools/measure -p 'test_worldgen_exact*.py'
+/usr/bin/python -B -m unittest discover -s tools/measure -p 'test_worldgen_stage*.py'
+```
+
+Все Cargo/серверы — только GitHub. Отдельный `worldgen-stage-checks.yml`
+предназначен для ручного dispatch основным помощником после review. Он строит
+НОВЫЙ runtime из исходника run, проходит Clippy/default/no-default workspace,
+собирает plugin fixtures и экспортирует собственные стадии. Поскольку lockfile
+не отслеживается в Git, workflow устанавливает закреплённые публичные Cargo.lock
+ядра и собственных примеров перед --locked проверками; SHA сохраняются в артефакте.
+Оба существующих lockfile владельца на PC остаются нетронутыми. Команда экспорта:
+
+```
+MCSA_A6_DENSITY=0 MCSA_WORLDGEN_STAGE_OUTPUT=... \
+  cargo test --locked --release world::worldgen_stage_tests::worldgen_stage_trace_263_export -- --ignored --exact
+```
+
+Новый `worldgen_stage_ci_263.py` связывает SHA нового ELF, trace, Cargo.lock и
+HEAD/run; заимствует неизменные Console/generate/readiness/freeze/freshness/cleanup
+helpers старого baseline. Старый pinned177ELF и `validate_source_diff` НЕ используются
+для нового build и НЕ ослаблены. JAR сверяется по прежним pinned bytes/SHA.
+Временные миры удаляются; артефакт содержит только явные отчёты/журналы/receipt
+и собственный полный stage trace. Нельзя называть workflow успешным до проверки
+actual jobs/logs/artifact/identity/cleanup/полных gates.
+
+После CI сначала прочитать точный argmax и собственные стадийные профили. Менять
+генератор можно только при доказанной узкой причине и последующей регрессии/
+holdout; усреднённые высоты, частоты биомов и уровень SEA сами по себе не основание.

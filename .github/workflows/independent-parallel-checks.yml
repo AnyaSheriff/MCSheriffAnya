@@ -1,0 +1,79 @@
+name: Independent dependency planner checks
+on:
+  push:
+    branches: ['feat/independent-parallel-20261116']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mcsa-independent-heavy-checks
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_TERM_COLOR: never
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+          components: clippy
+      - name: Record the exact previously tested compiler
+        run: |
+          mkdir -p parallel-evidence
+          rustc -vV | tee parallel-evidence/rustc.log
+          cargo clippy --version | tee parallel-evidence/clippy-version.log
+          python3 -B - <<'PY'
+          import pathlib
+          assert 'release: 1.99.1\n' in pathlib.Path('parallel-evidence/rustc.log').read_text()
+          PY
+      - name: Install the previously verified public lock
+        run: python3 -B tools/fetch-release-lock.py
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: public-container-button-source
+      - name: Strict workspace Clippy
+        run: |
+          set -o pipefail
+          mkdir -p parallel-evidence
+          cargo clippy --release --locked --workspace --all-targets -- -D warnings 2>&1 | tee parallel-evidence/clippy.log
+      - name: Actual dependency planner tests
+        run: |
+          set -o pipefail
+          cargo test --release --locked --test parallel_regions 2>&1 | tee parallel-evidence/planner-tests.log
+          python3 -B - <<'PY'
+          import pathlib,re
+          text=pathlib.Path('parallel-evidence/planner-tests.log').read_text()
+          rows=re.findall(r'test result: ok\. (\d+) passed; (\d+) failed; (\d+) ignored;',text)
+          assert rows==[('13','0','0')],rows
+          PY
+      - name: Ordinary release build
+        run: |
+          set -o pipefail
+          cargo build --release --locked --bin mcsheriffanya 2>&1 | tee parallel-evidence/build.log
+          git diff --exit-code
+      - name: Preserve explicit logs and source identities
+        if: always()
+        run: |
+          python3 -B - <<'PY'
+          import hashlib,json,pathlib,shutil,subprocess
+          out=pathlib.Path('parallel-evidence');out.mkdir(exist_ok=True)
+          if pathlib.Path('Cargo.lock').is_file():shutil.copyfile('Cargo.lock',out/'Cargo.lock')
+          source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          files={p.name:{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in out.iterdir() if p.is_file()}
+          inputs={name:hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() for name in ['src/parallel_regions.rs','src/parallel_regions/tests.rs','tests/parallel_regions.rs','docs/parallel-region-planner.md']}
+          (out/'receipt.json').write_text(json.dumps({'source':source,'files':files,'source_inputs':inputs,'scope':'Declared-dependency planner only. No runtime executor, mob/TNT speedup, or vanilla parity claim.'},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: independent-parallel-${{ github.run_id }}-${{ github.run_attempt }}
+          path: parallel-evidence/
+          retention-days: 14
+          if-no-files-found: error

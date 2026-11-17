@@ -322,3 +322,10 @@ none очищает ячейку. Java SDK переводит Bukkit 0..8 в 36.
 Rust Plugin.on_tab_complete экспортируется макросом SDK; старые компоненты
 без этого экспорта тоже загружаются. `bukkit-plugin` — WIT world переводчика,
 `sdk-module` — world Rust SDK, прежние plugin/module сохраняются.
+
+Java-переводчик также открывает существующий безопасный WIT bossbar через
+`Bukkit.createBossBar`/`Server.createBossBar`: название, цвет, деления, заполнение,
+зрители и видимость. Флаги и `KeyedBossBar` пока отклоняются. Владелец, лимиты
+и очистка остаются на стороне хозяина; изменение ABI не требуется.
+Точные ограничения и собственные Java→WASM→Host проверки описаны в
+[README переводчика](../tools/plugin-translator/README.md#полосы-боссов-из-java).
