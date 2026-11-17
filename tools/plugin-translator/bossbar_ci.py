@@ -21,10 +21,30 @@ TESTS = (
 
 def verify_runtime_log(name, log):
     """cargo exit 0 с нулём найденных или проигнорированным тестом — ошибка."""
-    if not re.search(r'^test ' + re.escape(name) + r' \.\.\. ok$', log, re.MULTILINE):
-        raise ValueError('Не исполнен обязательный тест: ' + name)
-    if not re.search(r'^test result: ok\. 1 passed; 0 failed; 0 ignored;', log, re.MULTILINE):
+    lines = log.splitlines()
+    runs = [i for i, line in enumerate(lines) if re.fullmatch(r'running \d+ tests?', line)]
+    summaries = [i for i, line in enumerate(lines) if line.startswith('test result:')]
+    if len(runs) != 1 or lines[runs[0]] != 'running 1 test' or len(summaries) != 1:
+        raise ValueError('Требуется ровно один запуск одного теста: ' + name)
+    begin, end = runs[0], summaries[0]
+    summary = r'test result: ok\. 1 passed; 0 failed; 0 ignored;(?: 0 measured; \d+ filtered out;)? finished in \d+(?:\.\d+)?s'
+    if end <= begin or not re.fullmatch(summary, lines[end]):
         raise ValueError('Нет ровно одного успешного обязательного теста: ' + name)
+    body = [line for line in lines[begin+1:end] if line.strip()]
+    headers = [line for line in lines if line.startswith('test ') and not line.startswith('test result:')]
+    if len(headers) != 1 or headers[0] not in body:
+        raise ValueError('Не исполнен обязательный тест: ' + name)
+    header = re.fullmatch(r'test ' + re.escape(name) + r' \.\.\.(?: (.*))?', headers[0])
+    if header is None:
+        raise ValueError('Не исполнен обязательный тест: ' + name)
+    tail = header.group(1) or ''
+    if re.match(r'(?:FAILED|ignored)\b', tail) or any(re.fullmatch(r'(?:FAILED|ignored)(?:,.*)?', line) for line in body):
+        raise ValueError('Обязательный тест упал или пропущен: ' + name)
+    # INFO хозяина может вклиниться после «test NAME ...» до финального ok.
+    # Одних имени и успешной summary недостаточно: нужен настоящий терминатор.
+    completions = [line for line in body if line == 'ok' or (line == headers[0] and tail == 'ok')]
+    if len(completions) != 1 or body[-1] != completions[0]:
+        raise ValueError('Нет конечного ok обязательного теста: ' + name)
 
 
 def run(command, path):

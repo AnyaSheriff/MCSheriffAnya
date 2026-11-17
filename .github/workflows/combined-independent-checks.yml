@@ -60,6 +60,16 @@ jobs:
           cargo test --locked --release --workspace 2>&1 | tee worldgen-stage-build-logs/default-tests.log
           cargo test --locked --release --workspace --no-default-features 2>&1 | tee worldgen-stage-build-logs/no-default-tests.log
           cargo build --locked --release --bin mcsheriffanya 2>&1 | tee worldgen-stage-build-logs/build.log
+      - name: Retain own Linux candidate for later visual acceptance
+        run: |
+          python3 -B - <<'PYTHON'
+          import hashlib,json,pathlib,shutil,subprocess
+          binary=pathlib.Path('target/release/mcsheriffanya');data=binary.read_bytes()
+          assert data[:6]==b'\x7fELF\x02\x01' and int.from_bytes(data[18:20],'little')==62
+          out=pathlib.Path('build-evidence');out.mkdir()
+          target=out/'mcsa-linux-x64';shutil.copy2(binary,target)
+          (out/'build.json').write_text(json.dumps({'source':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'binary':target.name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'platform':'Linux x86_64 GNU','scope':'Build candidate only; verify whole CI before manual acceptance'},indent=2)+'\n')
+          PYTHON
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -137,6 +147,7 @@ jobs:
           path: |
             bossbar-evidence/
             mod-evidence/
+            build-evidence/
             worldgen-stage-build-logs/own-example-components/
           retention-days: 14
           if-no-files-found: warn
