@@ -1,5 +1,6 @@
 // Только собственные этапы; оригинал наблюдается по конечному сохранению мира.
 use super::*;
+use crate::gameplay_catalog::{Catalog, Kind, Profile};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -49,12 +50,17 @@ fn profile(chunk: &Chunk, x: i32, z: i32) -> Vec<[i32; 3]> {
 }
 
 fn snapshot(stage: &str, chunk: &Chunk) -> serde_json::Value {
+    let catalog = Catalog::new(Profile::Preview26_3);
     let mut columns = Vec::new();
     let mut names = BTreeMap::new();
     for x in 0..CHUNK_SIZE { for z in 0..CHUNK_SIZE {
         let runs = profile(chunk, x, z);
         for run in &runs {
-            names.insert(run[2], crate::blocks::block_at_state(run[2]).expect("известное состояние"));
+            names.entry(run[2]).or_insert_with(|| {
+                catalog.name(Kind::State, run[2]).unwrap_or_else(|error| {
+                    panic!("этап {stage}, локальная колонка ({x},{z}), Y={}..={}, состояние {}: {error:?}", run[0], run[1], run[2])
+                })
+            });
         }
         columns.push(json!({"local": [x, z], "runs": runs}));
     } }
@@ -100,6 +106,24 @@ fn profile_preserves_air_and_state_changes_on_same_block_name() {
     let runs = profile(&chunk, 0, 0);
     assert_eq!(runs, vec![[MIN_Y, -1, 0], [0, 0, water], [1, 1, water + 1], [2, MIN_Y + WORLD_HEIGHT - 1, 0]]);
     assert_eq!(crate::blocks::block_at_state(water), crate::blocks::block_at_state(water + 1));
+}
+
+#[test]
+fn snapshot_names_preview_states_and_keeps_raw_id() {
+    let mut chunk = Chunk::new();
+    let slab = crate::gameplay_catalog::WHITE_SLAB_FIRST_STATE;
+    let spike = Catalog::new(Profile::Preview26_3).default_state("sulfur_spike").unwrap().unwrap();
+    for (y, state) in [(0, slab), (1, spike)] {
+        assert!(crate::blocks::block_at_state(state).is_none());
+        chunk.put_generated(0, y, 0, state, true);
+    }
+    let trace = snapshot("final", &chunk);
+    for (run, state, name) in [(1, slab, "white_concrete_slab"), (2, spike, "sulfur_spike")] {
+        let y = run - 1;
+        assert_eq!(trace["state_names"][state.to_string().as_str()], json!(name));
+        assert_eq!(trace["columns"][0]["runs"][run], json!([y, y, state]));
+    }
+    assert_eq!(trace["blockstates_sha256"], json!(state_hash(&chunk)));
 }
 
 #[test]

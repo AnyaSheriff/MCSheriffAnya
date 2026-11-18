@@ -16,6 +16,26 @@ public final class BossBarPlugin extends JavaPlugin {
   check(bar.isVisible()&&bar.getProgress()==1&&bar.getPlayers().isEmpty());
   check(second.getTitle().isEmpty());
  }
+ // Проверка отказа выполняется отдельным методом: после catch вызывающий
+ // по-прежнему проверяет список зрителей у того же объекта BossBar.
+ private static void expectAddRejected(BossBar rejected, Player player){
+  try{
+   rejected.addPlayer(player);
+  }catch(IllegalStateException expected){
+   check(expected.getMessage().contains("отклонена хозяином"));
+   return;
+  }
+  throw new IllegalStateException("Лимит хозяина не сработал");
+ }
+ private static void expectShowRejected(BossBar target){
+  try{
+   target.setVisible(true);
+  }catch(IllegalStateException expected){
+   check(expected.getMessage().contains("отклонена хозяином")&&expected.getSuppressed().length==0);
+   return;
+  }
+  throw new IllegalStateException("Лимит хозяина не сработал");
+ }
  @Override public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
   if(!(sender instanceof Player)||args.length!=1)return false;
   Player player=(Player)sender;
@@ -39,7 +59,7 @@ public final class BossBarPlugin extends JavaPlugin {
     break;
    case "show-rejected":
     check(!bar.isVisible()&&bar.getPlayers().size()==2&&capacityBars.size()==32);
-    try{bar.setVisible(true);throw new IllegalStateException("Лимит хозяина не сработал");}catch(IllegalStateException expected){check(expected.getMessage().contains("отклонена хозяином")&&expected.getSuppressed().length==0);}
+    expectShowRejected(bar);
     check(!bar.isVisible()&&bar.getPlayers().size()==2);
     break;
    case "free-hidden-viewer":
@@ -49,7 +69,7 @@ public final class BossBarPlugin extends JavaPlugin {
     java.util.List<BossBar> bars=new java.util.ArrayList<>();
     for(int i=0;i<32;i++){BossBar extra=Bukkit.createBossBar("Лимит "+i,BarColor.RED,BarStyle.SOLID);extra.addPlayer(player);bars.add(extra);}
     BossBar rejected=Bukkit.createBossBar("Сверх лимита",BarColor.RED,BarStyle.SOLID);
-    try{rejected.addPlayer(player);throw new IllegalStateException("Лимит хозяина не сработал");}catch(IllegalStateException expected){check(expected.getMessage().contains("отклонена хозяином"));}
+    expectAddRejected(rejected,player);
     check(rejected.getPlayers().isEmpty());
     for(BossBar extra:bars)extra.removeAll();
     break;
