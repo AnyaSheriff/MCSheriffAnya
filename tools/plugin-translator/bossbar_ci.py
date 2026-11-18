@@ -54,6 +54,19 @@ def run(command, path):
     result.check_returncode()
 
 
+def run_runtime_tests(output):
+    failures = []
+    for index, name in enumerate(TESTS, 1):
+        log = output / f'runtime-{index}.log'
+        try:
+            run(['cargo', 'test', '--release', '--locked', '--bin', 'mcsheriffanya',
+                 name, '--', '--ignored', '--exact', '--test-threads=1'], log)
+            verify_runtime_log(name, log.read_text())
+        except (subprocess.CalledProcessError, ValueError) as error:
+            failures.append(f'{name}: {error}')
+    return failures
+
+
 def receipt(output, label):
     paths = [p for base in [TRANSLATOR / 'mcsa-bukkit/src', TRANSLATOR / 'src', TRANSLATOR / 'fixtures/bossbar', ROOT / 'src/plugins'] for p in base.rglob('*') if p.is_file()]
     paths += list(TRANSLATOR.glob('*.py'))
@@ -75,6 +88,7 @@ def main():
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     receipt(output, args.mode + '-before')
+    failures = []
     if args.mode == 'translate':
         if 'include!("bossbar_tests.rs");' not in (ROOT / 'src/plugins/tests.rs').read_text():
             raise ValueError('Нет согласованного root include bossbar_tests.rs; нельзя заявить runtime coverage')
@@ -84,17 +98,17 @@ def main():
         for source in [TRANSLATOR / 'target/bossbar.jar', TRANSLATOR / 'target/mcsa-bukkit.jar', ROOT / 'tmp/java-test/plugins/java-bossbar/plugin.wasm', ROOT / 'tmp/java-test/plugins/java-bossbar/plugin.toml']:
             shutil.copyfile(source, output / source.name)
     else:
-        for index, name in enumerate(TESTS):
-            log = output / ('runtime-' + str(index + 1) + '.log')
-            run(['cargo', 'test', '--release', '--locked', '--bin', 'mcsheriffanya', name, '--', '--ignored', '--exact', '--test-threads=1'], log)
-            verify_runtime_log(name, log.read_text())
+        failures = run_runtime_tests(output)
     receipt(output, args.mode + '-after')
     before = json.loads((output / (args.mode + '-before-source.json')).read_text())
     after = json.loads((output / (args.mode + '-after-source.json')).read_text())
     if before != after:
         raise ValueError('Исходники или Cargo.lock поменялись во время проверки')
     files = {str(p.relative_to(output)): {'sha256': hashlib.sha256(p.read_bytes()).hexdigest(), 'bytes': p.stat().st_size} for p in sorted(output.rglob('*')) if p.is_file() and p.name != args.mode + '-receipt.json'}
-    (output / (args.mode + '-receipt.json')).write_text(json.dumps({'source': before['source'], 'mode': args.mode, 'files': files}, indent=2) + '\n')
+    (output / (args.mode + '-receipt.json')).write_text(json.dumps({'source': before['source'], 'mode': args.mode, 'files': files, 'failures': failures}, indent=2) + '\n')
+
+    if failures:
+        raise SystemExit('Не пройдены проверки BossBar:\n' + '\n'.join(failures))
 
 
 if __name__ == '__main__':

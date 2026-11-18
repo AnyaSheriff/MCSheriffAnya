@@ -52,6 +52,7 @@ jobs:
           python -B -m unittest discover -s tools/plugin-translator -p 'test_*.py'
           python -B tools/mod-translator/test_compiler.py
       - name: Strict source checks and NEW runtime build
+        id: source
         run: |
           set -o pipefail
           cargo clippy --locked --release --workspace --all-targets -- -D warnings 2>&1 | tee worldgen-stage-build-logs/clippy.log
@@ -75,16 +76,22 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Translate own Bukkit BossBar fixture
+        id: translation
         run: python3 -B tools/plugin-translator/bossbar_ci.py translate --output bossbar-evidence
       - uses: actions/setup-java@v4
+        id: runtime_java
+        if: ${{ !cancelled() && steps.source.outcome == 'success' }}
         with:
           distribution: temurin
           java-version: '25'
       - name: Execute three translated Bukkit BossBar tests
         run: python3 -B tools/plugin-translator/bossbar_ci.py runtime --output bossbar-evidence
       - name: Compile own ModSDK fixtures and execute exact Host test
+        if: ${{ !cancelled() && steps.translation.outcome == 'success' }}
         run: python3 -B tools/measure/combined_independent_ci.py
       - name: Export own stages and assert ordinary identity
+        id: trace
+        if: ${{ !cancelled() && steps.source.outcome == 'success' }}
         env:
           MCSA_WORLDGEN_STAGE_OUTPUT: ${{ runner.temp }}/worldgen-own-stages.jsonl.gz
         run: |
@@ -104,6 +111,7 @@ jobs:
           (temp/'worldgen-stage-build.json').write_text(json.dumps(receipt,indent=2)+'\n')
           PY
       - name: Ordinary final saves, argmax and stage links
+        if: ${{ !cancelled() && steps.trace.outcome == 'success' && steps.runtime_java.outcome == 'success' }}
         run: |
           python -B tools/measure/worldgen_stage_ci_263.py --binary target/release/mcsheriffanya --trace "$RUNNER_TEMP/worldgen-own-stages.jsonl.gz" --build-receipt "$RUNNER_TEMP/worldgen-stage-build.json" --output "$RUNNER_TEMP/worldgen-stage-evidence"
       - name: Keep explicit diagnostics and own trace only

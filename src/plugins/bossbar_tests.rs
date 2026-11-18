@@ -25,8 +25,10 @@ fn bossbar_second_player(shared: &Shared) {
 }
 
 fn bossbar_command(host: &mut Host, shared: &Shared, n: u8, phase: &str, count: usize) -> Vec<Vec<u8>> {
-    assert!(host.run_command(bossbar_sender(n), "barprobe", &[phase.into()]).unwrap().0);
-    assert!(host.is_loaded("java-bossbar"), "ошибка настоящего Java-компонента не должна теряться");
+    let result = host.run_command(bossbar_sender(n), "barprobe", &[phase.into()]);
+    assert!(host.is_loaded("java-bossbar"), "BossBar, этап {phase}: компонент выгружен, ответ {result:?}");
+    let (handled, message) = result.unwrap_or_else(|| panic!("BossBar, этап {phase}: команда не найдена"));
+    assert!(handled, "BossBar, этап {phase}: команда отклонена, ответ {message:?}");
     let orders = shared.players.lock().unwrap().take_orders(&[n;16]);
     let mut packets = Vec::new();
     let mut messages = Vec::new();

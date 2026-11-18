@@ -1,7 +1,11 @@
 """Receipt gate: успешный cargo exit с отсутствующим тестом не является proof."""
 import importlib.util
+import json
+import subprocess
+import tempfile
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('bossbar_ci_subject', Path(__file__).with_name('bossbar_ci.py'))
 ci = importlib.util.module_from_spec(spec)
@@ -81,3 +85,31 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3719 filtered out; f
         for body in ('[INFO] callback\nok\nok', '[INFO] callback\nok\n[INFO] still running', 'ok\nFAILED'):
             with self.assertRaises(ValueError):
                 ci.verify_runtime_log(name, self.log(name, body))
+
+
+    def test_failed_scenario_keeps_later_results_and_fails_gate(self):
+        executed = []
+
+        def fake_run(command, log):
+            name = command[command.index('--bin') + 2]
+            executed.append(name)
+            if name == ci.TESTS[0]:
+                log.write_text('running 1 test\n' + f'test {name} ... FAILED\n')
+                raise subprocess.CalledProcessError(101, command)
+            if name == ci.TESTS[1]:
+                log.write_text('running 0 tests\n')
+                return
+            log.write_text(self.log(name))
+
+        with tempfile.TemporaryDirectory() as folder, patch.object(ci, 'run', fake_run):
+            with patch.dict(ci.os.environ, {'GITHUB_ACTIONS': 'true'}), patch.object(
+                ci.sys, 'argv', ['bossbar_ci.py', 'runtime', '--output', folder]
+            ):
+                with self.assertRaises(SystemExit):
+                    ci.main()
+            receipt = json.loads((Path(folder) / 'runtime-receipt.json').read_text())
+            self.assertEqual(executed, list(ci.TESTS))
+            self.assertEqual(len(receipt['failures']), 2)
+            for name, failure in zip(ci.TESTS, receipt['failures']):
+                self.assertTrue(failure.startswith(name + ':'))
+            self.assertTrue(all(f'runtime-{i}.log' in receipt['files'] for i in range(1, 4)))
