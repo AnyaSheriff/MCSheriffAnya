@@ -122,7 +122,7 @@ class Parser:
     def registration(self):
         self.take(self.context); self.take('.')
         event = self.name()
-        if event not in {'onStart', 'onStop', 'onJoin', 'onQuit', 'every'}:
+        if event not in {'onStart', 'onStop', 'onJoin', 'onQuit', 'onChat', 'every'}:
             self.fail(f'Регистрация «{event}» не поддерживается', 'unsupported-event')
         self.take('(')
         period = None
@@ -133,7 +133,7 @@ class Parser:
             period = int(token.text)
             self.take(',')
         player = None
-        if event in {'onJoin', 'onQuit'}:
+        if event in {'onJoin', 'onQuit', 'onChat'}:
             player = self.name()
             if player == self.context:
                 self.fail('Имя игрока должно отличаться от Context')
@@ -142,6 +142,16 @@ class Parser:
         self.take('->'); self.take('{')
         actions = []
         while self.token.text != '}':
+            if event == 'onChat' and self.token.text == player:
+                self.take(player); self.take('.')
+                action = self.name()
+                if action != 'cancel':
+                    self.fail(f'Изменение чата «{action}» не поддерживается; доступно только cancel()', 'unsupported-chat-action')
+                self.take('('); self.take(')'); self.take(';')
+                actions.append(dict(operation='cancel', expression=[]))
+                if len(actions) > 64:
+                    self.fail('Не более 64 действий в обработчике', 'action-limit')
+                continue
             self.take(self.context); self.take('.')
             operation = self.name()
             if operation not in {'broadcast', 'log', 'message'}:
@@ -150,7 +160,10 @@ class Parser:
             if operation == 'message':
                 if player is None:
                     self.fail('message доступно только в обработчике игрока')
-                self.take(player); self.take(',')
+                self.take(player)
+                if event == 'onChat':
+                    self.fail('Для onChat личное сообщение пока не поддерживается; используйте log/broadcast', 'unsupported-chat-action')
+                self.take(',')
             expression = []
             while True:
                 if self.token.string:
@@ -158,12 +171,13 @@ class Parser:
                 elif player and self.token.text == player:
                     self.take(player); self.take('.')
                     field = self.name()
-                    if field not in {'name', 'uuid'}:
+                    allowed = {'message', 'playerName', 'playerUuid'} if event == 'onChat' else {'name', 'uuid'}
+                    if field not in allowed:
                         self.fail(f'Поле игрока «{field}» не поддерживается', 'unsupported-player-field')
                     self.take('('); self.take(')')
-                    expression.append(('player', field))
+                    expression.append(('chat' if event == 'onChat' else 'player', field))
                 else:
-                    self.fail('Поддержаны только строки и player.name()/uuid()')
+                    self.fail('Нужно строковое выражение с поддержанными полями текущего события')
                 if len(expression) > 32:
                     self.fail('Не более 32 частей строки', 'expression-limit')
                 if self.token.text != '+':
@@ -194,15 +208,28 @@ def generate(program):
     callbacks = program['callbacks']
     for i, callback in enumerate(callbacks):
         player = callback['event'] in {'onJoin', 'onQuit'}
-        lines.append(f'static void callback_{i}({"mcsa_api_types_player_t *who" if player else "void"}) {{')
-        if player:
+        chat = callback['event'] == 'onChat'
+        parameters = 'mcsa_api_types_player_t *who' if player else 'void'
+        if chat:
+            parameters = 'mcsa_api_types_player_t *who, plugin_string_t *message, bool *cancelled'
+        lines.append(f'static void callback_{i}({parameters}) {{')
+        if player or chat:
             lines.append('(void)who;')
+        if chat:
+            lines.append('(void)message; (void)cancelled;')
         for action in callback['actions']:
+            if action['operation'] == 'cancel':
+                lines.append('*cancelled=true;')
+                continue
             lines.append('used=0;')
             for kind, value in action['expression']:
                 if kind == 'literal':
                     literal, size = c_string(value)
                     lines.append(f'append({literal},{size});')
+                elif kind == 'chat':
+                    field = {'message': 'message', 'playerName': 'who->name', 'playerUuid': 'who->uuid'}[value]
+                    access = 'message->' if field == 'message' else field + '.'
+                    lines.append(f'append({access}ptr,{access}len);')
                 else:
                     lines.append(f'append(who->{value}.ptr,who->{value}.len);')
             # Блок сохраняет одинаковое имя переменной для нескольких действий.
@@ -236,8 +263,13 @@ def generate(program):
     lines.append('void exports_mcsa_api_events_on_task(uint32_t task) { if(!active) return; switch(task) {')
     for i in every:
         lines.append(f'case {i+1}: callback_{i}(); break;')
-    lines.extend(['default: break; }}',
-        'void exports_mcsa_api_events_on_chat(mcsa_api_types_player_t *who, plugin_string_t *message, mcsa_api_types_chat_result_t *ret) { (void)who; (void)message; ret->tag=MCSA_API_TYPES_CHAT_RESULT_PASS; }',
+    lines.append('default: break; }}')
+    lines.append('void exports_mcsa_api_events_on_chat(mcsa_api_types_player_t *who, plugin_string_t *message, mcsa_api_types_chat_result_t *ret) { (void)who; (void)message; bool cancelled=false; if(active) {')
+    for i, callback in enumerate(callbacks):
+        if callback['event'] == 'onChat':
+            lines.append(f'callback_{i}(who,message,&cancelled);')
+    lines.append('} ret->tag=cancelled ? MCSA_API_TYPES_CHAT_RESULT_CANCEL : MCSA_API_TYPES_CHAT_RESULT_PASS; }')
+    lines.extend([
         'mcsa_api_types_verdict_t exports_mcsa_api_events_on_block_break(mcsa_api_types_player_t *who,mcsa_api_types_block_pos_t *pos,plugin_string_t *block) { (void)who;(void)pos;(void)block;return MCSA_API_TYPES_VERDICT_ALLOW; }',
         'mcsa_api_types_verdict_t exports_mcsa_api_events_on_block_place(mcsa_api_types_player_t *who,mcsa_api_types_block_pos_t *pos,plugin_string_t *block) { (void)who;(void)pos;(void)block;return MCSA_API_TYPES_VERDICT_ALLOW; }',
         'mcsa_api_types_verdict_t exports_mcsa_api_events_on_player_command(mcsa_api_types_player_t *who,plugin_string_t *line) { (void)who;(void)line;return MCSA_API_TYPES_VERDICT_ALLOW; }',

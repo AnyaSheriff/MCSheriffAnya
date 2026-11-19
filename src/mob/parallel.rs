@@ -55,11 +55,19 @@ impl Executor {
                 local = Some((index, panic::catch_unwind(AssertUnwindSafe(|| chunk.into_iter().map(|v| map(v)).collect()))));
             } else {
                 let done = done.clone();
-                self.workers[index].sender.send(Box::new(move || {
+                let job: Job = Box::new(move || {
                     let value = panic::catch_unwind(AssertUnwindSafe(|| chunk.into_iter().map(|v| map(v)).collect()));
                     let _ = done.send((index, value));
-                })).unwrap_or_else(|_| panic!("поток наблюдения мобов остановился"));
-                self.stats.jobs += 1;
+                });
+                match self.workers[index].sender.send(job) {
+                    Ok(()) => self.stats.jobs += 1,
+                    Err(error) => {
+                        // Очередь не приняла задание: оно ещё не исполнялось. Считаем
+                        // снимок здесь и сохраняем общий барьер уже работающих задач.
+                        self.failed = true;
+                        (error.0)();
+                    }
+                }
             }
         }
         drop(done);
@@ -84,6 +92,90 @@ impl Drop for Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn closed_worker() -> Worker {
+        let (sender, receiver) = mpsc::channel::<Job>();
+        let (ready, stopped) = mpsc::channel();
+        let handle = thread::spawn(move || { drop(receiver); ready.send(()).unwrap(); });
+        stopped.recv().unwrap();
+        Worker { sender, handle }
+    }
+
+    #[test]
+    fn closed_helper_preserves_last_alert_order_exactly_once_and_then_stays_serial() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let mut executor = Executor::new();
+        executor.grow(1);
+        executor.workers.push(closed_worker());
+        executor.set_width(3);
+        let coordinator = thread::current().id();
+        let counts = Arc::new((0..8).map(|_| AtomicUsize::new(0)).collect::<Vec<_>>());
+        let seen = counts.clone();
+        // Та же чистая граница выбора последнего зова, что у Bee, включая None.
+        let calls = [((0.0_f64, 0.0_f64, 0.0_f64), Some(7), 100), ((16.0, 0.0, 0.0), None, 200)];
+        let positions = [0.0_f64, 16.0, 17.0, -16.0, -17.0, 4.0, 2.0, 32.0];
+        let actual = executor.ordered_map(positions.into_iter().enumerate().collect(), move |(index, x)| {
+            seen[index].fetch_add(1, Ordering::SeqCst);
+            let mut selected = None;
+            for &(at, target, anger) in &calls {
+                if (x-at.0).abs() <= 16.0 && at.1.abs() <= 10.0 && at.2.abs() <= 16.0 {
+                    selected = Some((target, anger));
+                }
+            }
+            (index, selected, thread::current().id() == coordinator)
+        });
+        let expected = [Some((None, 200)), Some((None, 200)), Some((None, 200)),
+            Some((Some(7), 100)), None, Some((None, 200)), Some((None, 200)), Some((None, 200))];
+        assert_eq!(actual.iter().map(|&(index, value, _)| (index, value)).collect::<Vec<_>>(),
+            expected.into_iter().enumerate().collect::<Vec<_>>());
+        assert!(actual[..3].iter().all(|value| !value.2));
+        assert!(actual[3..].iter().all(|value| value.2));
+        assert!(counts.iter().all(|count| count.load(Ordering::SeqCst) == 1));
+        assert_eq!(executor.stats().jobs, 1);
+        assert!(executor.spawn_failed());
+        assert!(!executor.should_parallel(128, 32768));
+        executor.begin_tick();
+        executor.set_width(8);
+        assert!(executor.ordered_map(vec![0, 1, 2], move |_| thread::current().id() == coordinator)
+            .into_iter().all(|local| local));
+        assert_eq!(executor.stats().jobs, 0);
+    }
+
+    #[test]
+    fn unsent_job_panic_waits_for_live_helpers_without_replaying_any_input() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let mut executor = Executor::new();
+        executor.grow(1);
+        executor.workers.push(closed_worker());
+        executor.set_width(3);
+        let counts = Arc::new((0..6).map(|_| AtomicUsize::new(0)).collect::<Vec<_>>());
+        let seen = counts.clone();
+        let failed = panic::catch_unwind(AssertUnwindSafe(|| executor.ordered_map((0..6).collect(), move |index| {
+            if index == 0 { thread::sleep(std::time::Duration::from_millis(10)); }
+            seen[index].fetch_add(1, Ordering::SeqCst);
+            if index == 2 { panic!("unsent snapshot panic"); }
+            index
+        }))).expect_err("паника вычисления обязана дойти после барьера");
+        assert_eq!(failed.downcast_ref::<&str>(), Some(&"unsent snapshot panic"));
+        assert_eq!(counts.iter().map(|count| count.load(Ordering::SeqCst)).collect::<Vec<_>>(), [1, 1, 1, 0, 1, 1]);
+        assert!(executor.spawn_failed());
+        let coordinator = thread::current().id();
+        assert!(executor.ordered_map(vec![0, 1], move |_| thread::current().id() == coordinator)
+            .into_iter().all(|local| local));
+    }
+
+    #[test]
+    fn every_closed_helper_completes_the_unsent_batches_on_coordinator() {
+        let mut executor = Executor::new();
+        executor.workers = vec![closed_worker(), closed_worker()];
+        executor.set_width(3);
+        let coordinator = thread::current().id();
+        assert_eq!(executor.ordered_map((0..7).collect(), move |index| (index, thread::current().id() == coordinator)),
+            (0..7).map(|index| (index, true)).collect::<Vec<_>>());
+        assert_eq!(executor.stats().jobs, 0);
+        assert!(executor.spawn_failed());
+    }
+
     #[test]
     fn individually_small_batches_do_not_accumulate_pressure() {
         let mut executor=Executor::new();

@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent.parent
 # Только закреплённые инструменты существующей цепочки; Java/Bukkit не нужны.
 CHAIN = REPO / 'tools/plugin-translator/.toolchain'
+SOURCE_PROFILE = 'mcsa-mod-source-0.1'
+SDK_ABI = 'mcsa:api@0.1.0'
 
 
 def load(folder):
@@ -29,16 +31,19 @@ def load(folder):
     except (ValueError, UnicodeError) as error:
         raise Refusal('manifest', f'Неверный mod.toml: {error}') from error
     required = {'name', 'version', 'api', 'minecraft', 'protocol', 'source'}
-    if set(manifest) != required:
-        raise Refusal('manifest-fields', 'Нужны ровно поля name/version/api/minecraft/protocol/source; чужие loader-метаданные не переводятся')
+    if set(manifest) not in (required, required | {'sdk_abi'}):
+        raise Refusal('manifest-fields', 'Нужны поля name/version/api/minecraft/protocol/source; допускается только дополнительное поле sdk_abi')
     if not isinstance(manifest['name'], str) or not re.fullmatch('[a-z0-9_-]{1,32}', manifest['name']):
         raise Refusal('name', 'Имя: a-z, 0-9, _ и -, от 1 до 32 символов')
     if not isinstance(manifest['version'], str) or not re.fullmatch('[A-Za-z0-9_.+-]{1,64}', manifest['version']):
         raise Refusal('version', 'Версия: до 64 ASCII символов, без пробелов')
-    if manifest['api'] != 'mcsa-mod-source-0.1':
-        raise Refusal('api', 'Поддержан только собственный API mcsa-mod-source-0.1')
+    if manifest['api'] != SOURCE_PROFILE:
+        raise Refusal('api', f'Поддержан только собственный профиль исходника {SOURCE_PROFILE}')
     if manifest['minecraft'] != '26.3' or type(manifest['protocol']) is not int or manifest['protocol'] != 777:
         raise Refusal('target', 'Поддержано только ядро 26.3 / protocol 777; адаптация 1.21.1 не проверена')
+    # Прежний шестипольный манифест уже подразумевал этот ABI.
+    if manifest.setdefault('sdk_abi', SDK_ABI) != SDK_ABI:
+        raise Refusal('sdk-abi', f'Поддержан только ABI ModSDK {SDK_ABI}')
     if not isinstance(manifest['source'], str) or not re.fullmatch('[A-Za-z_][A-Za-z_0-9]*[.]java', manifest['source']):
         raise Refusal('source-path', 'source должен быть одним именем .java внутри папки')
     source_path = folder / manifest['source']
@@ -84,7 +89,17 @@ def build(folder, output, toolchain=CHAIN):
             stage.mkdir()
             shutil.copyfile(work / 'plugin.wasm', stage / 'plugin.wasm')
             (stage / 'plugin.toml').write_text(f'name = "{manifest["name"]}"\nversion = "{manifest["version"]}"\napi = "0.1"\nmain = "plugin.wasm"\n', encoding='utf-8')
-            receipt = dict(format=1, source_sha256=digest, compiler_profile='mcsa-mod-source-0.1', target='26.3/777', callbacks=len(program['callbacks']), wasm_sha256=hashlib.sha256((stage / 'plugin.wasm').read_bytes()).hexdigest(), wit_sha256=hashlib.sha256((REPO / 'wit/mcsa-api.wit').read_bytes()).hexdigest(), generated_c_sha256=hashlib.sha256(generated.encode('utf-8')).hexdigest())
+            receipt = dict(
+                format=1,
+                source_sha256=digest,
+                compiler_profile=manifest['api'],
+                target=f'{manifest["minecraft"]}/{manifest["protocol"]}',
+                sdk_abi=manifest['sdk_abi'],
+                callbacks=len(program['callbacks']),
+                wasm_sha256=hashlib.sha256((stage / 'plugin.wasm').read_bytes()).hexdigest(),
+                wit_sha256=hashlib.sha256((REPO / 'wit/mcsa-api.wit').read_bytes()).hexdigest(),
+                generated_c_sha256=hashlib.sha256(generated.encode('utf-8')).hexdigest(),
+            )
             (stage / 'conversion.json').write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
             (stage / 'data').mkdir()
             stage.rename(destination)
@@ -100,10 +115,13 @@ def main(argv=None):
     parser.add_argument('--toolchain', type=Path, default=CHAIN)
     parser.add_argument('--report', type=Path, help='Русский JSON-отчёт об успехе или точном отказе')
     args = parser.parse_args(argv)
-    report = dict(format=1, profile='mcsa-mod-source-0.1', fabric_forge_compatible=False, ok=False)
+    report = dict(format=1, profile=SOURCE_PROFILE, fabric_forge_compatible=False, ok=False)
     try:
         manifest, program, digest = load(args.project)
-        report.update(name=manifest['name'], source_sha256=digest, callbacks=len(program['callbacks']))
+        report.update(
+            name=manifest['name'], source_sha256=digest, callbacks=len(program['callbacks']),
+            sdk_abi=manifest['sdk_abi'], target=f'{manifest["minecraft"]}/{manifest["protocol"]}',
+        )
         if args.emit_c:
             if args.emit_c.exists():
                 raise Refusal('destination', 'C-файл уже существует')

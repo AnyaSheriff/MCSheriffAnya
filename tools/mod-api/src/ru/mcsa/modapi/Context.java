@@ -13,6 +13,7 @@ public interface Context {
     void onStop(Runnable action);
     void onJoin(Consumer<Player> action);
     void onQuit(Consumer<Player> action);
+    void onChat(Consumer<ChatEvent> action);
     void every(int period, Runnable action);
     void broadcast(String text);
     void log(String text);

@@ -5,7 +5,7 @@ import unittest
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import zipfile
 import worldgen_exact_ci_263 as ci
 
@@ -74,6 +74,35 @@ class SourceTests(unittest.TestCase):
             self.assertTrue(FakeConsole.closed)
             self.assertTrue(json.loads((folder/'evidence/ours-cleanup.json').read_text())['port_free'])
             self.assertIn('bedrock-port=0', (folder/'scratch/ours/config/mcsa.properties').read_text())
+
+    def test_saved_callback_sees_flushed_coverage_before_console_closes(self):
+        server = Mock()
+        server.wait_ready.return_value = 'Done (0.1s)! For help, type "help"'
+        replies = {'tick freeze': 'frozen', 'gamerule random_tick_speed 0': '0',
+                   'gamerule spawn_mobs false': 'false', 'seed': 'seed 42'}
+        server.command.side_effect = lambda command, **_: replies.get(command, '')
+        server.close.return_value = {'server_exit': 0, 'forced': False, 'group_gone': True, 'port_free': True}
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            evidence = folder / 'evidence'
+            evidence.mkdir()
+            world = folder / 'vanilla/world'
+            with patch.object(ci, 'Console', return_value=server), \
+                    patch.object(ci, 'allocated_chunks', return_value=set()), \
+                    patch.object(ci, 'saved_chunks', return_value=set(ci.CHUNKS)) as saved:
+                def after_saved(console, saved_world, output):
+                    saved.assert_called_once_with(world, ci.CHUNKS)
+                    server.command.assert_called_with('save-all flush', timeout=300)
+                    server.close.assert_not_called()
+                    self.assertIs(console, server)
+                    self.assertEqual((saved_world, output), (world, evidence))
+
+                callback = Mock(side_effect=after_saved)
+                result = ci.generate('vanilla', 42, folder / 'fake', folder, evidence, 27860,
+                                     after_saved=callback)
+            self.assertEqual(result, world)
+            callback.assert_called_once_with(server, world, evidence)
+            server.close.assert_called_once_with()
 
     def test_source_diff_rejects_changed_catalog_and_wrong_status(self):
         required=sorted(ci.ALLOWED_ADDITIONS-{'tools/measure/WORLDGEN-EXACT-20261116.md'})

@@ -206,7 +206,7 @@ def allocated_chunks(world, requested):
     return result
 
 
-def generate(side, seed, binary, scratch, evidence, port):
+def generate(side, seed, binary, scratch, evidence, port, *, after_saved=None):
     cwd = scratch / side; cwd.mkdir()
     config = cwd if side == 'vanilla' else cwd / 'config'; config.mkdir(exist_ok=True)
     common = (f'server-ip=127.0.0.1\nserver-port={port}\nlevel-seed={seed}\nlevel-type=minecraft:normal\n'
@@ -263,6 +263,8 @@ def generate(side, seed, binary, scratch, evidence, port):
             time.sleep(2)
         else:
             raise TimeoutError('saved requested chunks incomplete: '+str(last_error))
+        if after_saved is not None:
+            after_saved(server, cwd/'world', evidence)
     finally:
         cleanup = server.close()
         (evidence / f'{side}-cleanup.json').write_text(json.dumps(cleanup, indent=2)+'\n')

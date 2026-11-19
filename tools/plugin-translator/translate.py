@@ -29,10 +29,7 @@ def run(*args, **kwargs):
     guarded_run([str(a) for a in args], check=True, **kwargs)
 
 
-def bootstrap(toolchain=True):
-    TARGET.mkdir(exist_ok=True)
-    if not (TARGET / "lib/teavm-tooling-0.12.3.jar").exists():
-        run("mvn", "-q", "-f", ROOT / "pom.xml", "dependency:copy-dependencies", "-DoutputDirectory=target/lib")
+def bootstrap_wasm_toolchain():
     def fetch(item):
         name, url = item
         if (CHAIN / name).is_dir():
@@ -44,9 +41,19 @@ def bootstrap(toolchain=True):
         with tarfile.open(archive) as tar:
             tar.extractall(CHAIN, filter="data")
         archive.unlink()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+        list(pool.map(fetch, PACKAGES.items()))
+
+
+def bootstrap(toolchain=True):
+    TARGET.mkdir(exist_ok=True)
+    if not (TARGET / "lib/teavm-tooling-0.12.3.jar").exists():
+        # Полные координаты исключают поиск плагина Maven по префиксу.
+        run("mvn", "-q", "-f", ROOT / "pom.xml",
+            "org.apache.maven.plugins:maven-dependency-plugin:3.6.1:copy-dependencies",
+            "-DoutputDirectory=target/lib")
     if toolchain:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-            list(pool.map(fetch, PACKAGES.items()))
+        bootstrap_wasm_toolchain()
     cp = str(TARGET / "lib/*")
     for source, dest in [(ROOT / "mcsa-bukkit/src/main/java", TARGET / "sdk"), (ROOT / "src/main/java", TARGET / "tool")]:
         shutil.rmtree(dest, ignore_errors=True)

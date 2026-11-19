@@ -119,6 +119,69 @@ fn validation_rejects_changed_stamp_policy_order_or_ownership() {
 }
 
 #[test]
+fn completed_groups_reassemble_into_original_serial_order() {
+    let tasks = [
+        task(u64::MAX, vec![Access::Write(A)]),
+        task(0, vec![Access::Write(B)]),
+        task(7, vec![Access::Read(A)]),
+    ];
+    let plan = build(STAMP, &tasks, POLICY).unwrap();
+    assert_eq!(plan.groups(), [vec![u64::MAX, 7], vec![0]]);
+    let completed = plan.groups()
+        .iter()
+        .rev()
+        .flatten()
+        .map(|&id| TaskResult { stamp: STAMP, id, value: Box::new(id) })
+        .collect();
+    let ordered = plan.collect_results(STAMP, &tasks, POLICY, completed).unwrap();
+    assert_eq!(ordered, [Box::new(u64::MAX), Box::new(0), Box::new(7)]);
+
+    let empty = build(STAMP, &[], POLICY).unwrap();
+    assert!(empty.collect_results::<()>(STAMP, &[], POLICY, vec![]).unwrap().is_empty());
+}
+
+#[test]
+fn collecting_results_requires_exactly_one_value_for_each_task() {
+    let tasks = [task(8, vec![]), task(2, vec![])];
+    let plan = build(STAMP, &tasks, POLICY).unwrap();
+    let collect = |ids: &[TaskId]| {
+        let completed = ids.iter().map(|&id| TaskResult { stamp: STAMP, id, value: () }).collect();
+        plan.collect_results(STAMP, &tasks, POLICY, completed)
+    };
+    assert_eq!(collect(&[8, 8]), Err(ResultError::DuplicateResult(8)));
+    assert_eq!(collect(&[8, 5]), Err(ResultError::UnexpectedTask(5)));
+    assert_eq!(collect(&[8]), Err(ResultError::MissingResult(2)));
+    assert_eq!(collect(&[]), Err(ResultError::MissingResult(8)));
+}
+
+#[test]
+fn collecting_results_rejects_stale_inputs_and_results_for_reused_ids() {
+    let tasks = [task(8, vec![Access::Read(A)])];
+    let plan = build(STAMP, &tasks, POLICY).unwrap();
+    let completed = || vec![TaskResult { stamp: STAMP, id: 8, value: () }];
+    let moved = [task(8, vec![Access::Read(B)])];
+    assert_eq!(
+        plan.collect_results(STAMP, &moved, POLICY, completed()),
+        Err(ResultError::StalePlan(StalePlan::Tasks)),
+    );
+    assert_eq!(
+        plan.collect_results(STAMP, &tasks, Policy::ForceSerial, completed()),
+        Err(ResultError::StalePlan(StalePlan::Policy)),
+    );
+    for stamp in [Stamp { tick: 71, ..STAMP }, Stamp { epoch: 10, ..STAMP }] {
+        assert_eq!(
+            plan.collect_results(stamp, &tasks, POLICY, completed()),
+            Err(ResultError::StalePlan(StalePlan::Stamp)),
+        );
+        let current = build(stamp, &tasks, POLICY).unwrap();
+        assert_eq!(
+            current.collect_results(stamp, &tasks, POLICY, completed()),
+            Err(ResultError::StaleResult(8)),
+        );
+    }
+}
+
+#[test]
 fn new_tick_can_split_after_bridge_disappears_without_retained_ownership() {
     let tasks = [task(10, vec![Access::Write(A)]),
         task(7, vec![Access::Read(A), Access::Write(B)]), task(1, vec![Access::Read(B)])];

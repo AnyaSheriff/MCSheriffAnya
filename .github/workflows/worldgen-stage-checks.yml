@@ -89,7 +89,7 @@ jobs:
           out=pathlib.Path('worldgen-stage-evidence');out.mkdir(exist_ok=True)
           names=['inputs.json','summary.json']
           for i in range(1,5):
-              names += [f'seed-{i}/{n}' for n in ('plan.json','comparison.json','stage-link.json','vanilla.log','ours.log','vanilla-commands.txt','ours-commands.txt','vanilla-cleanup.json','ours-cleanup.json','vanilla-preexisting.json','ours-preexisting.json','vanilla-control.json','ours-control.json')]
+              names += [f'seed-{i}/{n}' for n in ('plan.json','comparison.json','stage-link.json','vanilla-console-blocks.json','vanilla.log','ours.log','vanilla-commands.txt','ours-commands.txt','vanilla-cleanup.json','ours-cleanup.json','vanilla-preexisting.json','ours-preexisting.json','vanilla-control.json','ours-control.json')]
           for name in names:
               p=source/name
               if p.is_file() and not p.is_symlink():

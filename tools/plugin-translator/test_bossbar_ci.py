@@ -113,3 +113,47 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3719 filtered out; f
             for name, failure in zip(ci.TESTS, receipt['failures']):
                 self.assertTrue(failure.startswith(name + ':'))
             self.assertTrue(all(f'runtime-{i}.log' in receipt['files'] for i in range(1, 4)))
+
+
+class TranslationFailureReceipt(unittest.TestCase):
+    def test_each_failed_stage_keeps_evidence_and_stops_following_tools(self):
+        for failed_stage in range(1, 4):
+            with self.subTest(stage=failed_stage), tempfile.TemporaryDirectory() as folder:
+                called = []
+
+                def fake_run(command, log):
+                    called.append(command)
+                    log.write_text(f'stage {len(called)}: retained diagnostic\n')
+                    if len(called) == failed_stage:
+                        raise subprocess.CalledProcessError(2, command)
+
+                with patch.object(ci, 'run', fake_run), patch.dict(ci.os.environ, {'GITHUB_ACTIONS': 'true'}), patch.object(
+                    ci.sys, 'argv', ['bossbar_ci.py', 'translate', '--output', folder]
+                ):
+                    with self.assertRaises(SystemExit):
+                        ci.main()
+                receipt = json.loads((Path(folder) / 'translate-receipt.json').read_text())
+                self.assertEqual(len(called), failed_stage)
+                self.assertEqual(len(receipt['failures']), 1)
+                self.assertTrue(receipt['failures'][0].startswith('translate:'))
+                self.assertIn('returned non-zero exit status 2', receipt['failures'][0])
+                self.assertIn('translate-before-source.json', receipt['files'])
+                self.assertIn('translate-after-source.json', receipt['files'])
+                logs = ('build-fixtures.log', 'guards.log', 'translation.log')
+                for name in logs[:failed_stage]:
+                    self.assertIn(name, receipt['files'])
+                for name in logs[failed_stage:]:
+                    self.assertNotIn(name, receipt['files'])
+                self.assertNotIn('plugin.wasm', receipt['files'])
+
+    def test_missing_translation_artifact_is_failure_not_success(self):
+        with tempfile.TemporaryDirectory() as folder, tempfile.TemporaryDirectory() as inputs:
+            with patch.object(ci, 'run'), patch.object(ci, 'TRANSLATOR', Path(inputs)), patch.dict(
+                ci.os.environ, {'GITHUB_ACTIONS': 'true'}
+            ), patch.object(ci.sys, 'argv', ['bossbar_ci.py', 'translate', '--output', folder]):
+                with self.assertRaises(SystemExit):
+                    ci.main()
+            receipt = json.loads((Path(folder) / 'translate-receipt.json').read_text())
+            self.assertEqual(len(receipt['failures']), 1)
+            self.assertIn('bossbar.jar', receipt['failures'][0])
+            self.assertNotIn('plugin.wasm', receipt['files'])

@@ -79,10 +79,53 @@ impl Plan {
         if self.tasks != tasks { return Err(StalePlan::Tasks); }
         Ok(())
     }
+
+    /// После барьера проверяет входы и собирает буфер для последовательного применения.
+    /// Владелец входа сохраняет его замороженным до конца применения. Рабочее задание
+    /// копирует stamp при запуске и возвращает значение без публикации эффектов.
+    pub fn collect_results<R>(
+        &self,
+        stamp: Stamp,
+        tasks: &[Task],
+        policy: Policy,
+        completed: Vec<TaskResult<R>>,
+    ) -> Result<Vec<R>, ResultError> {
+        self.validate(stamp, tasks, policy).map_err(ResultError::StalePlan)?;
+        let mut by_id: BTreeMap<_, _> = self.tasks.iter().map(|task| (task.id, None)).collect();
+        for TaskResult { stamp: result_stamp, id, value } in completed {
+            if result_stamp != stamp {
+                return Err(ResultError::StaleResult(id));
+            }
+            let slot = by_id.get_mut(&id).ok_or(ResultError::UnexpectedTask(id))?;
+            if slot.is_some() {
+                return Err(ResultError::DuplicateResult(id));
+            }
+            *slot = Some(value);
+        }
+        self.tasks
+            .iter()
+            .map(|task| by_id.remove(&task.id).flatten().ok_or(ResultError::MissingResult(task.id)))
+            .collect()
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StalePlan { Stamp, Policy, Tasks }
+
+pub struct TaskResult<R> {
+    pub stamp: Stamp,
+    pub id: TaskId,
+    pub value: R,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResultError {
+    StalePlan(StalePlan),
+    StaleResult(TaskId),
+    UnexpectedTask(TaskId),
+    DuplicateResult(TaskId),
+    MissingResult(TaskId),
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PlanError {

@@ -98,4 +98,37 @@ mod own_mod_source_tests {
         assert!(chat(&shared, end).is_empty());
         assert!(messages(&shared).is_empty());
     }
+
+    #[test]
+    #[ignore = "нужен собственный mod-chat из build_fixtures.py --chat, CI-only"]
+    fn translated_own_mod_chat_is_typed_ordered_and_cancelled() {
+        let root = server_root("own-mod-chat");
+        for name in ["mod-welcome", "mod-chat"] { install_mod(&root, name); }
+        let shared = shared();
+        let mut host = Host::new(Arc::clone(&shared), root).unwrap();
+        host.tick(0);
+        host.load("mod-welcome").unwrap();
+        assert_eq!(host.chat(&view(), "before"), ChatOutcome::Pass);
+        host.load("mod-chat").unwrap();
+        let uuid = crate::network::login::format_uuid(&[1; 16]);
+        for text in [r#"Привет "тест" <raw>"#, "second call"] {
+            let from = shared.chat.lock().unwrap().count();
+            assert_eq!(host.chat(&view(), text), ChatOutcome::Cancel);
+            assert_eq!(chat(&shared, from), [
+                format!("chat:first:Первый:{text}"), format!("chat:second:{uuid}:{text}"),
+            ], "оба обработчика видят исходный текст; отмена не прерывает свой список");
+            assert!(host.is_loaded("mod-chat"));
+        }
+        host.unload("mod-chat").unwrap();
+        let from = shared.chat.lock().unwrap().count();
+        assert_eq!(host.chat(&view(), "after unload"), ChatOutcome::Pass);
+        assert!(chat(&shared, from).is_empty());
+        host.load("mod-chat").unwrap();
+        assert_eq!(host.chat(&view(), "after reload"), ChatOutcome::Cancel);
+        assert_eq!(chat(&shared, from), [
+            "chat:first:Первый:after reload".to_string(), format!("chat:second:{uuid}:after reload"),
+        ], "повторная загрузка не удваивает обработчики");
+        host.unload_all();
+    }
+
 }

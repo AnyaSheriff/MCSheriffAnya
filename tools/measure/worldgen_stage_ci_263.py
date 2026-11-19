@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import urllib.request
@@ -14,6 +15,9 @@ import worldgen_exact_ci_263 as baseline
 import worldgen_stage_263 as stage
 
 ROOT = Path(__file__).resolve().parents[2]
+CONSOLE_SEED = 100554032945340
+CONSOLE_POSITIONS = ((8195, 0, 8208), (8195, 1, 8208), (8195, 2, 8208),
+                     (8195, 3, 8208), (8195, 64, 8208), (8196, 1, 8209))
 
 
 def sha(path):
@@ -34,6 +38,39 @@ def load_records(world, wanted):
     if records.keys() != wanted or before != exact.fingerprints(files):
         raise ValueError('incomplete or changing saved coverage')
     return records
+
+
+def check_vanilla_console(server, world, evidence):
+    x, _, z = CONSOLE_POSITIONS[0]
+    chunk = x // 16, z // 16
+    region = exact.region_dir(world, 'overworld') / f'r.{chunk[0] // 32}.{chunk[1] // 32}.mca'
+    reader = exact.Reader()
+    [(cx, cz, blocks, biomes, _)] = reader.read(region, {chunk})
+    names, _, _ = exact.chunk_data(reader, blocks, biomes)
+    checks = []
+    for i, (x, y, z) in enumerate(CONSOLE_POSITIONS):
+        if (x // 16, z // 16) != (cx, cz):
+            raise ValueError('console probe outside decoded chunk')
+        name = names[y + 64, z % 16, x % 16]
+        block = name if ':' in name else f'minecraft:{name}'
+        if not re.fullmatch(r'[a-z0-9_.-]+:[a-z0-9_./-]+', block):
+            raise ValueError('invalid decoded block identifier: ' + repr(block))
+        pos = f'{x} {y} {z}'
+        check = {'position': [x, y, z], 'decoded_block': block}
+        signals = []
+        # Проверка загрузки нужна в обеих ветках. Молчание не подтверждает расхождение.
+        for condition in ('if', 'unless'):
+            marker = f'MCSA_WORLDGEN_BLOCK_{i}_{condition.upper()}_END'
+            response = server.command(f'execute in minecraft:overworld if loaded {pos} '
+                                      f'{condition} block {pos} {block} run say {marker}', timeout=60)
+            check[f'{condition}_response'] = response
+            signals.append(any(line.rstrip().endswith('] ' + marker) for line in response.splitlines()))
+        matched, differed = signals
+        check['status'] = 'inconclusive' if matched == differed else 'match' if matched else 'mismatch'
+        checks.append(check)
+    report = {'schema': 1, 'seed': CONSOLE_SEED, 'dimension': 'overworld',
+              'all_match': all(check['status'] == 'match' for check in checks), 'checks': checks}
+    (evidence / 'vanilla-console-blocks.json').write_text(json.dumps(report, indent=2) + '\n')
 
 
 def validate_build(receipt, head, binary, trace):
@@ -83,7 +120,8 @@ def main():
             plan = {'version': '26.3', 'seed': seed, 'dimension': 'overworld',
                     'chunks': [list(c) for c in baseline.CHUNKS]}
             (evidence / 'plan.json').write_text(json.dumps(plan, indent=2) + '\n')
-            vanilla = baseline.generate('vanilla', seed, jarpath, scratch, evidence, 27860)
+            vanilla = baseline.generate('vanilla', seed, jarpath, scratch, evidence, 27860,
+                                        after_saved=check_vanilla_console if seed == CONSOLE_SEED else None)
             ours = baseline.generate('ours', seed, binary, scratch, evidence, 27861)
             report = exact.compare_worlds(ours, vanilla, plan)
             (evidence / 'comparison.json').write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + '\n')

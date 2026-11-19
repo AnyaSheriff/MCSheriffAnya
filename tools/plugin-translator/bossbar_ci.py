@@ -90,13 +90,17 @@ def main():
     receipt(output, args.mode + '-before')
     failures = []
     if args.mode == 'translate':
-        if 'include!("bossbar_tests.rs");' not in (ROOT / 'src/plugins/tests.rs').read_text():
-            raise ValueError('Нет согласованного root include bossbar_tests.rs; нельзя заявить runtime coverage')
-        run([sys.executable, '-B', TRANSLATOR / 'build-fixtures.py'], output / 'build-fixtures.log')
-        run([sys.executable, '-B', TRANSLATOR / 'test-bossbar-guards.py', '--output', output / 'guards'], output / 'guards.log')
-        run([sys.executable, '-B', TRANSLATOR / 'translate.py', TRANSLATOR / 'target/bossbar.jar', '--output', ROOT / 'tmp/java-test/plugins', '--report', output / 'translation-report.json'], output / 'translation.log')
-        for source in [TRANSLATOR / 'target/bossbar.jar', TRANSLATOR / 'target/mcsa-bukkit.jar', ROOT / 'tmp/java-test/plugins/java-bossbar/plugin.wasm', ROOT / 'tmp/java-test/plugins/java-bossbar/plugin.toml']:
-            shutil.copyfile(source, output / source.name)
+        try:
+            if 'include!("bossbar_tests.rs");' not in (ROOT / 'src/plugins/tests.rs').read_text():
+                raise ValueError('Нет согласованного root include bossbar_tests.rs; нельзя заявить runtime coverage')
+            run([sys.executable, '-B', TRANSLATOR / 'build-fixtures.py'], output / 'build-fixtures.log')
+            run([sys.executable, '-B', TRANSLATOR / 'test-bossbar-guards.py', '--output', output / 'guards'], output / 'guards.log')
+            run([sys.executable, '-B', TRANSLATOR / 'translate.py', TRANSLATOR / 'target/bossbar.jar', '--output', ROOT / 'tmp/java-test/plugins', '--report', output / 'translation-report.json'], output / 'translation.log')
+            for source in [TRANSLATOR / 'target/bossbar.jar', TRANSLATOR / 'target/mcsa-bukkit.jar', ROOT / 'tmp/java-test/plugins/java-bossbar/plugin.wasm', ROOT / 'tmp/java-test/plugins/java-bossbar/plugin.toml']:
+                shutil.copyfile(source, output / source.name)
+        except (subprocess.CalledProcessError, ValueError, OSError) as error:
+            # Ошибка сборки тоже оставляет проверяемый receipt, но не продолжает перевод.
+            failures.append(f'translate: {error}')
     else:
         failures = run_runtime_tests(output)
     receipt(output, args.mode + '-after')

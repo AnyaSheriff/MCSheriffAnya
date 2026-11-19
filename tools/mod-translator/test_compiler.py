@@ -122,17 +122,38 @@ class ProjectTests(unittest.TestCase):
     def test_own_project(self):
         manifest, program, digest = load(self.folder)
         self.assertEqual(manifest['name'], 'mod-welcome')
+        self.assertEqual(manifest['sdk_abi'], 'mcsa:api@0.1.0')
         self.assertEqual(len(digest), 64)
         self.assertEqual(len(program['callbacks']), 6)
+
+    def test_legacy_manifest_loads_as_same_project(self):
+        explicit = load(self.folder)
+        path = self.folder / 'mod.toml'
+        path.write_text(path.read_text().replace('sdk_abi = "mcsa:api@0.1.0"\n', ''))
+        self.assertEqual(load(self.folder), explicit)
+
+    def test_unsupported_sdk_abi_rejected_before_source_parse(self):
+        path = self.folder / 'mod.toml'
+        original = path.read_text()
+        for value in ['"mcsa:api@0.2.0"', '"mcsa-mod-source-0.1"', '""', '1', '["mcsa:api@0.1.0"]']:
+            with self.subTest(value=value):
+                path.write_text(original.replace('"mcsa:api@0.1.0"', value))
+                with patch('translate.parse') as parse_source:
+                    with self.assertRaises(Refusal) as caught:
+                        load(self.folder)
+                    self.assertEqual(caught.exception.issue['code'], 'sdk-abi')
+                    parse_source.assert_not_called()
 
     def test_target_and_api_refusal(self):
         path = self.folder / 'mod.toml'
         original = path.read_text()
-        for before, after in [('26.3', '1.21.1'), ('777', '767'), ('mcsa-mod-source-0.1', 'fabric')]:
+        for before, after, code in [('26.3', '1.21.1', 'target'), ('777', '767', 'target'),
+                                    ('mcsa-mod-source-0.1', 'fabric', 'api')]:
             with self.subTest(after=after):
                 path.write_text(original.replace(before, after))
-                with self.assertRaises(Refusal):
+                with self.assertRaises(Refusal) as caught:
                     load(self.folder)
+                self.assertEqual(caught.exception.issue['code'], code)
         path.write_text(original)
 
     def test_extra_manifest_fields_refused(self):
@@ -181,6 +202,15 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('line', result['issue'])
             self.assertEqual(list(Path(output).iterdir()), [report])
 
+    def test_cli_reports_abi_profile_and_target(self):
+        with tempfile.TemporaryDirectory() as output:
+            report = Path(output) / 'report.json'
+            self.assertEqual(main([str(self.folder), '--check-only', '--report', str(report)]), 0)
+            result = json.loads(report.read_text())
+            self.assertEqual(result['profile'], 'mcsa-mod-source-0.1')
+            self.assertEqual(result['sdk_abi'], 'mcsa:api@0.1.0')
+            self.assertEqual(result['target'], '26.3/777')
+
     def test_emit_c_requires_full_valid_source(self):
         with tempfile.TemporaryDirectory() as output:
             path = Path(output) / 'result.c'
@@ -221,6 +251,66 @@ class ProjectTests(unittest.TestCase):
                 build(self.folder, Path(output))
             self.assertEqual(caught.exception.issue['code'], 'destination')
             self.assertEqual((destination / 'owner-data').read_bytes(), b'keep')
+
+
+
+class ChatCompilerTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = REPO / 'tools/mod-api/fixtures/chat'
+        self.source = (self.fixture / 'ChatAudit.java').read_text()
+
+    def test_typed_chat_fixture_and_existing_abi(self):
+        manifest, program, _ = load(self.fixture)
+        self.assertEqual(manifest['sdk_abi'], 'mcsa:api@0.1.0')
+        self.assertEqual([c['event'] for c in program['callbacks']], ['onChat', 'onChat'])
+        self.assertEqual(program['callbacks'][0]['actions'][0]['expression'], [
+            ('literal', 'chat:first:'), ('chat', 'playerName'), ('literal', ':'), ('chat', 'message')])
+        self.assertEqual(program['callbacks'][1]['actions'][1]['operation'], 'cancel')
+
+    def test_original_text_and_sender_use_borrowed_wit_fields(self):
+        code = generate(parse(self.source))
+        self.assertIn('append(message->ptr,message->len);', code)
+        self.assertIn('append(who->name.ptr,who->name.len);', code)
+        self.assertIn('append(who->uuid.ptr,who->uuid.len);', code)
+        self.assertNotIn('plugin_string_free', code)
+
+    def test_cancel_is_monotonic_and_callbacks_are_ordered(self):
+        code = generate(parse(self.source))
+        self.assertEqual(code.count('*cancelled=true;'), 2)
+        self.assertNotIn('*cancelled=false', code)
+        self.assertLess(code.index('callback_0(who,message,&cancelled);'), code.index('callback_1(who,message,&cancelled);'))
+        self.assertIn('bool cancelled=false; if(active)', code)
+        self.assertIn('MCSA_API_TYPES_CHAT_RESULT_CANCEL : MCSA_API_TYPES_CHAT_RESULT_PASS', code)
+
+    def test_observer_without_cancel_is_supported(self):
+        code = generate(parse(self.source.replace('chat.cancel();', '')))
+        self.assertNotIn('*cancelled=true;', code)
+        self.assertIn('bool cancelled=false;', code)
+
+    def test_unsupported_chat_mutations_are_rejected(self):
+        for action in ['chat.replace("x");', 'chat.uncancel();', 'chat.cancel(false);', 'ctx.message(chat, "x");']:
+            with self.subTest(action=action), self.assertRaises(Refusal):
+                parse(self.source.replace('chat.cancel();', action))
+
+    def test_event_getters_do_not_cross_types(self):
+        for expression in ['chat.name()', 'chat.uuid()', 'chat.player()', 'chat.isCancelled()', 'player.name()']:
+            with self.subTest(expression=expression), self.assertRaises(Refusal):
+                parse(self.source.replace('chat.playerName()', expression))
+        with self.assertRaises(Refusal):
+            parse(SOURCE.replace('player.name()', 'player.message()'))
+
+    def test_cancel_is_not_available_in_lifecycle(self):
+        with self.assertRaises(Refusal):
+            parse(SOURCE.replace('ctx.log("mod-fixture started");', 'chat.cancel();'))
+
+    def test_cancel_counts_toward_existing_action_limit(self):
+        with self.assertRaises(Refusal) as caught:
+            parse(self.source.replace('chat.cancel();', 'chat.cancel();' * 65))
+        self.assertEqual(caught.exception.issue['code'], 'action-limit')
+
+    def test_new_fixture_still_requires_full_source_parse(self):
+        with self.assertRaises(Refusal):
+            parse(self.source + 'hidden();')
 
 
 if __name__ == '__main__':

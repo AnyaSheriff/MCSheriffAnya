@@ -15,6 +15,13 @@ CLI принимает ровно два файла: собственный `mod
 
 ## Пример и команды
 
+В `mod.toml` поле `api = "mcsa-mod-source-0.1"` задаёт профиль исходника,
+`sdk_abi = "mcsa:api@0.1.0"` — ABI компонента, а `minecraft = "26.3"` и
+`protocol = 777` — целевую версию Java Edition и протокола. Переводчик
+проверяет каждое значение. Для прежнего манифеста без `sdk_abi` с этим
+профилем и целью действует ABI `mcsa:api@0.1.0`. Неизвестное значение
+`sdk_abi` вызывает отказ с кодом `sdk-abi`.
+
 ```sh
 python3 tools/mod-translator/translate.py tools/mod-api/fixtures/welcome --check-only --report /tmp/mod-check.json
 python3 tools/mod-translator/translate.py tools/mod-api/fixtures/welcome --emit-c /tmp/own-mod.c
@@ -27,8 +34,9 @@ python3 tools/mod-translator/build_fixtures.py
 `wit-bindgen c --world plugin`, WASI C-компиляцию и `wasm-tools validate`, затем
 атомарно создаёт `plugins/<name>/{plugin.toml,plugin.wasm,conversion.json,data/}`.
 Существующая папка не перезаписывается. `conversion.json` содержит SHA исходника
-и WASM, число обработчиков и точную версию профиля. Успешная валидация WASM сама
-по себе не доказывает исполнение в хозяине: ниже отдельный runtime gate.
+и WASM и число обработчиков. В `conversion.json` и в отчёте об успешной
+проверке указаны профиль исходника, целевая версия с протоколом и ABI компонента.
+Исполнение в хозяине проверяет отдельный runtime-тест, описанный ниже.
 
 Инструменты уже закреплены существующей цепочкой:
 `wit-bindgen 0.63.0`, `wasi-sdk 34`, `wasm-tools 1.262.0` в
@@ -101,3 +109,30 @@ load/start, два join-callback с точными NBT и порядком, quit
 ранний такт, повтор, unload/stop, чужой task handle, повторную загрузку,
 второй Store и отсутствие callbacks после unload. Сетевой Minecraft-клиент,
 реальные Fabric/Forge-моды и Android этим тестом не проверяются.
+
+
+## Типизированное событие чата (добавление 19 ноября)
+
+`ctx.onChat(chat -> { ... });` получает собственный `ChatEvent`: `message()`,
+`playerName()` и `playerUuid()` возвращают исходный текст и снимок отправителя
+из WIT-вызова. Объект существует только во время callback. `chat.cancel();`
+необратимо отменяет доставку этого сообщения. Все обработчики текущего мода
+всё равно выполняются в порядке регистрации; каждый получает тот же текст.
+При следующем сообщении флаг отмены начинается заново. Без отмены возвращается
+Pass. Между разными модами действует текущий порядок хозяина; после Cancel
+хозяин может не вызывать следующие моды — общей транзакции здесь нет.
+
+В onChat доступны log/broadcast со строковыми полями события; личное сообщение
+через этот объект, изменение текста, снятие отмены, сторонние getters и сохранение
+события не поддержаны и приводят к полному отказу перевода. Broadcast по-прежнему
+применяет собственные ограничения хозяина; он не является исходной доставкой чата.
+Публичный SDK получил ChatEvent и Context.onChat; ABI WIT не менялся, прежние
+шестипольные манифесты и optional sdk_abi продолжают приниматься.
+
+Собственная fixture `tools/mod-api/fixtures/chat` намеренно отменяет каждое
+сообщение и публикует две диагностические строки для проверки порядка.
+На GitHub: `python3 -B tools/mod-translator/build_fixtures.py --chat`, затем
+`cargo test --locked --release --bin mcsheriffanya plugins::tests::own_mod_source_tests::translated_own_mod_chat_is_typed_ordered_and_cancelled -- --ignored --exact --test-threads=1`.
+Этот новый Host-тест подготовлен, но ещё НЕ выполнен. Локальные Python-проверки
+не доказывают новую WASM-сборку или игровую доставку. Это небольшой собственный
+API-срез, не совместимость Fabric/Forge и не полноценный API будущих модов.
