@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 
 const SEEDS: [i64; 4] = [1_792_932_773_345_722_119, 100_554_032_945_340, 42, -20_261_116];
 const CHUNKS: [(i32, i32); 2] = [(512, 512), (512, 513)];
+const EARLY_STAGES: [&str; 4] = ["initial_fill", "ore_host_prep", "ores", "underground_dig"];
 const STAGES: [&str; 22] = [
     "base_underground", "dungeons", "mineshaft", "stronghold", "ruined_portal",
     "shipwreck", "ocean_ruin", "trail_ruins", "trees", "vegetation", "structure_terrain",
@@ -139,7 +140,17 @@ fn worldgen_stage_trace_263_export() {
             let ordinary = Chunk::generated(&generator, cx, cz);
             let mut stages = Vec::new();
             let mut rows = Vec::new();
+            let mut early_stages = Vec::new();
+            let base = Chunk::underground_generated_observed(&generator, cx, cz, |stage, chunk| {
+                early_stages.push(stage);
+                rows.push(snapshot(stage, chunk));
+            });
+            assert_eq!(early_stages, EARLY_STAGES);
+            assert_identical(&underground::base_chunk(&generator, cx, cz), &base);
             let traced = Chunk::generated_observed(&generator, cx, cz, |stage, chunk| {
+                if stage == "base_underground" {
+                    assert_identical(&base, chunk);
+                }
                 stages.push(stage);
                 rows.push(snapshot(stage, chunk));
             });
@@ -159,7 +170,7 @@ fn worldgen_stage_trace_263_export() {
                             climate.weirdness, climate.temperature, climate.humidity]}));
                 }
             }
-            serde_json::to_writer(&mut out, &json!({"schema": 1, "version": "26.3", "seed": seed,
+            serde_json::to_writer(&mut out, &json!({"schema": 2, "version": "26.3", "seed": seed,
                 "chunk": [cx, cz], "density_router": false, "holdout": SEEDS[2..].contains(&seed),
                 "identity": {"equal_blockstates": true, "equal_biomes": true,
                     "compared_blockstates": WORLD_HEIGHT * CHUNK_SIZE * CHUNK_SIZE,

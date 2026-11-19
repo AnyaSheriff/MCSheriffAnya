@@ -119,15 +119,25 @@ class StageTests(unittest.TestCase):
                                              'compared_blockstates': 98304, 'compared_biomes': 1536,
                                              'ordinary_blockstates_sha256': 'blocks',
                                              'ordinary_biome_ids_sha256': 'biomes'}})
-        def read(values):
+        def read(values, *, require_early_stages=False):
             with tempfile.TemporaryDirectory() as folder:
                 path = Path(folder) / 'trace.gz'
                 with gzip.open(path, 'wt') as out:
                     for record in values:
                         out.write(json.dumps(record) + '\n')
                 with patch.object(stage, 'decode_stage'):
-                    return stage.read_traces(path)
+                    return stage.read_traces(path, require_early_stages=require_early_stages)
         self.assertEqual(len(read(records)), 8)
+        with self.assertRaisesRegex(ValueError, 'unexpected trace identity'):
+            read(records, require_early_stages=True)
+        revised = copy.deepcopy(records)
+        for record in revised:
+            record['schema'] = 2
+            record['stages'][:0] = [{'stage': name} for name in stage.EARLY_STAGES]
+        self.assertEqual(len(read(revised, require_early_stages=True)), 8)
+        revised[0]['stages'][0], revised[0]['stages'][1] = revised[0]['stages'][1], revised[0]['stages'][0]
+        with self.assertRaisesRegex(ValueError, 'missing/reordered stage'):
+            read(revised, require_early_stages=True)
         for mutate in [lambda r: r.pop(), lambda r: r.append(r[0]),
                        lambda r: r[0].__setitem__('density_router', True),
                        lambda r: r[-1].__setitem__('holdout', False),

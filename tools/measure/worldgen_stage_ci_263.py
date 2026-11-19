@@ -59,7 +59,7 @@ def main():
     binary, trace = args.binary.resolve(), args.trace.resolve()
     build = json.loads(args.build_receipt.read_text())
     validate_build(build, head, binary, trace)
-    traces = stage.read_traces(trace)
+    traces = stage.read_traces(trace, require_early_stages=True)
     output = args.output.resolve(); output.mkdir(parents=True, exist_ok=False)
     pin = json.loads((ROOT / 'tools/blackbox/ci/sources-777.json').read_text())['official_jar']
     with urllib.request.urlopen(pin['url'], timeout=120) as response:
@@ -97,7 +97,7 @@ def main():
             selected = [r['column'] for r in diagnostic['neighbors'] if r['in_plan']]
             links = [stage.link_trace(traces[seed, coord], saved[coord], selected) for coord in sorted(wanted)]
             stage_report = {'schema': 1, 'seed': seed, 'holdout': seed in stage.SEEDS[2:],
-                            'own_stage_semantics': 'base_underground already contains caves/ores/underground processing; later stages never skipped/reordered.',
+                            'own_stage_semantics': 'Initial fill includes inline cave sampling. Separate snapshots record ore-host preparation, ores, and underground digging before the decorated base.',
                             'official_observation': 'Only final ordinary saved blocks/biomes; no official internal-stage data.',
                             'argmax_column_in_trace': tuple(diagnostic['selected_column'][j] // 16 for j in range(2)) in wanted,
                             'all_trace_chunks_final_saved_equal': True, 'traced_chunks': links}

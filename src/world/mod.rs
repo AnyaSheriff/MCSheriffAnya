@@ -609,6 +609,15 @@ impl Chunk {
     /// Неизменяемый снимок до комнат: соседние чанки проверяют те же
     /// пещеры независимо от порядка генерации и уже загруженного мира.
     fn underground_generated(generator: &Generator, chunk_x: i32, chunk_z: i32) -> Self {
+        Self::underground_generated_observed(generator, chunk_x, chunk_z, |_, _| {})
+    }
+
+    fn underground_generated_observed(
+        generator: &Generator,
+        chunk_x: i32,
+        chunk_z: i32,
+        mut observe: impl FnMut(&'static str, &Self),
+    ) -> Self {
         let mut chunk = Self::new();
 
         // Шумы считаются один раз на столбец, а не на каждый блок: иначе на
@@ -711,9 +720,13 @@ impl Chunk {
 
         // Руда и пятна камня — после рельефа и пещер: им надо знать, где
         // камень и где воздух. Деревья — после руды: им до неё дела нет.
+        observe("initial_fill", &chunk);
         underground::prepare_ore_hosts(generator, &mut chunk, chunk_x, chunk_z);
+        observe("ore_host_prep", &chunk);
         generator.lay_ores(&mut chunk, chunk_x, chunk_z);
+        observe("ores", &chunk);
         underground::dig(generator, &mut chunk, chunk_x, chunk_z);
+        observe("underground_dig", &chunk);
         sulfur_caves::decorate(generator, &mut chunk, chunk_x, chunk_z);
         chunk
     }

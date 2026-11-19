@@ -11,7 +11,13 @@ Original JAR используется только для непрозрачно
 mineshaft, stronghold, ruined_portal, shipwreck, ocean_ruin, trail_ruins, trees,
 vegetation, structure_terrain, abandoned_camp, village, mansion, temples,
 pillager_outpost, ocean, monument, cave_biomes, ancient_city, trial_chambers, final.
-`base_underground` УЖЕ содержит пещеры/руды/подземную обработку; это не чистая density.
+Перед этим списком schema 2 записывает четыре среза собственного ядра:
+`initial_fill` после заполнения рельефа с пещерами, которые считаются в том же
+проходе, `ore_host_prep` после подготовки пород и карверов 26.3, `ores` после
+рудного прохода и `underground_dig` после прожилок и жеод. Затем серный декор
+завершает `base_underground`. Экспорт запускает этот ранний проход отдельно и
+сверяет его результат со штатным кэшем и снимком основного прохода. Старые
+трассы schema 1 можно читать вручную. Текущий CI требует schema 2.
 
 Test-only helper сохраняет каждый собственный blockstate на всех Y−64..319
 в 256 полных RLE-столбцах, все 1536 биомов и независимые SHA256. Сравниваются все

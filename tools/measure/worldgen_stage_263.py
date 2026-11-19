@@ -14,6 +14,7 @@ GROUND = frozenset(('grass_block', 'dirt', 'coarse_dirt', 'rooted_dirt', 'podzol
                    'terracotta', 'snow_block', 'powder_snow', 'ice', 'packed_ice', 'blue_ice',
                    'moss_block', 'pale_moss_block', 'netherrack', 'soul_sand', 'soul_soil',
                    'basalt', 'blackstone', 'end_stone', 'bedrock', 'obsidian', 'sulfur', 'cinnabar'))
+EARLY_STAGES = ('initial_fill', 'ore_host_prep', 'ores', 'underground_dig')
 STAGES = ('base_underground', 'dungeons', 'mineshaft', 'stronghold', 'ruined_portal',
           'shipwreck', 'ocean_ruin', 'trail_ruins', 'trees', 'vegetation', 'structure_terrain',
           'abandoned_camp', 'village', 'mansion', 'temples', 'pillager_outpost', 'ocean',
@@ -125,17 +126,21 @@ def decode_stage(stage):
     return flat_names, np.asarray(biomes, dtype=object).reshape(24, 4, 4, 4)
 
 
-def read_traces(path):
+def read_traces(path, *, require_early_stages=False):
     records = {}
     with gzip.open(path, 'rt') as stream:
         for line in stream:
             record = json.loads(line)
             key = record['seed'], tuple(record['chunk'])
-            if (record.get('schema') != 1 or record.get('version') != '26.3' or key in records
+            schema = record.get('schema')
+            if (type(schema) is not int or schema not in (1, 2)
+                    or (require_early_stages and schema != 2)
+                    or record.get('version') != '26.3' or key in records
                     or key[0] not in SEEDS or key[1] not in TRACE_CHUNKS or record.get('density_router') is not False
                     or record.get('holdout') != (key[0] in SEEDS[2:])):
                 raise ValueError('unexpected trace identity')
-            if [s['stage'] for s in record['stages']] != list(STAGES):
+            order = EARLY_STAGES + STAGES if schema == 2 else STAGES
+            if [s['stage'] for s in record['stages']] != list(order):
                 raise ValueError('missing/reordered stage')
             for stage in record['stages']:
                 decode_stage(stage)
