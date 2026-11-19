@@ -28,11 +28,19 @@ public final class RemoteBossBar implements BossBar {
   return json;
  }
  private static String hostStyle(BarStyle value){return value==BarStyle.SOLID?"progress":"notched_"+value.name().substring("SEGMENTED_".length());}
- private void send(Player player,String json,double amount,BarColor color,BarStyle style){
-  if(!Host.yes(162,player.getUniqueId().toString(),id,json,Double.toString(amount),Ascii.lower(color.name()),hostStyle(style)))
-   throw new IllegalStateException("Полоса босса отклонена хозяином: игрок не готов или превышен лимит 32 полос");
+ private boolean trySend(Player player,String json,double amount,BarColor color,BarStyle style){
+  return Host.yes(162,player.getUniqueId().toString(),id,json,Double.toString(amount),Ascii.lower(color.name()),hostStyle(style));
  }
- private void remove(Player player){if(!Host.yes(163,player.getUniqueId().toString(),id))throw new IllegalStateException("Скрытие полосы босса отклонено хозяином");}
+ private boolean tryRemove(Player player){return Host.yes(163,player.getUniqueId().toString(),id);}
+ private static IllegalStateException visibilityRefused(boolean show){
+  return new IllegalStateException(show
+   ?"Полоса босса отклонена хозяином: игрок не готов или превышен лимит 32 полос"
+   :"Скрытие полосы босса отклонено хозяином");
+ }
+ private void send(Player player,String json,double amount,BarColor color,BarStyle style){
+  if(!trySend(player,json,amount,color,style))throw visibilityRefused(true);
+ }
+ private void remove(Player player){if(!tryRemove(player))throw visibilityRefused(false);}
  // Реестр содержит только полосы с участниками, а не все когда-либо созданные объекты.
  private void detach(UUID uuid){players.remove(uuid);Set<RemoteBossBar> bars=attached.get(uuid);if(bars!=null){bars.remove(this);if(bars.isEmpty())attached.remove(uuid);}}
  public static void leave(Player player){UUID uuid=player.getUniqueId();Set<RemoteBossBar> bars=attached.remove(uuid);if(bars!=null)for(RemoteBossBar bar:bars)bar.players.remove(uuid);}
@@ -60,19 +68,35 @@ public final class RemoteBossBar implements BossBar {
  // Снимок нельзя менять снаружи; разные Java-обёртки одного UUID не дублируют зрителя.
  public List<Player> getPlayers(){prune();return Collections.unmodifiableList(new ArrayList<>(players.values()));}
  public boolean isVisible(){return visible;}
- public void setVisible(boolean value){
-  prune();if(visible==value)return;List<Player> changed=new ArrayList<>(players.size());
-  try{
-   for(Player player:players.values()){
-    if(value)send(player,titleJson,progress,color,style);else remove(player);
-    changed.add(player);
+ private boolean trySetVisible(Player player,boolean value){
+  return value?trySend(player,titleJson,progress,color,style):tryRemove(player);
+ }
+ private void rollbackVisibility(List<Player> viewers,int changed,Throwable failure){
+  // Другие плагины не исполняются внутри callback, поэтому освобождённые
+  // слоты доступны для отката скрытия.
+  for(int i=changed-1;i>=0;i--){
+   try{
+    if(!trySetVisible(viewers.get(i),visible))failure.addSuppressed(visibilityRefused(visible));
+   }catch(RuntimeException|Error rollbackFailure){
+    failure.addSuppressed(rollbackFailure);
    }
+  }
+ }
+ public void setVisible(boolean value){
+  prune();
+  if(visible==value)return;
+  List<Player> viewers=new ArrayList<>(players.values());
+  int changed=0;
+  // Штатный отказ остаётся булевым результатом до завершения отката.
+  try{
+   while(changed<viewers.size()&&trySetVisible(viewers.get(changed),value))changed++;
   }catch(RuntimeException|Error failure){
-   // В одном callback хозяин не исполняет другие плагины: освобождённые слоты
-   // при откате скрытия остаются свободными. Отказ показа не оставляет «призрак».
-   for(int i=changed.size()-1;i>=0;i--)try{
-    if(value)remove(changed.get(i));else send(changed.get(i),titleJson,progress,color,style);
-   }catch(RuntimeException|Error rollbackFailure){failure.addSuppressed(rollbackFailure);}
+   rollbackVisibility(viewers,changed,failure);
+   throw failure;
+  }
+  if(changed<viewers.size()){
+   IllegalStateException failure=visibilityRefused(value);
+   rollbackVisibility(viewers,changed,failure);
    throw failure;
   }
   visible=value;
