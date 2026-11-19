@@ -72,6 +72,33 @@ class StageTests(unittest.TestCase):
         r = stage.column_record(values)
         self.assertEqual((r['top_non_air'], r['top_water'], r['top_substrate']), (127, 62, 0))
 
+    def test_initial_relief_keeps_water_and_leaves_out_of_substrate_gap(self):
+        first = snapshot()
+        first.update(stage='initial_fill', state_names={'0': 'air', '1': 'stone', '2': 'water'})
+        first['columns'][0]['runs'] = [[-64, -1, 0], [0, 0, 1], [1, 1, 2], [2, 319, 0]]
+        native = np.zeros((384, 16, 16), dtype='>i4')
+        native[64:66, 0, 0] = [1, 2]
+        first['blockstates_sha256'] = hashlib.sha256(
+            b'mcsa-stage-blockstates-v1:y,z,x:i32be\n' + native.tobytes()).hexdigest()
+        grid = [{'column': [x - 16, z], 'grid_top': -65} for x in range(16) for z in range(16)]
+        grid[0]['grid_top'] = 0
+        traces = {(-1, 0): {'stages': [first], 'diagnostic_columns': grid}}
+        vanilla = {(-1, 0): arrays()}
+        vanilla[-1, 0][0][62, 0, 0] = 'sand'
+        vanilla[-1, 0][0][74, 0, 0] = 'oak_leaves'
+        report = stage.initial_relief_report(traces, vanilla)
+        self.assertEqual(report['columns'], 256)
+        self.assertEqual(report['grid_equals_initial_substrate'], 256)
+        self.assertEqual(report['initial_non_air_above_grid'], 1)
+        self.assertEqual(report['initial_vs_reference_substrate_abs_sum'], 2)
+        self.assertEqual(report['worst_substrate_column'],
+                         {'column': [-16, 0], 'grid_top': 0, 'initial_substrate_top': 0,
+                          'initial_non_air_top': 1, 'reference_final_substrate_top': -2,
+                          'initial_minus_reference': 2})
+        grid[-1] = grid[0]
+        with self.assertRaisesRegex(ValueError, 'grid top coverage'):
+            stage.initial_relief_report(traces, vanilla)
+
     def test_full_trace_decode_and_native_hashes(self):
         a, b = stage.decode_stage(snapshot())
         self.assertEqual(a.shape, (384, 16, 16))

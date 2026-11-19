@@ -139,17 +139,23 @@ def main():
             if (tuple(diagnostic['selected_column']) not in linked_columns
                     or linked_columns != {tuple(col) for col in selected}):
                 raise ValueError('missing stage links for height discrepancy')
+            relief = stage.initial_relief_report(traces, load_records(vanilla, wanted))
+            if relief['columns'] != diagnostic['compared_columns']:
+                raise ValueError('initial relief coverage does not match paired plan')
             stage_report = {'schema': 1, 'seed': seed, 'holdout': seed in stage.SEEDS[2:],
                             'own_stage_semantics': 'Initial fill includes inline cave sampling. Separate snapshots record ore-host preparation, ores, and underground digging before the decorated base.',
                             'official_observation': 'Only final ordinary saved blocks/biomes; no official internal-stage data.',
                             'argmax_column_in_trace': True,
-                            'all_trace_chunks_final_saved_equal': True, 'traced_chunks': links}
+                            'all_trace_chunks_final_saved_equal': True, 'traced_chunks': links,
+                            'initial_relief': relief,
+                            'initial_relief_scope': 'Substrate is a material whitelist, also applied to final vanilla saves.'}
             (evidence / 'stage-link.json').write_text(json.dumps(stage_report, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
             results.append({'seed': seed, 'holdout': seed in stage.SEEDS[2:], 'recording_valid': True,
                             'parity': report['parity'], 'argmax': diagnostic['selected_column'],
                             'height_max': diagnostic['abs_error_max'], 'tie_count': diagnostic['tie_count'],
                             'own_observer_identity': True, 'final_saved_equal': True,
-                            'argmax_column_in_trace': stage_report['argmax_column_in_trace']})
+                            'argmax_column_in_trace': stage_report['argmax_column_in_trace'],
+                            'initial_relief': relief})
             del traces
     (output / 'summary.json').write_text(json.dumps({'source': head, 'results': results,
         'generator_fix': False, 'scope': 'Diagnostic stage experiment, not full-generator parity.'}, indent=2) + '\n')

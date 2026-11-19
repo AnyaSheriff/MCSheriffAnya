@@ -55,6 +55,48 @@ def column_record(names):
             'top_substrate': top(names, natural), 'profile_y_inclusive_name': rle_names(names)}
 
 
+def initial_relief_report(traces, vanilla):
+    """Сетка нашего рельефа, первое заполнение и грунт в конечном сохранении ванили."""
+    if not traces or traces.keys() != vanilla.keys():
+        raise ValueError('complete paired relief coverage required')
+    report = {'columns': 0, 'grid_equals_initial_substrate': 0,
+              'initial_non_air_above_grid': 0, 'initial_non_air_below_grid': 0,
+              'initial_vs_reference_substrate_abs_sum': 0}
+    worst_key = None
+    for (cx, cz), trace in sorted(traces.items()):
+        initial = trace['stages'][0]
+        if initial['stage'] != 'initial_fill':
+            raise ValueError('missing initial_fill for relief diagnostic')
+        names, _ = decode_stage(initial)
+        diagnostics = trace['diagnostic_columns']
+        grid = {tuple(c['column']): c['grid_top'] for c in diagnostics}
+        columns = {(cx * 16 + x, cz * 16 + z) for x in range(16) for z in range(16)}
+        if len(diagnostics) != 256 or grid.keys() != columns or any(type(y) is not int for y in grid.values()):
+            raise ValueError('invalid grid top coverage')
+        reference_names = vanilla[cx, cz][0]
+        for x, z in sorted(columns):
+            own = names[:, z % 16, x % 16]
+            solid_top = top(own, natural)
+            filled_top = top(own, lambda n: n not in AIR)
+            reference_top = top(reference_names[:, z % 16, x % 16], natural)
+            grid_top = grid[x, z]
+            gap = solid_top - reference_top
+            report['columns'] += 1
+            report['grid_equals_initial_substrate'] += solid_top == grid_top
+            report['initial_non_air_above_grid'] += filled_top > grid_top
+            report['initial_non_air_below_grid'] += filled_top < grid_top
+            report['initial_vs_reference_substrate_abs_sum'] += abs(gap)
+            key = -abs(gap), x, z
+            if worst_key is None or key < worst_key:
+                worst_key = key
+                report['worst_substrate_column'] = {
+                    'column': [x, z], 'grid_top': grid_top, 'initial_substrate_top': solid_top,
+                    'initial_non_air_top': filled_top, 'reference_final_substrate_top': reference_top,
+                    'initial_minus_reference': gap,
+                }
+    return report
+
+
 def height_argmax_diagnostics(ours, vanilla):
     """ALL columns, fixed lexicographic (worldX,worldZ) tie; no example truncation."""
     if not ours or ours.keys() != vanilla.keys():
