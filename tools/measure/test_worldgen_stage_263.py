@@ -12,6 +12,7 @@ import unittest
 import numpy as np
 
 import worldgen_stage_263 as stage
+from worldgen_exact_ci_263 import CHUNKS as PAIRED_CHUNKS
 
 
 def arrays():
@@ -100,9 +101,10 @@ class StageTests(unittest.TestCase):
         result = stage.link_trace(record, saved, [[0, 0]])
         self.assertTrue(result['final_saved_names_equal'])
         self.assertEqual(result['columns'][0]['own_stages'][0]['top_non_air'], -65)
+        self.assertEqual(stage.link_trace(record, saved, [])['columns'], [])
         bad = copy.deepcopy(saved); bad[0][100, 15, 15] = 'stone'
         with self.assertRaises(ValueError):
-            stage.link_trace(record, bad, [[0, 0]])
+            stage.link_trace(record, bad, [])
         bad = copy.deepcopy(saved); bad[1][23, 3, 3, 3] = 'forest'
         with self.assertRaises(ValueError):
             stage.link_trace(record, bad, [[0, 0]])
@@ -110,7 +112,7 @@ class StageTests(unittest.TestCase):
     def test_trace_manifest_rejects_missing_reordered_or_nonidentical_records(self):
         records = []
         for seed in stage.SEEDS:
-            for chunk in stage.TRACE_CHUNKS:
+            for chunk in stage.LEGACY_TRACE_CHUNKS:
                 records.append({'schema': 1, 'version': '26.3', 'seed': seed, 'chunk': chunk,
                                 'density_router': False, 'holdout': seed in stage.SEEDS[2:],
                                 'stages': [{'stage': name, 'blockstates_sha256': 'blocks',
@@ -119,25 +121,36 @@ class StageTests(unittest.TestCase):
                                              'compared_blockstates': 98304, 'compared_biomes': 1536,
                                              'ordinary_blockstates_sha256': 'blocks',
                                              'ordinary_biome_ids_sha256': 'biomes'}})
-        def read(values, *, require_early_stages=False):
+        def read(values, *, required_schema=None):
             with tempfile.TemporaryDirectory() as folder:
                 path = Path(folder) / 'trace.gz'
                 with gzip.open(path, 'wt') as out:
                     for record in values:
                         out.write(json.dumps(record) + '\n')
                 with patch.object(stage, 'decode_stage'):
-                    return stage.read_traces(path, require_early_stages=require_early_stages)
+                    return stage.read_traces(path, required_schema=required_schema)
         self.assertEqual(len(read(records)), 8)
         with self.assertRaisesRegex(ValueError, 'unexpected trace identity'):
-            read(records, require_early_stages=True)
+            read(records, required_schema=3)
         revised = copy.deepcopy(records)
         for record in revised:
             record['schema'] = 2
             record['stages'][:0] = [{'stage': name} for name in stage.EARLY_STAGES]
-        self.assertEqual(len(read(revised, require_early_stages=True)), 8)
+        self.assertEqual(len(read(revised)), 8)
+        with self.assertRaisesRegex(ValueError, 'unexpected trace identity'):
+            read(revised, required_schema=3)
+        full = []
+        for old in revised[::len(stage.LEGACY_TRACE_CHUNKS)]:
+            full.extend({**old, 'schema': 3, 'chunk': chunk} for chunk in stage.TRACE_CHUNKS)
+        self.assertEqual(set(stage.TRACE_CHUNKS), set(PAIRED_CHUNKS))
+        self.assertEqual(set(read(full, required_schema=3)),
+                         {(seed, chunk) for seed in stage.SEEDS for chunk in PAIRED_CHUNKS})
+        for broken in (full[:-1], full[:-1] + [full[-2]], full + [full[-1]], full[:12] + revised[2:]):
+            with self.subTest(records=len(broken)), self.assertRaises(ValueError):
+                read(broken, required_schema=3)
         revised[0]['stages'][0], revised[0]['stages'][1] = revised[0]['stages'][1], revised[0]['stages'][0]
         with self.assertRaisesRegex(ValueError, 'missing/reordered stage'):
-            read(revised, require_early_stages=True)
+            read(revised)
         for mutate in [lambda r: r.pop(), lambda r: r.append(r[0]),
                        lambda r: r[0].__setitem__('density_router', True),
                        lambda r: r[-1].__setitem__('holdout', False),

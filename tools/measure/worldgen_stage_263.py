@@ -1,6 +1,7 @@
 """Read-only полные столбцы и собственные стадии; не исправление генерации."""
 import gzip
 import hashlib
+from itertools import chain, islice
 import json
 import struct
 
@@ -20,7 +21,10 @@ STAGES = ('base_underground', 'dungeons', 'mineshaft', 'stronghold', 'ruined_por
           'abandoned_camp', 'village', 'mansion', 'temples', 'pillager_outpost', 'ocean',
           'monument', 'cave_biomes', 'ancient_city', 'trial_chambers', 'final')
 SEEDS = (1792932773345722119, 100554032945340, 42, -20261116)
-TRACE_CHUNKS = ((512, 512), (512, 513))
+LEGACY_TRACE_CHUNKS = ((512, 512), (512, 513))
+TRACE_CHUNKS = ((512, 512), (512, 513), (513, 512), (513, 513),
+                (-513, -513), (-513, -512), (-512, -513), (-512, -512),
+                (69, -30), (70, -30), (69, -31), (70, -31))
 
 
 def natural(name):
@@ -126,35 +130,55 @@ def decode_stage(stage):
     return flat_names, np.asarray(biomes, dtype=object).reshape(24, 4, 4, 4)
 
 
-def read_traces(path, *, require_early_stages=False):
-    records = {}
+def trace_batches(path, *, required_schema=None):
+    """Сверяет полное покрытие и держит в памяти трассу одного сида."""
+    schema = None
     with gzip.open(path, 'rt') as stream:
-        for line in stream:
-            record = json.loads(line)
-            key = record['seed'], tuple(record['chunk'])
-            schema = record.get('schema')
-            if (type(schema) is not int or schema not in (1, 2)
-                    or (require_early_stages and schema != 2)
-                    or record.get('version') != '26.3' or key in records
-                    or key[0] not in SEEDS or key[1] not in TRACE_CHUNKS or record.get('density_router') is not False
-                    or record.get('holdout') != (key[0] in SEEDS[2:])):
-                raise ValueError('unexpected trace identity')
-            order = EARLY_STAGES + STAGES if schema == 2 else STAGES
-            if [s['stage'] for s in record['stages']] != list(order):
-                raise ValueError('missing/reordered stage')
-            for stage in record['stages']:
-                decode_stage(stage)
-            identity = record['identity']
-            final = record['stages'][-1]
-            if (identity.get('equal_blockstates') is not True or identity.get('equal_biomes') is not True
-                    or identity.get('compared_blockstates') != 98304 or identity.get('compared_biomes') != 1536
-                    or identity.get('ordinary_blockstates_sha256') != final['blockstates_sha256']
-                    or identity.get('ordinary_biome_ids_sha256') != final['biome_ids_sha256']):
-                raise ValueError('ordinary/observed identity gate failed')
-            records[key] = record
-    if set(records) != {(seed, chunk) for seed in SEEDS for chunk in TRACE_CHUNKS}:
-        raise ValueError('missing trace chunks/seeds')
-    return records
+        for seed in SEEDS:
+            line = next(stream, None)
+            if line is None:
+                raise ValueError('missing trace chunks/seeds')
+            first = json.loads(line)
+            if schema is None:
+                schema = first.get('schema')
+                if (type(schema) is not int or schema not in (1, 2, 3)
+                        or (required_schema is not None and schema != required_schema)):
+                    raise ValueError('unexpected trace identity')
+            chunks = TRACE_CHUNKS if schema == 3 else LEGACY_TRACE_CHUNKS
+            order = EARLY_STAGES + STAGES if schema >= 2 else STAGES
+            records = {}
+            tail = map(json.loads, islice(stream, len(chunks) - 1))
+            for record in chain((first,), tail):
+                chunk = tuple(record['chunk'])
+                if (type(record.get('schema')) is not int or record['schema'] != schema
+                        or record.get('version') != '26.3' or type(record['seed']) is not int or record['seed'] != seed
+                        or any(type(v) is not int for v in chunk)
+                        or chunk in records or chunk not in chunks or record.get('density_router') is not False
+                        or record.get('holdout') != (seed in SEEDS[2:])):
+                    raise ValueError('unexpected trace identity')
+                if [s['stage'] for s in record['stages']] != list(order):
+                    raise ValueError('missing/reordered stage')
+                for stage in record['stages']:
+                    decode_stage(stage)
+                identity = record['identity']
+                final = record['stages'][-1]
+                if (identity.get('equal_blockstates') is not True or identity.get('equal_biomes') is not True
+                        or identity.get('compared_blockstates') != 98304 or identity.get('compared_biomes') != 1536
+                        or identity.get('ordinary_blockstates_sha256') != final['blockstates_sha256']
+                        or identity.get('ordinary_biome_ids_sha256') != final['biome_ids_sha256']):
+                    raise ValueError('ordinary/observed identity gate failed')
+                records[chunk] = record
+            if records.keys() != set(chunks):
+                raise ValueError('missing trace chunks/seeds')
+            yield seed, records
+        if next(stream, None) is not None:
+            raise ValueError('extra trace chunks/seeds')
+
+
+def read_traces(path, *, required_schema=None):
+    return {(seed, chunk): record
+            for seed, records in trace_batches(path, required_schema=required_schema)
+            for chunk, record in records.items()}
 
 
 def link_trace(record, saved, selected_columns):
@@ -168,8 +192,10 @@ def link_trace(record, saved, selected_columns):
     for x, z in selected_columns:
         if (x // 16, z // 16) == (cx, cz):
             result['columns'].append({'column': [x, z], 'own_diagnostics': diagnostics[x, z], 'own_stages': []})
+    if not result['columns']:
+        return result
     for stage in record['stages']:
-        arrays = decode_stage(stage)
+        arrays = final if stage is record['stages'][-1] else decode_stage(stage)
         for row in result['columns']:
             x, z = row['column']
             row['own_stages'].append({'stage': stage['stage'], **column_record(arrays[0][:, z % 16, x % 16])})

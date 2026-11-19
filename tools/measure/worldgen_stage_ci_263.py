@@ -59,7 +59,9 @@ def main():
     binary, trace = args.binary.resolve(), args.trace.resolve()
     build = json.loads(args.build_receipt.read_text())
     validate_build(build, head, binary, trace)
-    traces = stage.read_traces(trace, require_early_stages=True)
+    wanted = set(baseline.CHUNKS)
+    if wanted != set(stage.TRACE_CHUNKS):
+        raise ValueError('trace plan must cover every paired chunk')
     output = args.output.resolve(); output.mkdir(parents=True, exist_ok=False)
     pin = json.loads((ROOT / 'tools/blackbox/ci/sources-777.json').read_text())['official_jar']
     with urllib.request.urlopen(pin['url'], timeout=120) as response:
@@ -75,7 +77,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='mcsa-stage-', dir=os.environ['RUNNER_TEMP']) as temporary:
         temporary = Path(temporary)
         jarpath = temporary / 'official.jar'; jarpath.write_bytes(jar)
-        for i, seed in enumerate(stage.SEEDS):
+        for i, (seed, traces) in enumerate(stage.trace_batches(trace, required_schema=3)):
             evidence = output / f'seed-{i + 1}'; evidence.mkdir()
             scratch = temporary / f'seed-{i + 1}'; scratch.mkdir()
             plan = {'version': '26.3', 'seed': seed, 'dimension': 'overworld',
@@ -92,14 +94,17 @@ def main():
                     or diagnostic['abs_error_sum'] != report['top_non_air_abs_error_sum']
                     or diagnostic['compared_columns'] != report['totals']['top_non_air_heights']['compared']):
                 raise ValueError('full argmax does not reconcile with exact gate')
-            wanted = set(stage.TRACE_CHUNKS)
             saved = load_records(ours, wanted)
             selected = [r['column'] for r in diagnostic['neighbors'] if r['in_plan']]
-            links = [stage.link_trace(traces[seed, coord], saved[coord], selected) for coord in sorted(wanted)]
+            links = [stage.link_trace(traces[coord], saved[coord], selected) for coord in sorted(wanted)]
+            linked_columns = {tuple(col['column']) for link in links for col in link['columns']}
+            if (tuple(diagnostic['selected_column']) not in linked_columns
+                    or linked_columns != {tuple(col) for col in selected}):
+                raise ValueError('missing stage links for height discrepancy')
             stage_report = {'schema': 1, 'seed': seed, 'holdout': seed in stage.SEEDS[2:],
                             'own_stage_semantics': 'Initial fill includes inline cave sampling. Separate snapshots record ore-host preparation, ores, and underground digging before the decorated base.',
                             'official_observation': 'Only final ordinary saved blocks/biomes; no official internal-stage data.',
-                            'argmax_column_in_trace': tuple(diagnostic['selected_column'][j] // 16 for j in range(2)) in wanted,
+                            'argmax_column_in_trace': True,
                             'all_trace_chunks_final_saved_equal': True, 'traced_chunks': links}
             (evidence / 'stage-link.json').write_text(json.dumps(stage_report, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
             results.append({'seed': seed, 'holdout': seed in stage.SEEDS[2:], 'recording_valid': True,
@@ -107,6 +112,7 @@ def main():
                             'height_max': diagnostic['abs_error_max'], 'tie_count': diagnostic['tie_count'],
                             'own_observer_identity': True, 'final_saved_equal': True,
                             'argmax_column_in_trace': stage_report['argmax_column_in_trace']})
+            del traces
     (output / 'summary.json').write_text(json.dumps({'source': head, 'results': results,
         'generator_fix': False, 'scope': 'Diagnostic stage experiment, not full-generator parity.'}, indent=2) + '\n')
 

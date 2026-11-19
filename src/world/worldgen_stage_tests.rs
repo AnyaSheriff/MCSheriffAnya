@@ -6,7 +6,11 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
 const SEEDS: [i64; 4] = [1_792_932_773_345_722_119, 100_554_032_945_340, 42, -20_261_116];
-const CHUNKS: [(i32, i32); 2] = [(512, 512), (512, 513)];
+const CHUNKS: [(i32, i32); 12] = [
+    (512, 512), (512, 513), (513, 512), (513, 513),
+    (-513, -513), (-513, -512), (-512, -513), (-512, -512),
+    (69, -30), (70, -30), (69, -31), (70, -31),
+];
 const EARLY_STAGES: [&str; 4] = ["initial_fill", "ore_host_prep", "ores", "underground_dig"];
 const STAGES: [&str; 22] = [
     "base_underground", "dungeons", "mineshaft", "stronghold", "ruined_portal",
@@ -170,7 +174,7 @@ fn worldgen_stage_trace_263_export() {
                             climate.weirdness, climate.temperature, climate.humidity]}));
                 }
             }
-            serde_json::to_writer(&mut out, &json!({"schema": 2, "version": "26.3", "seed": seed,
+            serde_json::to_writer(&mut out, &json!({"schema": 3, "version": "26.3", "seed": seed,
                 "chunk": [cx, cz], "density_router": false, "holdout": SEEDS[2..].contains(&seed),
                 "identity": {"equal_blockstates": true, "equal_biomes": true,
                     "compared_blockstates": WORLD_HEIGHT * CHUNK_SIZE * CHUNK_SIZE,
