@@ -30,6 +30,7 @@ public final class RemotePlayer implements Player {
  public Location getLocation(){for(Player p:Bukkit.getOnlinePlayers())if(p.getUniqueId().toString().equals(uuid))return ((RemotePlayer)p).location.clone();return location.clone();}
  public World getWorld(){return getLocation().getWorld();} public GameMode getGameMode(){for(Player p:Bukkit.getOnlinePlayers())if(p.getUniqueId().toString().equals(uuid))return ((RemotePlayer)p).mode;return mode;}
  public void setGameMode(GameMode m){Host.call(11,uuid,""+m.ordinal());}public double getHealth(){return Double.parseDouble(Host.text(12,uuid));}
+ public int getPing(){return Integer.parseInt(Host.text(164,uuid));}
  public void sendMessage(String m){Host.call(2,uuid,m);}public boolean isOp(){return Integer.parseInt(Host.text(10,uuid))>0;}
  public void sendMessage(net.kyori.adventure.text.Component m){if(!Host.yes(27,uuid,Text.json(m)))throw new IllegalStateException("Компонент сообщения отклонён хозяином");}
  public void sendActionBar(net.kyori.adventure.text.Component m){if(!Host.yes(28,uuid,Text.json(m)))throw new IllegalStateException("Компонент action bar отклонён хозяином");}

@@ -168,6 +168,22 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
         for(size_t i=0;i<blocks.len;){size_t end=i+1;while(end<blocks.len&&blocks.ptr[end].len==blocks.ptr[i].len&&!memcmp(blocks.ptr[end].ptr,blocks.ptr[i].ptr,blocks.ptr[i].len))end++;number(end-i);string(blocks.ptr[i]);i=end;}plugin_list_string_free(&blocks);}break;}
     case 162: {mcsa_api_presentation_boss_bar_t bar={.id=s[1],.title=s[2],.progress=atof(a[3]),.color=s[4],.style=s[5]};number(mcsa_api_presentation_set_boss_bar(&s[0],&bar));break;}
     case 163: number(mcsa_api_presentation_remove_boss_bar(&s[0],&s[1]));break;
+    case 164: {
+        mcsa_api_presentation_player_info_t info;
+        uint32_t ping = 0;
+        if (mcsa_api_presentation_get_player_info(&s[0], &info)) {
+            ping = info.ping;
+            mcsa_api_presentation_player_info_free(&info);
+        }
+        integer(ping > INT32_MAX ? INT32_MAX : ping);
+        break;
+    }
+    case 165: {
+        mcsa_api_presentation_server_info_t info;
+        mcsa_api_presentation_get_server_info(&info);
+        integer(info.max_players);
+        break;
+    }
     default: abort();
     }
     free(copy);return output;

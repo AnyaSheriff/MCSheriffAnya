@@ -69,6 +69,18 @@ fn translated_bukkit_bossbar_multiplayer_updates_and_cleanup() {
     let mut host = Host::new(Arc::clone(&shared), root).unwrap();
     host.load("java-bossbar").unwrap();
     assert!(shared.players.lock().unwrap().ui.owned.is_empty(), "создание без зрителей не шлёт оформление");
+    {
+        let mut players = shared.players.lock().unwrap();
+        players.ui.info.entry([1; 16]).or_default().ping = 42;
+        players.ui.info.entry([2; 16]).or_default().ping = u32::MAX;
+    }
+    for (n, ping) in [(1, 42), (2, i32::MAX)] {
+        assert_eq!(host.run_command(bossbar_sender(n), "barprobe", &["info".into()]), Some((true, String::new())));
+        let orders = shared.players.lock().unwrap().take_orders(&[n; 16]);
+        let max = shared.properties.max_players.max(0);
+        assert!(matches!(orders.as_slice(), [crate::players::Order::Message { component }]
+            if *component == crate::network::nbt::text_component(&format!("PlayerInfo {ping} {max} {max}"))));
+    }
     let first = bossbar_command(&mut host, &shared, 1, "add", 1);
     assert_eq!(bossbar_actions(&first), [0]);
     let first_uuid = first[0][1..17].to_vec();

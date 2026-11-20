@@ -1,4 +1,5 @@
 package org.bukkit;
 public interface Server { java.util.Collection<? extends org.bukkit.entity.Player> getOnlinePlayers(); org.bukkit.entity.Player getPlayer(String name); org.bukkit.entity.Player getPlayer(java.util.UUID uuid); int broadcastMessage(String message); org.bukkit.plugin.PluginManager getPluginManager(); org.bukkit.scheduler.BukkitScheduler getScheduler(); World getWorld(String name); java.util.List<World> getWorlds();
+ int getMaxPlayers();
  default org.bukkit.boss.BossBar createBossBar(String title,org.bukkit.boss.BarColor color,org.bukkit.boss.BarStyle style,org.bukkit.boss.BarFlag... flags){return Bukkit.createBossBar(title,color,style,flags);}
 }

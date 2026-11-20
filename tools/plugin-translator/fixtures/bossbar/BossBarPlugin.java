@@ -51,6 +51,10 @@ public final class BossBarPlugin extends JavaPlugin {
  @Override public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
   if(!(sender instanceof Player)||args.length!=1)return false;
   Player player=(Player)sender;
+  if(args[0].equals("info")){
+   sender.sendMessage("PlayerInfo "+player.getPing()+" "+Bukkit.getMaxPlayers()+" "+getServer().getMaxPlayers());
+   return true;
+  }
   switch(args[0]){
    case "add":
     bar.addPlayer(player);bar.addPlayer(Bukkit.getPlayer(player.getUniqueId()));
