@@ -32,6 +32,15 @@ public final class SdkContracts {
   org.bukkit.configuration.file.YamlConfiguration config=new org.bukkit.configuration.file.YamlConfiguration();
   config.loadFromString("root:\n  number: 4\n  list: [ONE:0, 'two', 3]\n  entries:\n    - when: NEAR\n      nested: {radius: 8, bonus: -10}\n    - when: OTHER\n      enabled: true\n  quoted: \"line\\nnext\"\n");
   check(config.getInt("root.number")==4);
+  check(config.isList("root.list")&&config.isList("root.entries"));
+  check(!config.isList("root")&&!config.isList("root.missing")&&!config.isList("root.number"));
+  check(config.isConfigurationSection("root")&&!config.isConfigurationSection("root.list")&&!config.isConfigurationSection("root.missing"));
+  check(config.getConfigurationSection("root").isList("entries"));
+  org.bukkit.Sound[] sounds=org.bukkit.Sound.values();
+  check(sounds[5]==org.bukkit.Sound.ENTITY_PLAYER_ATTACK_CRIT);
+  for(int i=0;i<sounds.length;i++)check(sounds[i].ordinal()==i&&org.bukkit.Sound.valueOf(sounds[i].name())==sounds[i]);
+  check(org.bukkit.Sound.ENTITY_PLAYER_HURT_DROWN.getKey().equals(NamespacedKey.minecraft("entity.player.hurt_drown")));
+  check(org.bukkit.Particle.HEART.ordinal()==1&&org.bukkit.Particle.TOTEM_OF_UNDYING.name().equals("TOTEM_OF_UNDYING"));
   check(config.getStringList("root.list").equals(java.util.List.of("ONE:0","two","3")));
   check(config.getConfigurationSection("root").getKeys(false).contains("entries"));
   org.bukkit.configuration.file.YamlConfiguration copy=new org.bukkit.configuration.file.YamlConfiguration();copy.loadFromString(config.saveToString());

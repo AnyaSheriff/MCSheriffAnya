@@ -612,6 +612,27 @@ impl mcsa::api::player::Host for PluginCtx {
     }
 }
 
+// Имена сверены по закреплённым спискам команд 775/777. У частиц
+// из этого списка нет дополнительных данных после номера.
+const PLUGIN_PARTICLES: &[&str] = &[
+    "bubble", "cloud", "composter", "crit",
+    "dripping_water", "electric_spark", "enchant", "enchanted_hit",
+    "flame", "glow", "happy_villager", "heart",
+    "portal", "sculk_soul", "smoke", "soul_fire_flame",
+    "splash", "spore_blossom_air", "sweep_attack", "totem_of_undying",
+    "wax_off", "white_smoke",
+];
+
+const PLUGIN_SOUNDS: &[&str] = &[
+    "block.amethyst_block.chime", "block.anvil.use", "block.fire.extinguish", "block.sculk.spread",
+    "entity.blaze.hurt", "entity.blaze.shoot", "entity.enderman.hurt", "entity.enderman.scream",
+    "entity.enderman.teleport", "entity.evoker.prepare_summon", "entity.generic.extinguish_fire", "entity.illusioner.prepare_blindness",
+    "entity.item.break", "entity.item.pickup", "entity.magma_cube.squish", "entity.piglin.admiring_item",
+    "entity.player.attack.crit", "entity.player.burp", "entity.player.hurt_drown", "entity.player.levelup",
+    "entity.warden.sonic_charge", "entity.wolf.growl", "entity.zombie.ambient", "entity.zombie.attack_wooden_door",
+    "entity.zombie.hurt", "item.chorus_fruit.teleport", "item.shield.block", "item.totem.use",
+];
+
 impl mcsa::api::world::Host for PluginCtx {
     fn monster_limit(&mut self, dimension: wit::Dimension) -> u32 {
         self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир").plugin_monster_limits.last().map_or_else(|| (crate::mob::spawn::MONSTER_CAP as f64*self.shared.settings.monster_spawn_multiplier).round() as u32, |(_,limit)|*limit as u32)
@@ -647,7 +668,7 @@ impl mcsa::api::world::Host for PluginCtx {
     fn spawn_particle(&mut self, at: wit::Location, name: String, count: u32, dx: f64, dy: f64, dz: f64) -> Result<(), String> {
         if !self.shared.dimension_enabled(dimension_from_wit(at.dimension)) { return Err("Измерение отключено".into()); }
         if ![at.x,at.y,at.z,dx,dy,dz].iter().all(|v| v.is_finite()) || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || [dx,dy,dz].iter().any(|v| !(0.0..=64.0).contains(v)) || count > 4096 {return Err("Недопустимые параметры частиц".into());}
-        if !matches!(name.as_str(), "happy_villager" | "heart") {return Err("Частица вне поддерживаемого каталога".into());}
+        if !PLUGIN_PARTICLES.contains(&name.as_str()) {return Err("Частица вне поддерживаемого каталога".into());}
         let kind = crate::commands_admin::PARTICLES.iter().position(|n| *n == name).ok_or("Неизвестная частица")? as i32;
         self.shared.world_in(dimension_from_wit(at.dimension)).lock().expect("мир").note_particle(kind,None,(at.x,at.y,at.z),(dx as f32,dy as f32,dz as f32),0.0,count as i32);Ok(())
     }
@@ -723,13 +744,9 @@ impl mcsa::api::world::Host for PluginCtx {
     fn play_sound(&mut self, at: wit::Location, sound: String, volume: f32, pitch: f32) -> Result<(), String> {
         if !self.shared.dimension_enabled(dimension_from_wit(at.dimension)) { return Err("Измерение отключено".into()); }
         if !at.x.is_finite() || !at.y.is_finite() || !at.z.is_finite() || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || !volume.is_finite() || !(0.0..=16.0).contains(&volume) || !pitch.is_finite() || !(0.0..=2.0).contains(&pitch) {return Err("Недопустимые параметры звука".into());}
-        if !sound.starts_with("minecraft:") || sound.len() > 256 || !sound.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"_:./-".contains(&b)) {return Err("Недопустимый ключ звука".into());}
-        let sound = match sound.as_str() {
-            "minecraft:block.anvil.use" => "block.anvil.use", "minecraft:entity.enderman.teleport" => "entity.enderman.teleport",
-            "minecraft:entity.evoker.prepare_summon" => "entity.evoker.prepare_summon", "minecraft:entity.magma_cube.squish" => "entity.magma_cube.squish",
-            "minecraft:entity.piglin.admiring_item" => "entity.piglin.admiring_item", "minecraft:entity.player.attack.crit" => "entity.player.attack.crit",
-            _ => return Err("Звук вне поддерживаемого каталога".into()),
-        };
+        if sound.len() > 256 || !sound.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"_:./-".contains(&b)) {return Err("Недопустимый ключ звука".into());}
+        let sound = sound.strip_prefix("minecraft:").ok_or("Недопустимый ключ звука")?;
+        let sound = PLUGIN_SOUNDS.iter().copied().find(|&name| name == sound).ok_or("Звук вне поддерживаемого каталога")?;
         self.shared.world_in(dimension_from_wit(at.dimension)).lock().expect("мир").note_sound_player_at((at.x, at.y, at.z), sound, volume, pitch);Ok(())
     }
     fn get_border(&mut self, dimension: wit::Dimension) -> mcsa::api::world::Border {

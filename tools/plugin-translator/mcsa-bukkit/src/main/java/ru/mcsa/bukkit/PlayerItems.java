@@ -16,6 +16,7 @@ public final class PlayerItems implements PlayerInventory {
  public ItemStack getItem(int index){slot(index);return read(snapshot(),index);}
  public void setItem(int index,ItemStack item){Host.call(38,uuid,""+slot(index),item==null||item.isEmpty()?"air":Ascii.lower(item.getType().name()),""+(item==null||item.isEmpty()?0:item.getAmount()),item==null?"":item.metadata());snapshots.remove(uuid);}
  public ItemStack getItemInMainHand(){ItemStack item=getItem(selected());return item==null?new ItemStack(Material.AIR):item;}public ItemStack getItemInOffHand(){ItemStack item=getItem(40);return item==null?new ItemStack(Material.AIR):item;}public void setItemInOffHand(ItemStack item){setItem(40,item);}public ItemStack getHelmet(){return getItem(39);}
+ public void setItemInMainHand(ItemStack item){setItem(selected(),item);}
  public ItemStack[] getArmorContents(){return new ItemStack[]{getItem(36),getItem(37),getItem(38),getItem(39)};}public void setArmorContents(ItemStack[] armor){if(armor==null)armor=new ItemStack[0];if(armor.length>4)throw new IllegalArgumentException("Броня: до четырёх ячеек");for(int i=0;i<4;i++)setItem(36+i,i<armor.length?armor[i]:null);}
  public boolean contains(Material material){for(ItemStack item:getContents())if(item!=null&&item.getType()==material)return true;return false;}
  public boolean containsAtLeast(ItemStack stack,int count){if(stack==null)return false;for(ItemStack item:getContents())if(item!=null&&item.isSimilar(stack)){count-=item.getAmount();if(count<=0)return true;}return count<=0;}

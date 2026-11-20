@@ -95,6 +95,38 @@ fn assert_tab_presentation(host: &mut Host, shared: &Shared) {
     assert!(matches!(orders.as_slice(), [Order::Packet(packet)] if *packet == header_packet(&json!(""), &json!(""))));
 }
 
+fn assert_race_presentation(host: &mut Host, shared: &Shared) {
+    use crate::{network::nbt::text_component, players::Order, survival::{Effect, EffectKind}, world::WorldEvent};
+    let player = [1; 16];
+    {
+        let mut players = shared.players.lock().unwrap();
+        let info = players.ui.info.get_mut(&player).unwrap();
+        info.selected = 4;
+        info.plugin_state.effects.push(Effect {
+            kind: EffectKind::Speed, amplifier: 0, ticks_left: 80, ambient: false, visible: true, show_icon: true,
+        });
+    }
+    let world = shared.world_in(crate::dimension::Dimension::Overworld);
+    let from = world.lock().unwrap().watch_events(0);
+    assert_eq!(host.run_command(bossbar_sender(1), "barprobe", &["race-presentation".into()]), Some((true, String::new())));
+    {
+        let mut players = shared.players.lock().unwrap();
+        let inventory = &players.ui.info[&player].inventory;
+        for (slot, name) in [(5, "iron_helmet"), (6, "iron_chestplate"), (8, "iron_boots"), (40, "iron_sword")] {
+            assert_eq!(crate::blocks::item_name(inventory[slot].unwrap().item), Some(name));
+        }
+        assert!(inventory[7].is_none() && inventory[36].is_none());
+        let orders = players.take_orders(&player);
+        assert!(orders.iter().any(|order| matches!(order, Order::Message { component } if *component == text_component("Race presentation checked"))));
+        assert!(orders.iter().any(|order| matches!(order, Order::Packet(packet)
+            if packet.windows(b"#55ff55".len()).any(|value| value == b"#55ff55")
+                && packet.windows(b"Race ready".len()).any(|value| value == b"Race ready"))));
+    }
+    let (events, _) = world.lock().unwrap().events_since(from, 0);
+    assert!(matches!(events.as_slice(), [WorldEvent::Sound(sound), WorldEvent::Particle {kind, count, ..}]
+        if sound.name == "entity.warden.sonic_charge" && crate::commands_admin::PARTICLES[*kind as usize] == "totem_of_undying" && *count == 3));
+}
+
 fn assert_bukkit_scoreboard(host: &mut Host, shared: &Shared) {
     use crate::{network::nbt::text_component, players::Order, scoreboard};
     use serde_json::json;
@@ -209,6 +241,7 @@ fn translated_bukkit_player_presentation_and_world_change() {
     assert_tab_presentation(&mut host, &shared);
     assert_bukkit_scoreboard(&mut host, &shared);
     assert_bukkit_world_change(&mut host, &shared);
+    assert_race_presentation(&mut host, &shared);
     assert!(host.is_loaded("java-bossbar"));
     host.unload("java-bossbar").unwrap();
 }

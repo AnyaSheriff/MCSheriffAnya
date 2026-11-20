@@ -713,6 +713,22 @@ fn bukkit_host_operations_remain_typed_and_bounded() {
     assert_eq!(ctx.weather(wit::Dimension::Overworld), "thunder");
     assert!(ctx.set_weather(wit::Dimension::Overworld, "ошибка".into(), 100).is_err());
     assert!(ctx.set_weather(wit::Dimension::Overworld, "rain".into(), u32::MAX).is_err());
+    let overworld = shared.world_in(crate::dimension::Dimension::Overworld);
+    let from = overworld.lock().unwrap().watch_events(0);
+    let at = wit::Location { dimension: wit::Dimension::Overworld, x: -1.5, y: 70.0, z: 2.25, yaw: None, pitch: None };
+    assert!(ctx.play_sound(at, "minecraft:entity.warden.sonic_charge".into(), 0.6, 1.2).is_ok());
+    assert!(ctx.play_sound(at, "minecraft:unregistered".into(), 0.6, 1.2).is_err());
+    assert!(ctx.play_sound(at, "other:entity.warden.sonic_charge".into(), 0.6, 1.2).is_err());
+    assert!(ctx.spawn_particle(at, "totem_of_undying".into(), 3, 0.25, 0.5, 1.0).is_ok());
+    assert!(ctx.spawn_particle(at, "block".into(), 3, 0.25, 0.5, 1.0).is_err());
+    assert!(ctx.spawn_particle(at, "totem_of_undying".into(), 4097, 0.25, 0.5, 1.0).is_err());
+    let (events, _) = overworld.lock().unwrap().events_since(from, 0);
+    let [crate::world::WorldEvent::Sound(sound), crate::world::WorldEvent::Particle { kind, block, at, offset, speed, count, .. }] = events.as_slice() else {
+        panic!("ожидались ровно звук и частица");
+    };
+    assert_eq!((sound.name, sound.exact, sound.volume, sound.pitch), ("entity.warden.sonic_charge", Some((-1.5, 70.0, 2.25)), 0.6, 1.2));
+    assert_eq!(crate::commands_admin::PARTICLES[*kind as usize], "totem_of_undying");
+    assert_eq!((*block, *at, *offset, *speed, *count), (None, (-1.5, 70.0, 2.25), (0.25, 0.5, 1.0), 0.0, 3));
     let border = ctx.get_border(wit::Dimension::Overworld);
     assert_eq!(border.size, 59_999_968.0);
     assert!(ctx.set_border(wit::Dimension::Overworld, super::api::mcsa::api::world::Border { size: f64::NAN, center_x: 0.0, center_z: 0.0 }).is_err());

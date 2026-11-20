@@ -6,13 +6,20 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.boss.*;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
@@ -84,6 +91,23 @@ public final class BossBarPlugin extends JavaPlugin implements Listener {
   check(Bukkit.getPlayer(player.getUniqueId()).getDisplayName().equals(player.getDisplayName()));
   player.playerListName(Component.text("TabAlias"));
   player.sendPlayerListHeaderAndFooter(Component.text("TabHead").append(Component.newline()).append(Component.text("LineTwo")), Component.text("TabFoot"));
+ }
+ private static void checkRacePresentation(Player player) {
+  check(player.hasPotionEffect(PotionEffectType.SPEED) && !player.hasPotionEffect(PotionEffectType.POISON));
+  PlayerInventory inventory = player.getInventory();
+  inventory.setItemInMainHand(new ItemStack(Material.IRON_SWORD));
+  inventory.setBoots(new ItemStack(Material.IRON_BOOTS));
+  inventory.setLeggings(new ItemStack(Material.IRON_LEGGINGS));
+  inventory.setChestplate(new ItemStack(Material.IRON_CHESTPLATE));
+  inventory.setHelmet(new ItemStack(Material.IRON_HELMET));
+  check(inventory.getItemInMainHand().getType() == Material.IRON_SWORD);
+  check(inventory.getArmorContents()[1].getType() == Material.IRON_LEGGINGS);
+  inventory.setLeggings(null);
+  check(inventory.getArmorContents()[1] == null);
+  Location at = player.getLocation();
+  player.getWorld().playSound(at, Sound.ENTITY_WARDEN_SONIC_CHARGE, 0.6f, 1.2f);
+  player.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, at, 3, 0.25, 0.5, 1);
+  player.sendActionBar("§aRace ready");
  }
  private static void setMainBoard(Player player) {
   Scoreboard main = Bukkit.getScoreboardManager().getMainScoreboard();
@@ -162,6 +186,7 @@ public final class BossBarPlugin extends JavaPlugin implements Listener {
    return true;
   }
   switch (args[0]) {
+   case "race-presentation": checkRacePresentation(player); sender.sendMessage("Race presentation checked"); return true;
    case "board-main": setMainBoard(player); sender.sendMessage("Board main"); return true;
    case "board-private": setPrivateBoard(player); sender.sendMessage("Board private"); return true;
    case "board-clear": clearMainBoard(player); sender.sendMessage("Board cleared"); return true;

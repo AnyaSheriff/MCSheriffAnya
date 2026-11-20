@@ -1,6 +1,7 @@
 package org.bukkit.entity;
 import net.kyori.adventure.text.Component;
 public interface Player extends HumanEntity, org.bukkit.OfflinePlayer, org.bukkit.inventory.InventoryHolder, org.bukkit.command.CommandSender { void setSilent(boolean value);boolean isSilent();org.bukkit.entity.Entity getVehicle();boolean isInsideVehicle();boolean getAllowFlight();boolean isFlying();void setAllowFlight(boolean value);void setFlying(boolean value);void setFlyingFallDamage(net.kyori.adventure.util.TriState value);net.kyori.adventure.util.TriState hasFlyingFallDamage();int getFireTicks();void setFireTicks(int ticks);void damage(double amount);void giveExp(int amount);boolean isDead();boolean isInWater();boolean isInLava();boolean isInRain();boolean isOnGround();boolean isSneaking();boolean canSee(Player player);org.bukkit.inventory.ItemStack getActiveItem();int getPing();int getFoodLevel();int getLevel();float getExp();void setRespawnLocation(org.bukkit.Location location); org.bukkit.GameMode getGameMode(); void setGameMode(org.bukkit.GameMode mode); org.bukkit.inventory.PlayerInventory getInventory(); void kickPlayer(String reason); void sendActionBar(Component message); default boolean isOnline(){return org.bukkit.Bukkit.getPlayer(getUniqueId())!=null;}
+ default void sendActionBar(String message){sendActionBar(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(message));}
  String getDisplayName();
  void setDisplayName(String name);
  void playerListName(Component name);
