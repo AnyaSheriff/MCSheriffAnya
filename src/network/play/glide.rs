@@ -108,7 +108,7 @@ pub(super) fn tick(shared: &Shared, player: &mut PlayerState) {
 }
 
 /// Ракета в руке при полёте: расходуется (в выживании), разгон длится
-/// `flight` секунд полёта; прочность не тратится. Возвращает, была ли.
+/// до взрыва прикреплённой ракеты; прочность элитр не тратится.
 pub(super) fn use_rocket(shared: &Shared, player: &mut PlayerState, hand: i32) -> bool {
     let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
     let Some(stack) = player.inventory.slot(slot) else {
@@ -119,19 +119,23 @@ pub(super) fn use_rocket(shared: &Shared, player: &mut PlayerState, hand: i32) -
         return false;
     }
 
-    let flight = stack.extras().rocket().flight.max(1) as u32;
-
-    // [проверить] ракета-сущность, привязанная к игроку, не создаётся; разгон —
-    // по правилу вики: к 1,5 блока/такт вдоль взгляда за время полёта.
-    player.glide.boost = 10 * (flight + 1);
+    let dimension = player.dimension;
+    let velocity = super::thrown::rocket_launch_velocity(shared, dimension);
+    let roll = || vitals::world_random(shared, dimension);
+    let lifetime = crate::firework::lifetime(stack.extras().rocket().flight, roll(), roll());
+    let mut rocket = crate::firework::Rocket::new(
+        shared.next_entity_id(), dimension, stack, (player.x, player.y, player.z), velocity,
+        false, (player.entity_id, player.uuid, player.name.clone()), lifetime,
+    );
+    rocket.attached = true;
+    shared.thrown.lock().expect("снаряды захвачены другим потоком").rockets.push(rocket);
+    player.glide.boost = lifetime + 1;
     player.progress.used(stack.item);
 
     if player.game_mode != GAME_MODE_CREATIVE {
         player.inventory.set(slot, inventory::remainder(stack, stack.count - 1));
         player.net.slot_changed(slot);
     }
-
-    let _ = shared;
 
     true
 }

@@ -106,6 +106,12 @@ jobs:
           python3 -B tools/blackbox/happy_ghast_facing_ci.py \
             --binary build-evidence/mcsa-linux-x64 --build-receipt build-evidence/build.json \
             --output happy-ghast-evidence
+      - name: Observe attached firework sound, explosion and damage on Java 26.3
+        if: ${{ !cancelled() && steps.source.outcome == 'success' && steps.runtime_java.outcome == 'success' }}
+        run: |
+          python3 -B tools/blackbox/elytra_rocket_ci.py \
+            --binary build-evidence/mcsa-linux-x64 --build-receipt build-evidence/build.json \
+            --output elytra-rocket-evidence
       - name: Compile own ModSDK fixtures and execute exact Host tests
         if: ${{ !cancelled() && steps.wasm_tools.outcome == 'success' }}
         run: python3 -B tools/measure/combined_independent_ci.py
@@ -177,6 +183,7 @@ jobs:
             mod-evidence/
             build-evidence/
             happy-ghast-evidence/
+            elytra-rocket-evidence/
             worldgen-stage-build-logs/own-example-components/
           retention-days: 14
           if-no-files-found: warn

@@ -53,6 +53,8 @@ pub struct Rocket {
     pub lifetime: u32,
     /// Пущена из арбалета: летит прямо (свойство 10).
     pub angled: bool,
+    /// Ракета элитр: остаётся у игрока до взрыва.
+    pub attached: bool,
     /// Кто пустил (0 — никто).
     pub owner: i32,
     pub owner_uuid: [u8; 16],
@@ -111,6 +113,7 @@ impl Rocket {
             life: 0,
             lifetime,
             angled,
+            attached: false,
             owner: owner.0,
             owner_uuid: owner.1,
             owner_name: owner.2,
@@ -190,89 +193,109 @@ pub struct Wound {
     pub from: (f64, f64, f64),
 }
 
+fn player_height(sneaking: bool) -> f64 {
+    if sneaking { 1.5 } else { 1.8 }
+}
+
+/// Полёт свободной ракеты до первого препятствия; возвращает, пора ли взрывать.
+fn fly_free(world: &World, rocket: &mut Rocket, members: &[Bystander], mobs: &[crate::mob::Mob]) -> bool {
+    // Пущенная с блока разгоняется: вбок ×1,15, вверх +0,04 (вики).
+    if !rocket.angled {
+        rocket.vx *= 1.15;
+        rocket.vy += 0.04;
+        rocket.vz *= 1.15;
+    }
+
+    let from = (rocket.x, rocket.y, rocket.z);
+    let to = (rocket.x + rocket.vx, rocket.y + rocket.vy, rocket.z + rocket.vz);
+    let centre = |p: (f64, f64, f64)| (p.0, p.1 + HEIGHT / 2.0, p.2);
+
+    // Пустивший не задевается, пока ракета в нём.
+    if rocket.in_owner && !members.iter().any(|m| m.0 == rocket.owner && crate::thrown::overlap(from, HALF, HEIGHT, m.1, 0.3, player_height(m.2))) {
+        rocket.in_owner = false;
+    }
+
+    // Попадание ищется по пути этого такта до хода, а взрыв — уже после
+    // хода, на новом месте (чёрный ящик, firework-crossbow: ракета прошла
+    // 1,6 блока за такт и взорвалась на +2, урон 5,858 = 7·√((5 − 1,498)/5)
+    // — расстояние от места после хода до ног жертвы).
+    let mut best: Option<(f64, Struck)> = None;
+
+    for (id, at, sneaking, mode) in members {
+        if *mode == 3 || (*id == rocket.owner && rocket.in_owner) {
+            continue;
+        }
+
+        if let Some(part) = crate::thrown::sweep(centre(from), centre(to), *at, 0.3 + HALF, player_height(*sneaking) + HEIGHT).map(|p| p.max(0.0))
+            && best.is_none_or(|(known, _)| part < known)
+        {
+            best = Some((part, Struck::Player(*id)));
+        }
+    }
+
+    for mob in mobs {
+        if mob.is_dead() || mob.entity_id == rocket.owner || matches!(mob.kind, crate::mob::Kind::EndCrystal) {
+            continue;
+        }
+
+        let (width, mob_height) = mob.size();
+
+        if let Some(part) = crate::thrown::sweep(centre(from), centre(to), (mob.x, mob.y - HEIGHT / 2.0, mob.z), width / 2.0 + HALF, mob_height + HEIGHT)
+            && best.is_none_or(|(known, _)| part < known)
+        {
+            best = Some((part, Struck::Mob(mob.entity_id)));
+        }
+    }
+
+    let block = crate::thrown::first_block(world, from, to).map(|(part, _)| part);
+    let entity_first = match (best, block) {
+        (Some((part, _)), Some(block_part)) => part <= block_part,
+        (Some(_), None) => true,
+        _ => false,
+    };
+
+    move_box(world, rocket);
+
+    // Поворот догоняет полёт на пятую часть за такт, как у зелий; у
+    // пущенной с блока он начинается с 0/0 (чёрный ящик, firework-launch:
+    // наклон 56 и 62 из 256 на +10 и +20).
+    let (yaw, pitch) = crate::thrown::angles((rocket.vx, rocket.vy, rocket.vz));
+    let turn = (yaw - rocket.rot.0 + 540.0).rem_euclid(360.0) - 180.0;
+
+    rocket.rot = (rocket.rot.0 + turn * 0.2, rocket.rot.1 + (pitch - rocket.rot.1) * 0.2);
+
+    // О сущность — взрыв сразу; о блок — только со звёздами.
+    entity_first || (block.is_some() && !rocket.fireworks.explosions.is_empty())
+}
+
 /// Ход ракет измерения за такт: полёт, попадание, взрыв по сроку. Взрывы
 /// уходят в `blasts`, раны — в `wounds` (их наносит thrown.rs после хода).
 pub fn step(world: &mut World, rockets: &mut Vec<Rocket>, dimension: Dimension, members: &[Bystander], mobs: &[crate::mob::Mob], blasts: &mut Vec<Blast>, wounds: &mut Vec<(Rocket, Wound)>) {
-    let height = |sneaking: bool| if sneaking { 1.5 } else { 1.8 };
     let mut gone = Vec::new();
 
     for rocket in rockets.iter_mut().filter(|r| r.dimension == dimension) {
-        if !world.has_chunk((rocket.x.floor() as i32).div_euclid(16), (rocket.z.floor() as i32).div_euclid(16)) {
+        let carried = if rocket.attached {
+            let Some((_, at, _, _)) = members.iter().find(|member| member.0 == rocket.owner) else {
+                gone.push(rocket.entity_id);
+                continue;
+            };
+            Some(*at)
+        } else {
+            None
+        };
+        let (x, _, z) = carried.unwrap_or((rocket.x, rocket.y, rocket.z));
+        if !world.has_chunk((x.floor() as i32).div_euclid(16), (z.floor() as i32).div_euclid(16)) {
             continue;
         }
 
         rocket.prev = ((rocket.x, rocket.y, rocket.z), (rocket.vx, rocket.vy, rocket.vz), rocket.rot);
 
-        // Пущенная с блока разгоняется: вбок ×1,15, вверх +0,04 (вики).
-        if !rocket.angled {
-            rocket.vx *= 1.15;
-            rocket.vy += 0.04;
-            rocket.vz *= 1.15;
-        }
-
-        let from = (rocket.x, rocket.y, rocket.z);
-        let to = (rocket.x + rocket.vx, rocket.y + rocket.vy, rocket.z + rocket.vz);
-        let centre = |p: (f64, f64, f64)| (p.0, p.1 + HEIGHT / 2.0, p.2);
-
-        // Пустивший не задевается, пока ракета в нём.
-        if rocket.in_owner && !members.iter().any(|m| m.0 == rocket.owner && crate::thrown::overlap(from, HALF, HEIGHT, m.1, 0.3, height(m.2))) {
-            rocket.in_owner = false;
-        }
-
-        // Попадание ищется по пути этого такта до хода, а взрыв — уже после
-        // хода, на новом месте (чёрный ящик, firework-crossbow: ракета прошла
-        // 1,6 блока за такт и взорвалась на +2, урон 5,858 = 7·√((5 − 1,498)/5)
-        // — расстояние от места после хода до ног жертвы).
-        let mut best: Option<(f64, Struck)> = None;
-
-        for (id, at, sneaking, mode) in members {
-            if *mode == 3 || (*id == rocket.owner && rocket.in_owner) {
-                continue;
-            }
-
-            if let Some(part) = crate::thrown::sweep(centre(from), centre(to), *at, 0.3 + HALF, height(*sneaking) + HEIGHT).map(|p| p.max(0.0))
-                && best.is_none_or(|(known, _)| part < known)
-            {
-                best = Some((part, Struck::Player(*id)));
-            }
-        }
-
-        for mob in mobs {
-            if mob.is_dead() || mob.entity_id == rocket.owner || matches!(mob.kind, crate::mob::Kind::EndCrystal) {
-                continue;
-            }
-
-            let (width, mob_height) = mob.size();
-
-            if let Some(part) = crate::thrown::sweep(centre(from), centre(to), (mob.x, mob.y - HEIGHT / 2.0, mob.z), width / 2.0 + HALF, mob_height + HEIGHT)
-                && best.is_none_or(|(known, _)| part < known)
-            {
-                best = Some((part, Struck::Mob(mob.entity_id)));
-            }
-        }
-
-        let block = crate::thrown::first_block(world, from, to).map(|(part, _)| part);
-        let entity_first = match (best, block) {
-            (Some((part, _)), Some(block_part)) => part <= block_part,
-            (Some(_), None) => true,
-            _ => false,
+        let mut explode = if let Some(at) = carried {
+            (rocket.x, rocket.y, rocket.z) = at;
+            false
+        } else {
+            fly_free(world, rocket, members, mobs)
         };
-
-        move_box(world, rocket);
-
-        // О сущность — взрыв сразу (вики, Crossbow: «explodes on contact»);
-        // о блок — только со звёздами, без них ракета скользит (вики, Firework
-        // Rocket; чёрный ящик, firework-blast: пущенная внутри камня взорвалась
-        // в том же такте).
-        let mut explode = entity_first || (block.is_some() && !rocket.fireworks.explosions.is_empty());
-
-        // Поворот догоняет полёт на пятую часть за такт, как у зелий; у
-        // пущенной с блока он начинается с 0/0 (чёрный ящик, firework-launch:
-        // наклон 56 и 62 из 256 на +10 и +20).
-        let (yaw, pitch) = crate::thrown::angles((rocket.vx, rocket.vy, rocket.vz));
-        let turn = (yaw - rocket.rot.0 + 540.0).rem_euclid(360.0) - 180.0;
-
-        rocket.rot = (rocket.rot.0 + turn * 0.2, rocket.rot.1 + (pitch - rocket.rot.1) * 0.2);
 
         // Звук запуска — в первом такте полёта, после хода и попадания (вики:
         // громкость 3, высота 1; чёрный ящик, firework-blast: после события 17).
@@ -314,7 +337,7 @@ pub fn step(world: &mut World, rockets: &mut Vec<Rocket>, dimension: Dimension, 
             }
 
             if let Some(damage) = blast_damage(power, distance(*pos))
-                && seen(*pos, height(*sneaking))
+                && seen(*pos, player_height(*sneaking))
             {
                 wounds.push((rocket.clone(), Wound { target: Struck::Player(*id), damage, from: at }));
             }
@@ -347,6 +370,46 @@ mod tests {
         assert_eq!(lifetime(1, 0.999, 0.999), 31);
         assert_eq!(lifetime(0, 0.5, 0.5), 10 + 3 + 3);
         assert_eq!(lifetime(3, 0.0, 0.0), 40);
+    }
+
+    #[test]
+    fn attached_rocket_tracks_its_player_and_explodes_at_their_position() {
+        let mut world = World::in_memory();
+        world.set_block(0, 3, 0, crate::blocks::state_by_name("stone").unwrap());
+        let item = crate::blocks::item_named("firework_rocket").unwrap();
+        let (_, star) = crate::stackdata::parse_item_spec(
+            "firework_rocket[fireworks={flight_duration:1,explosions:[{shape:\"small_ball\"}]}]",
+        ).unwrap();
+        let mut rocket = Rocket::new(
+            1, Dimension::Overworld, Stack::new(item, 2).with_extras(star), (1.5, 64.0, 1.5),
+            (0.0, 0.05, 0.0), false, (2, [2; 16], "Игрок".into()), 2,
+        );
+        rocket.attached = true;
+        let mut rockets = vec![rocket.clone()];
+        let mut blasts = Vec::new();
+        let mut wounds = Vec::new();
+        let mut player = (2, (1.5, 64.0, 1.5), false, 0);
+        for x in [3.5, 5.5] {
+            player.1 = (x, 64.0, 1.5);
+            step(&mut world, &mut rockets, Dimension::Overworld, &[player], &[], &mut blasts, &mut wounds);
+            assert_eq!((rockets[0].x, rockets[0].y, rockets[0].z), player.1);
+            assert!(blasts.is_empty() && wounds.is_empty());
+        }
+        assert_eq!(rockets[0].stack.count, 2);
+        player.1 = (7.5, 64.0, 1.5);
+        step(&mut world, &mut rockets, Dimension::Overworld, &[player], &[], &mut blasts, &mut wounds);
+        assert!(rockets.is_empty());
+        assert_eq!(blasts.len(), 1);
+        assert_eq!(blasts[0].last.x, 7.5);
+        assert_eq!(wounds.len(), 1);
+        assert!(matches!(wounds[0].1.target, Struck::Player(2)));
+        assert_eq!(wounds[0].1.damage, 7.0);
+
+        rockets.push(rocket);
+        blasts.clear();
+        wounds.clear();
+        step(&mut world, &mut rockets, Dimension::Overworld, &[], &[], &mut blasts, &mut wounds);
+        assert!(rockets.is_empty() && blasts.is_empty() && wounds.is_empty());
     }
 
     #[test]

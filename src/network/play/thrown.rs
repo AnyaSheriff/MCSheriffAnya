@@ -18,9 +18,10 @@ const ENTITY_MOVE_ROTATE: i32 = 0x36;
 const ENTITY_EVENT: i32 = 0x22;
 const ROCKET_BLAST_EVENT: u8 = 17;
 
-/// Свойства ракеты: предмет (8), пущена под углом (10) (minecraft-data,
-/// entities.json: fireworks_item, attached_to_target, shot_at_angle).
+/// Привязка к игроку (9) и пуск под углом (10), чёрный ящик Java 26.3.
+const ROCKET_ATTACHED_PROPERTY: u8 = 9;
 const ROCKET_ANGLED_PROPERTY: u8 = 10;
+const PROPERTY_OPTIONAL_VARINT: i32 = 19;
 
 /// Свойства: предмет снаряда (8), радиус (8), ожидание (9), частица (10)
 /// облака (minecraft-data, entities.json); виды значений — слот, число с
@@ -412,6 +413,17 @@ async fn update_eye(stream: &mut Outgoing<'_>, player: &mut PlayerState, eye: &c
     Ok(())
 }
 
+pub(super) fn rocket_launch_velocity(shared: &Shared, dimension: Dimension) -> (f64, f64, f64) {
+    let roll = || vitals::world_random(shared, dimension);
+    // Скорость вбок — нормальное распределение с σ 0,001 (вики).
+    let gauss = || {
+        let (a, b) = (f64::from(roll()).max(1.0e-9), f64::from(roll()));
+
+        (-2.0 * a.ln()).sqrt() * (std::f64::consts::TAU * b).cos() * 0.001
+    };
+    (gauss(), 0.05, gauss())
+}
+
 /// Ракета фейерверка в основной руке щёлкнута по блоку: пуск из точки
 /// щелчка, сдвинутой на 0,15 от грани (вики, Firework Rocket: «launched up
 /// vertically by using its item on a block») [проверить сдвиг]. Возвращает,
@@ -427,13 +439,7 @@ pub(super) fn launch_rocket(shared: &Shared, player: &mut PlayerState, at: (f64,
 
     let dimension = player.dimension;
     let roll = || vitals::world_random(shared, dimension);
-    // Скорость вбок — нормальное распределение с σ 0,001 (вики).
-    let gauss = || {
-        let (a, b) = (f64::from(roll()).max(1.0e-9), f64::from(roll()));
-
-        (-2.0 * a.ln()).sqrt() * (std::f64::consts::TAU * b).cos() * 0.001
-    };
-    let velocity = (gauss(), 0.05, gauss());
+    let velocity = rocket_launch_velocity(shared, dimension);
     let normal = match face {
         0 => (0.0, -1.0, 0.0),
         1 => (0.0, 1.0, 0.0),
@@ -733,6 +739,12 @@ async fn update_rocket(stream: &mut Outgoing<'_>, player: &mut PlayerState, rock
         body.push(ITEM_PROPERTY);
         body.extend_from_slice(&encode_varint(PROPERTY_SLOT));
         push_slot(&mut body, Some(rocket.stack));
+
+        if rocket.attached {
+            body.push(ROCKET_ATTACHED_PROPERTY);
+            body.extend_from_slice(&encode_varint(PROPERTY_OPTIONAL_VARINT));
+            body.extend_from_slice(&encode_varint(rocket.owner + 1));
+        }
 
         if rocket.angled {
             body.push(ROCKET_ANGLED_PROPERTY);
