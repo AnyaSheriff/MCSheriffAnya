@@ -115,6 +115,11 @@ fn assert_race_presentation(host: &mut Host, shared: &Shared) {
         for (slot, name) in [(5, "iron_helmet"), (6, "iron_chestplate"), (8, "iron_boots"), (40, "iron_sword")] {
             assert_eq!(crate::blocks::item_name(inventory[slot].unwrap().item), Some(name));
         }
+        let sword = inventory[40].unwrap().extras();
+        assert!(sword.unbreakable);
+        assert_eq!(sword.name.as_deref(), Some("Race blade"));
+        let meta: serde_json::Value = serde_json::from_str(sword.plugin_meta.as_deref().unwrap()).unwrap();
+        assert_eq!(crate::scoreboard::plain_text(&meta["lore"][0]), "Racial equipment");
         assert!(inventory[7].is_none() && inventory[36].is_none());
         let orders = players.take_orders(&player);
         assert!(orders.iter().any(|order| matches!(order, Order::Message { component } if *component == text_component("Race presentation checked"))));

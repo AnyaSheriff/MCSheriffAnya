@@ -61,11 +61,17 @@ fn apply_metadata(data: &mut crate::stackdata::Data, text: &str) -> Result<(), S
             "pdc" if valid_pdc(value) => (),
             "potion" if value.as_str().is_some_and(|name| crate::survival::potion_number(name.strip_prefix("minecraft:").unwrap_or(name)).is_some()) => (),
             "damage" if value.as_i64().is_some_and(|v| (0..=i32::MAX as i64).contains(&v)) => (),
+            "unbreakable" if value.is_boolean() => (),
             "maxDamage" if value.as_i64().is_some_and(|v| (1..=i32::MAX as i64).contains(&v)) => (),
             "flags" if value.as_array().is_some_and(|flags| flags.len() <= 32 && flags.iter().all(|flag| flag.as_str().is_some_and(|s| ["HIDE_ENCHANTS","HIDE_ATTRIBUTES","HIDE_UNBREAKABLE","HIDE_DESTROYS","HIDE_PLACED_ON","HIDE_ADDITIONAL_TOOLTIP","HIDE_DYE","HIDE_ARMOR_TRIM","HIDE_STORED_ENCHANTS"].contains(&s)))) => (),
             "enchants" | "stored" if value.as_object().is_some_and(|enchants| enchants.len() <= 64 && enchants.iter().all(|(name, level)| crate::stackdata::enchantment_number(name).is_some() && level.as_i64().is_some_and(|v| (1..=255).contains(&v)))) => (),
             _ => return Err(format!("ItemMeta: недопустимое поле {key}")),
         }
+    }
+    // Старые компоненты не присылают это поле. Сохраняем значение
+    // исходного предмета, пока компонент явно не попросил его изменить.
+    if let Some(unbreakable) = map.remove("unbreakable") {
+        data.unbreakable = unbreakable.as_bool().expect("проверено");
     }
     data.damage = map.get("damage").and_then(Value::as_i64).unwrap_or(0) as i32;
     data.potion = map.get("potion").and_then(Value::as_str).and_then(|name| crate::survival::potion_number(name.strip_prefix("minecraft:").unwrap_or(name)));
@@ -84,6 +90,7 @@ fn metadata(stack: Stack, token: Option<u32>) -> String {
     let data = stack.extras();
     let mut map: Map<String,Value> = data.plugin_meta.as_ref().and_then(|s| serde_json::from_str::<Value>(s).ok()).and_then(|v| v.as_object().cloned()).unwrap_or_default();
     if data.damage != 0 { map.insert("damage".into(), json!(data.damage)); } else { map.remove("damage"); }
+    if data.unbreakable { map.insert("unbreakable".into(), json!(true)); } else { map.remove("unbreakable"); }
     map.remove("potion");
     if let Some(name) = data.potion.and_then(|id| crate::survival::POTIONS.get(usize::from(id))) { map.insert("potion".into(), json!(format!("minecraft:{name}"))); }
     for (key, enchants) in [("enchants", data.enchants), ("stored", data.stored)] {
@@ -341,5 +348,24 @@ mod tests {
             assert!(apply_metadata(&mut crate::stackdata::Data::default(),invalid).is_err(),"{invalid}");
         }
         assert!(apply_metadata(&mut crate::stackdata::Data::default(), &"x".repeat(16385)).is_err());
+    }
+
+    #[test]
+    fn unbreakable_is_saved_and_only_changed_by_explicit_guest_input() {
+        let mut data = crate::stackdata::Data::default();
+        apply_metadata(&mut data, r#"{"unbreakable":true}"#).unwrap();
+        let saved = crate::stackdata::from_bytes(&crate::stackdata::to_bytes(&data)).unwrap();
+        assert!(saved.unbreakable);
+        assert_eq!(crate::stackdata::encode_components(&saved).0, 1);
+        let stack = Stack::new(crate::blocks::item_named("diamond_sword").unwrap(), 1).with_extras(saved);
+        let exposed: Value = serde_json::from_str(&metadata(stack, Some(1))).unwrap();
+        assert_eq!(exposed["unbreakable"], json!(true));
+        assert_eq!(exposed["_opaque"], json!(1), "старый SDK всё ещё видит отдельные метаданные");
+        apply_metadata(&mut data, r#"{"_native":1}"#).unwrap();
+        assert!(data.unbreakable);
+        assert!(apply_metadata(&mut data, r#"{"unbreakable":"false"}"#).is_err());
+        assert!(data.unbreakable);
+        apply_metadata(&mut data, r#"{"unbreakable":false}"#).unwrap();
+        assert!(data.is_default());
     }
 }
