@@ -1875,7 +1875,7 @@ fn step_mobs_with_executor(shared: &Shared, dimension: Dimension, world: &mut Wo
             }
             mob.newmobs.ridden = ridden;
             // «Стоит смирно» считается и у NoAI (чёрный ящик, happy-ghast-ride: 19=true на такт после схода).
-            let near = watchers.iter().any(|p| !p.spectator && (p.x-mob.x).abs() <= 2.0 && (p.z-mob.z).abs() <= 2.0 && p.y >= mob.y+mob.size().1 && p.y < mob.y+mob.size().1+2.0);
+            let near = crate::mob::newmobs::player_above_happy_ghast(mob, &watchers);
             if ridden {mob.newmobs.still=0;} else if near {mob.newmobs.still=10;} else {mob.newmobs.still=(mob.newmobs.still-1).max(0);}
         }
     }

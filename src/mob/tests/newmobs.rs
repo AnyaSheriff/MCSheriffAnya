@@ -252,7 +252,10 @@ fn adult_happy_ghast_aligns_on_top_and_keeps_the_riders_heading() {
     m.yaw = -60.0;
     m.head_yaw = -60.0;
     m.vx = 0.1;
-    let top = ai::Watcher { x: m.x, y: m.y + m.size().1 + 0.01, z: m.z, ..watcher() };
+    let top = ai::Watcher { x: m.x + 2.95, y: m.y + m.size().1 + 0.01, z: m.z, ..watcher() };
+    assert!(!newmobs::player_above_happy_ghast(&m, &[ai::Watcher { x: m.x + 3.05, ..top }]));
+    assert!(newmobs::player_above_happy_ghast(&m, &[ai::Watcher { x: m.x + 2.2, z: m.z + 2.2, ..top }]));
+    assert!(!newmobs::player_above_happy_ghast(&m, &[ai::Watcher { spectator: true, ..top }]));
     let standing = [top];
     let context = ai::Ctx { players: &standing, ..ctx() };
     let mut rng = Rng::new(9);

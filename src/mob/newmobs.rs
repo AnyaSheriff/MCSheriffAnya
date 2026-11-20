@@ -139,12 +139,21 @@ pub fn harness_colour(name: &str) -> Option<u8> {
     COLOURS.iter().position(|c| *c == colour).map(|i| i as u8)
 }
 
+pub(crate) fn player_above_happy_ghast(mob: &Mob, players: &[ai::Watcher]) -> bool {
+    // Чёрный ящик 26.3: взрослый останавливается при 2,95 блока сбоку,
+    // а за трёхблочной границей продолжает искать цель.
+    let reach = if mob.is_baby() { 2.0 } else { 3.0 };
+    let top = mob.y + mob.size().1;
+    players.iter().any(|p| !p.spectator && (p.x - mob.x).abs() <= reach
+        && (p.z - mob.z).abs() <= reach && p.y >= top && p.y < top + 2.0)
+}
+
 /// [проверить] полёт: общий ход летающих мобов, без боя и падения.
 pub fn happy_tick(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     ai::voice(mob,rng);
     if mob.newmobs.ridden {
         mob.newmobs.still = 0;
-    } else if ctx.players.iter().any(|p| !p.spectator && (p.x-mob.x).abs() <= 2.0 && (p.z-mob.z).abs() <= 2.0 && p.y >= mob.y+mob.size().1 && p.y < mob.y+mob.size().1+2.0) {
+    } else if player_above_happy_ghast(mob, ctx.players) {
         mob.newmobs.still = 10;
         if !mob.is_baby() {
             // Чёрный ящик 26.3: взрослый гаст с игроком сверху разворачивается к ближайшей стороне света.

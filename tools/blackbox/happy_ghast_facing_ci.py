@@ -148,7 +148,7 @@ def observe(label, command, protocol, entity_type, output, root):
         x, y, z = client.actor_position
         stage('west', 3.4, teleport(x - 9, y, z), 'tick step 58')
         x, y, z = client.actor_position
-        stage('hold', 1.8, teleport(x, y + 4.01, z), 'tick step 20')
+        stage('hold', 1.8, teleport(x + 2.6, y + 4.01, z), 'tick step 20')
         x, y, z = client.actor_position
         stage('diagonal', 3.4, teleport(x + 7, y, z + 4), 'tick step 60')
         x, y, z = client.actor_position
@@ -176,6 +176,7 @@ def verdict(record):
     steps = record['phase']
     east = steps['east']
     west = steps['west']
+    hold = steps['hold']
     diagonal = steps['diagonal']
     cardinal = steps['cardinal']
     diagonal_facing = any(s['yaw'] == s['head'] and 205 <= s['yaw'] <= 221 for s in diagonal['packets'])
@@ -183,6 +184,7 @@ def verdict(record):
         and east['position'][0] - steps['summon']['position'][0] > .4
         and east['position'][0] - west['position'][0] > .4
         and east['yaw'] == east['head'] == 192 and west['yaw'] == west['head'] == 64
+        and hold['yaw'] == hold['head'] == 64 and math.dist(west['position'], hold['position']) < .15
         and diagonal_facing
         and cardinal['yaw'] == cardinal['head'] == 192
         and math.dist(diagonal['position'], cardinal['position']) < .15)
