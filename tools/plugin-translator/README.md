@@ -39,14 +39,14 @@ PotionMeta, свет/возраст/состояние блоков и их во
 
 ## Поддерживаемые операции
 
-- `JavaPlugin`: onLoad/onEnable/onDisable, getName/getServer, getCommand,
+- `JavaPlugin`: onLoad/onEnable/onDisable, getName/getServer, getCommand, getDescription (имя, версия, главный класс),
   getConfig/reloadConfig/saveConfig/saveDefaultConfig. Команды описываются
   в plugin.yml (description/usage), исполняются через onCommand или setExecutor.
 - `CommandSender`, `CommandExecutor`, `TabCompleter`, PluginCommand.setTabCompleter,
   JavaPlugin.onTabComplete. Пустой результат по умолчанию дополняется именами
   игроков. WIT completion необязателен: старые компоненты продолжают загружаться.
   Подсказки ограничены 100 строками по 512 байт, проверяются права команды.
-- `Bukkit`/`Server`: игроки по имени/UUID, онлайн, broadcastMessage, миры,
+- `Bukkit`/`Server`: игроки по имени/UUID, онлайн, лимит игроков, отправитель консоли, broadcastMessage, миры,
   PluginManager.registerEvents, синхронный BukkitScheduler.
 - Player: имя, UUID, положение, мир, здоровье (чтение/смена; только Java), эффекты зелий (выдача/снятие), gamemode (чтение/смена),
   teleport, sendMessage, kickPlayer, isOp и консервативная hasPermission:
@@ -55,10 +55,15 @@ PotionMeta, свет/возраст/состояние блоков и их во
   Inventory/PlayerInventory.setItem: обычные ячейки 0..35 (hotbar 0..8).
   Миры: world, world_nether, world_the_end; прямое чтение блоков/высоты и teleport загружают целевой чанк без удержания замка мира; пакетный снимок block-cube не генерирует соседние чанки,
   время суток, погода и мгновенная смена центра/размера WorldBorder. Полного чтения инвентаря и addItem пока нет.
-- NamespacedKey, Adventure Component/TextComponent: text/empty/append, цвета,
-  декорации, legacyAmpersand/legacySection; JSON идёт в проверяемый presentation
-  хозяина для чата и action bar. Компоненты неизменяемые; hex legacy и hover/click API пока нет.
-- Listener/@EventHandler: join, quit, AsyncPlayerChatEvent, command preprocess,
+- NamespacedKey, Adventure Component/TextComponent: text/empty/append/newline, цвета,
+  декорации и legacy с RGB. Текстовые теги MiniMessage поддерживают вложенные
+  цвета и декорации, reset, newline, градиенты с цветами без фазы и экранирование.
+  Остальные теги остаются текстом. JSON проверяет хозяин перед отправкой.
+- Java-игроки: пинг, отображаемое имя для плагинов, имя в списке, заголовок и подвал списка.
+- Таблицы очков: основная таблица компонента и отдельные таблицы для назначенных
+  игроков, цели dummy, слоты, числа и фиксированные текстовые значения, команды
+  с настройкой видимости имени. Снятие своей таблицы возвращает основную.
+- Listener/@EventHandler: join, quit, PlayerChangedWorldEvent, AsyncPlayerChatEvent, command preprocess,
   break/place, EntityDamageEvent для урона игроку (getDamage/setDamage/отмена),
   PlayerDeathEvent (игрок и getKeepInventory, без изменения дропа). Combat-экспорт
   необязателен: старые компоненты загружаются без него. Приоритеты и ignoreCancelled работают внутри одного плагина;
@@ -113,11 +118,11 @@ newSingleThreadExecutor, newFixedThreadPool(1), execute/submit, Future и shutdo
 Неиспользуемая lambda-фабрика ThreadFactory удаляется; её Thread
 никогда не создаётся. Прямой new Thread(...).start(), Timer, другие executors
 и реальные параллельные операции по-прежнему дают русский отказ.
-softdepend принимается как список отсутствующих необязательных интеграций;
-PluginManager видит только текущий Java-плагин. При объявленной softdepend
-PlaceholderAPI доступен только тип отсутствующего расширения: создание/
-регистрация дают явную ошибку; PluginManager.isPluginEnabled возвращает false.
-Реальная PlaceholderAPI и её callbacks не предоставляются.
+softdepend принимается как список отсутствующих необязательных интеграций.
+PluginManager видит текущий Java-плагин. При `softdepend: [PlaceholderAPI]`
+переводчик связывает условные ссылки на PlaceholderAPI и её расширение.
+`isPluginEnabled("PlaceholderAPI")` возвращает false. Прямой вызов API или
+создание расширения выдаёт ошибку об отсутствующей зависимости.
 Проверяются владельцы, имена и **полные дескрипторы** методов/полей, constant pool,
 лямбды, аннотации и наследование Bukkit. Все классы JAR проверяются, включая
 недостижимые методы. Код плагина не исполняется на JVM переводчика;
@@ -223,10 +228,11 @@ DNS закрепляется за проверенными публичными 
 держатели и специализированные `AnvilView`/`MerchantInventory` ещё не реализованы.
 
 `getScoreboardManager().getMainScoreboard()` поддерживает команды с именем,
-цветом, Component-префиксом/суффиксом и набором участников. Изменения уходят
-всем Java-клиентам, новый игрок получает снимок команд; перенос записи между
-командами удаляет её из старой. Команды ограничены пространством компонента и
-очищаются при выгрузке. Цели/счёт/личные доски Java пока не поддержаны.
+цветом, Component-префиксом/суффиксом и набором участников. Изменения получает
+каждый Java-игрок, которому назначена эта таблица. Новый игрок по умолчанию
+получает снимок основной таблицы. Перенос записи между командами удаляет её
+из старой. При смене таблицы предыдущая снимается, при выгрузке компонента
+его команды, цели и показы очищаются.
 `getPlayerExact`, текущий такт, векторы, расстояния/направление Location и поиск
 ближайших игроков по ограничивающему прямоугольнику также доступны.
 

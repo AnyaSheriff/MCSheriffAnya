@@ -364,6 +364,15 @@ mod enabled {
     pub fn enchant_event(who: &PlayerView, item: crate::inventory::Stack, result: crate::inventory::Stack, button: u32, cost: i32, hint: String, level: i32) -> Option<crate::inventory::Stack> {
         let who=who.clone();with_host(Some(result),move |host|host.enchant_event(&who,item,result,button,cost,hint,level))
     }
+    pub fn player_changed_world(shared: &Shared, uuid: &[u8; 16], previous: Dimension) {
+        if !active() { return; }
+        let who = shared.players.lock().expect("список игроков захвачен другим потоком")
+            .members().iter().find(|member| &member.uuid == uuid).map(PlayerView::of_member);
+        if let Some(who) = who.filter(|who| who.dimension != previous) {
+            with_host((), move |host| host.player_changed_world(&who, previous));
+        }
+    }
+
     pub fn world_init(dimension: crate::dimension::Dimension) {with_host((),move |host|host.world_init(dimension))}
     pub fn generated_loot(dimension:crate::dimension::Dimension,pos:(i32,i32,i32),slots:Vec<Option<crate::inventory::Stack>>)->Vec<Option<crate::inventory::Stack>> {with_host(slots.clone(),move |host|host.generated_loot(dimension,pos,slots))}
     pub fn populate(dimension: crate::dimension::Dimension, x: i32, z: i32, seed: i64, chunk: crate::world::Chunk) -> crate::world::Chunk {with_host(chunk.clone(),move |host|host.populate(dimension,x,z,seed,chunk))}
@@ -467,7 +476,7 @@ mod enabled {
 }
 
 #[cfg(feature = "plugins")]
-pub use enabled::{world_init, generated_loot, populate, entity_death, native_event, block_drop, ground_item, furnace_event, trade_event, food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use enabled::{world_init, generated_loot, populate, entity_death, native_event, block_drop, ground_item, furnace_event, trade_event, food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_changed_world, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(feature = "plugins")]
 impl PlayerView {
@@ -540,6 +549,7 @@ mod disabled {
     pub fn prepare_anvil(_who: &PlayerView, _inputs: &[Option<crate::inventory::Stack>], _result: Option<crate::inventory::Stack>, cost: i32) -> i32 {cost}
     pub fn prepare_enchant(_who: &PlayerView, _item: crate::inventory::Stack, properties: Vec<i16>) -> Vec<i16> {properties}
     pub fn enchant_event(_who: &PlayerView, _item: crate::inventory::Stack, result: crate::inventory::Stack, _button: u32, _cost: i32, _hint: String, _level: i32) -> Option<crate::inventory::Stack> {Some(result)}
+    pub fn player_changed_world(_shared: &Shared, _uuid: &[u8; 16], _previous: Dimension) {}
     pub fn world_init(_dimension: crate::dimension::Dimension) {}
     pub fn generated_loot(_dimension:crate::dimension::Dimension,_pos:(i32,i32,i32),slots:Vec<Option<crate::inventory::Stack>>)->Vec<Option<crate::inventory::Stack>> {slots}
     pub fn populate(_dimension: crate::dimension::Dimension, _x: i32, _z: i32, _seed: i64, chunk: crate::world::Chunk) -> crate::world::Chunk {chunk}
@@ -565,7 +575,7 @@ mod disabled {
 }
 
 #[cfg(not(feature = "plugins"))]
-pub use disabled::{world_init, generated_loot, populate, entity_death, native_event, block_drop, ground_item, furnace_event, trade_event, food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_command, player_join, player_quit, run_command, shutdown, start, tick};
+pub use disabled::{world_init, generated_loot, populate, entity_death, native_event, block_drop, ground_item, furnace_event, trade_event, food_level, prepare_enchant, enchant_event, prepare_anvil, prepare_craft, entity_interact, damage_from, drag_event, stopping, item_event, respawn, player_move, interact, inventory_event, command_names, tab_complete, active, block_break, block_place, chat, death, player_changed_world, player_command, player_join, player_quit, run_command, shutdown, start, tick};
 
 #[cfg(not(feature = "plugins"))]
 impl PlayerView {

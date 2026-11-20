@@ -1301,6 +1301,7 @@ impl BedrockWorld {
 
         self.shared.players.lock().expect("список игроков захвачен другим потоком").set_dimension(&self.identity.uuid, dimension);
         self.publish_position();
+        crate::plugins::player_changed_world(&self.shared, &self.identity.uuid, old);
 
         self.events_from = self.shared.world_in(dimension).lock().expect("мир захвачен другим потоком").watch_events(reader);
         (self.items_from, self.waiting_items) = lying_items(&self.shared, dimension, reader);

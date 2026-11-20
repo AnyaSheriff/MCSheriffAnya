@@ -197,6 +197,20 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
     case 167: number(mcsa_api_presentation_set_display_name(&s[0], &s[1]));break;
     case 168: number(mcsa_api_presentation_set_player_list_name(&s[0], &s[1]));break;
     case 169: number(mcsa_api_presentation_set_tab_header_footer(&s[0], &s[1], &s[2]));break;
+    case 170: {
+        mcsa_api_presentation_objective_t objective = {.id = s[1], .title = s[2], .hearts = false};
+        number(mcsa_api_presentation_set_objective(&s[0], &objective));
+        break;
+    }
+    case 171: number(mcsa_api_presentation_remove_objective(&s[0], &s[1]));break;
+    case 172: number(mcsa_api_presentation_set_display_slot(&s[0], &s[1], s[2].len ? &s[2] : NULL));break;
+    case 173: {
+        mcsa_api_presentation_score_t score = {.objective = s[1], .holder = s[2],
+            .value = (int32_t)strtol(a[3], NULL, 10), .number = {.is_some = s[4].len != 0, .val = s[4]}};
+        number(mcsa_api_presentation_set_score(&s[0], &score));
+        break;
+    }
+    case 174: number(mcsa_api_presentation_remove_score(&s[0], &s[1], &s[2]));break;
     default: abort();
     }
     free(copy);return output;
@@ -269,6 +283,13 @@ uint32_t exports_mcsa_api_player_events_on_interact(mcsa_api_types_player_t *who
 void exports_mcsa_api_player_events_on_respawn(mcsa_api_types_player_t *who,mcsa_api_types_location_t *destination,bool bed,bool anchor,mcsa_api_types_location_t *ret) {
     clear();player(who);number(destination->dimension);number(destination->x);number(destination->y);number(destination->z);number(destination->yaw.is_some?destination->yaw.val:who->yaw);number(destination->pitch.is_some?destination->pitch.val:who->pitch);number(bed);number(anchor);
     dispatch(15);*ret=*destination;unsigned dimension;double x,y,z;float yaw,pitch;if(!event_text||sscanf(event_text,"%u %lf %lf %lf %f %f",&dimension,&x,&y,&z,&yaw,&pitch)!=6||dimension>2)abort();ret->dimension=dimension;ret->x=x;ret->y=y;ret->z=z;ret->yaw.is_some=ret->pitch.is_some=true;ret->yaw.val=yaw;ret->pitch.val=pitch;
+}
+
+void exports_mcsa_api_player_events_on_world_change(mcsa_api_types_player_t *who, mcsa_api_types_dimension_t from) {
+    clear();
+    player(who);
+    number(from);
+    dispatch(46);
 }
 
 bool exports_mcsa_api_item_events_on_entity(mcsa_api_types_player_t *who,plugin_string_t *target,uint32_t hand,uint32_t *slot) {clear();player(who);string(*target);number(hand);number(slot?(int64_t)*slot:-1);return dispatch(19)==1;}

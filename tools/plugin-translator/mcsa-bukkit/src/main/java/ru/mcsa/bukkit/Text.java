@@ -8,6 +8,17 @@ public final class Text implements TextComponent {
  public Text color(TextColor value){String hex=null;if(value!=null){int n=value.value();if(n<0||n>0xffffff)throw new IllegalArgumentException("Цвет: 0..ffffff");hex=hexColor(n);}return new Text(content,hex,new EnumMap<>(decorations),new ArrayList<>(children));}
  public Text append(Component value){List<Component> c=new ArrayList<>(children);c.add(Objects.requireNonNull(value));return new Text(content,color,new EnumMap<>(decorations),c);}
  public Text decoration(TextDecoration d,boolean state){Map<TextDecoration,Boolean> m=new EnumMap<>(decorations);m.put(d,state);return new Text(content,color,m,new ArrayList<>(children));}
+ static Text styled(String content, int rgb, int specified, int enabled) {
+  Map<TextDecoration,Boolean> decorations = new EnumMap<>(TextDecoration.class);
+  for (TextDecoration decoration : TextDecoration.values()) {
+   int bit = 1 << decoration.ordinal();
+   if ((specified & bit) != 0) decorations.put(decoration, (enabled & bit) != 0);
+  }
+  return new Text(content, rgb < 0 ? null : hexColor(rgb), decorations, new ArrayList<>());
+ }
+ static Text sequence(List<Component> parts) {
+  return new Text("", null, new EnumMap<>(TextDecoration.class), new ArrayList<>(parts));
+ }
  private static final String LEGACY_COLORS = "0123456789abcdef";
  private static final String LEGACY_DECORATIONS = "klmno";
 

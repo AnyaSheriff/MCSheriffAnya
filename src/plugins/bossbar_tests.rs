@@ -95,18 +95,95 @@ fn assert_tab_presentation(host: &mut Host, shared: &Shared) {
     assert!(matches!(orders.as_slice(), [Order::Packet(packet)] if *packet == header_packet(&json!(""), &json!(""))));
 }
 
+fn assert_bukkit_scoreboard(host: &mut Host, shared: &Shared) {
+    use crate::{network::nbt::text_component, players::Order, scoreboard};
+    use serde_json::json;
+    let owner = "java-bossbar".to_string();
+    let run = |host: &mut Host, phase: &str, reply: &str| {
+        assert_eq!(host.run_command(bossbar_sender(1), "barprobe", &[phase.into()]), Some((true, String::new())));
+        let mut players = shared.players.lock().unwrap();
+        assert!(players.take_orders(&[1;16]).iter().any(|order| {
+            matches!(order, Order::Message { component } if *component == text_component(reply))
+        }), "{phase}");
+        players.take_orders(&[2;16])
+    };
+
+    assert!(!run(host, "board-main", "Board main").is_empty());
+    {
+        let players = shared.players.lock().unwrap();
+        for viewer in [[1;16], [2;16]] {
+            let ui = &players.ui.owned[&(owner.clone(), viewer)];
+            let objective = ui.objectives.values().next().unwrap();
+            assert_eq!(ui.objectives.len(), 1);
+            assert_eq!(scoreboard::plain_text(&objective.display), "MainTitle");
+            assert_eq!(ui.teams.values().next().unwrap().nametag, 1);
+            assert_eq!(players.ui.slots[&(viewer, 2)].1, objective.name);
+            let fixed = scoreboard::Score { value: -7, locked: true, display: None,
+                format: Some(scoreboard::NumberFormat::Fixed(json!({"text":"FixedName"}))) };
+            let score = scoreboard::score_packet("Первый", &objective.name, &fixed);
+            assert!(ui.cache.values().any(|packet| *packet == score));
+        }
+    }
+
+    assert!(run(host, "board-private", "Board private").is_empty());
+    {
+        let players = shared.players.lock().unwrap();
+        let personal = &players.ui.owned[&(owner.clone(), [1;16])];
+        let shared_board = &players.ui.owned[&(owner.clone(), [2;16])];
+        let private_objective = personal.objectives.values().next().unwrap();
+        let main_objective = shared_board.objectives.values().next().unwrap();
+        assert!(personal.teams.is_empty());
+        assert_eq!(shared_board.teams.len(), 1);
+        assert_eq!(private_objective.name, main_objective.name);
+        assert_eq!(scoreboard::plain_text(&private_objective.display), "ChangedTitle");
+        assert_eq!(scoreboard::plain_text(&main_objective.display), "MainTitle");
+        assert!(!players.ui.slots.contains_key(&([1;16], 2)));
+        assert_eq!(players.ui.slots[&([1;16], 1)].1, private_objective.name);
+        assert_eq!(players.ui.slots[&([2;16], 2)].1, main_objective.name);
+        let points = scoreboard::Score { value: 6, locked: true, display: None, format: None };
+        let score = scoreboard::score_packet("PersonalEntry", &private_objective.name, &points);
+        assert!(personal.cache.values().any(|packet| *packet == score));
+        assert!(!shared_board.cache.values().any(|packet| *packet == score));
+    }
+
+    assert!(!run(host, "board-clear", "Board cleared").is_empty());
+    let players = shared.players.lock().unwrap();
+    assert!(players.ui.slots.is_empty());
+    for viewer in [[1;16], [2;16]] {
+        let ui = &players.ui.owned[&(owner.clone(), viewer)];
+        assert!(ui.teams.is_empty() && ui.objectives.is_empty() && ui.cache.is_empty());
+    }
+}
+
+fn assert_bukkit_world_change(host: &mut Host, shared: &Shared) {
+    use crate::{dimension::Dimension, network::nbt::text_component, players::Order};
+    let mut who = view();
+    host.player_changed_world(&who, Dimension::Overworld);
+    assert!(shared.players.lock().unwrap().take_orders(&who.uuid).is_empty());
+    for (from, to, message) in [
+        (Dimension::Overworld, Dimension::Nether, "ChangedWorld world world_nether"),
+        (Dimension::Nether, Dimension::Overworld, "ChangedWorld world_nether world"),
+    ] {
+        who.dimension = to;
+        shared.players.lock().unwrap().set_dimension(&who.uuid, to);
+        host.player_changed_world(&who, from);
+        let mut players = shared.players.lock().unwrap();
+        assert!(matches!(players.take_orders(&who.uuid).as_slice(), [Order::Message { component }]
+            if *component == text_component(message)));
+        assert!(players.take_orders(&[2;16]).is_empty());
+    }
+}
+
 #[test]
 #[ignore = "нужен переведённый fixtures/bossbar в tmp/java-test/plugins/java-bossbar"]
-fn translated_bukkit_bossbar_multiplayer_updates_and_cleanup() {
-    let root = server_root("java-bossbar");
+fn translated_bukkit_player_presentation_and_world_change() {
+    let root = server_root("java-player-presentation");
     bossbar_fixture(&root);
-    assert!(install(&root, "plugins", "hello", "hello", ""));
     let shared = shared();
     java_info(&shared);
     bossbar_second_player(&shared);
     let mut host = Host::new(Arc::clone(&shared), root).unwrap();
     host.load("java-bossbar").unwrap();
-    assert!(shared.players.lock().unwrap().ui.owned.is_empty(), "создание без зрителей не шлёт оформление");
     {
         let mut players = shared.players.lock().unwrap();
         players.ui.info.entry([1; 16]).or_default().ping = 42;
@@ -119,7 +196,35 @@ fn translated_bukkit_bossbar_multiplayer_updates_and_cleanup() {
         assert!(matches!(orders.as_slice(), [crate::players::Order::Message { component }]
             if *component == crate::network::nbt::text_component(&format!("PlayerInfo {ping} {max} {max}"))));
     }
+    assert_eq!(host.run_command(bossbar_sender(1), "barprobe", &["metadata".into()]), Some((true, String::new())));
+    assert!(matches!(shared.players.lock().unwrap().take_orders(&[1;16]).as_slice(),
+        [crate::players::Order::Message { component }] if *component == crate::network::nbt::text_component("Metadata checked")));
+    assert_eq!(host.run_command(bossbar_sender(1), "barprobe", &["minitext".into()]), Some((true, String::new())));
+    let decoded = serde_json::json!({"text":"","extra":[
+        {"text":"Head ","color":"#55ff55"},{"text":"bold","color":"#55ff55","bold":true},{"text":"\n"},
+        {"text":"A","color":"#ff0000"},{"text":"☃","color":"#800080"},{"text":"Z","color":"#0000ff"},{"text":"<red>"},
+    ]});
+    assert!(matches!(shared.players.lock().unwrap().take_orders(&[1;16]).as_slice(),
+        [crate::players::Order::Message { component }] if *component == crate::scoreboard::encode_component(&decoded)));
     assert_tab_presentation(&mut host, &shared);
+    assert_bukkit_scoreboard(&mut host, &shared);
+    assert_bukkit_world_change(&mut host, &shared);
+    assert!(host.is_loaded("java-bossbar"));
+    host.unload("java-bossbar").unwrap();
+}
+
+#[test]
+#[ignore = "нужен переведённый fixtures/bossbar в tmp/java-test/plugins/java-bossbar"]
+fn translated_bukkit_bossbar_multiplayer_updates_and_cleanup() {
+    let root = server_root("java-bossbar");
+    bossbar_fixture(&root);
+    assert!(install(&root, "plugins", "hello", "hello", ""));
+    let shared = shared();
+    java_info(&shared);
+    bossbar_second_player(&shared);
+    let mut host = Host::new(Arc::clone(&shared), root).unwrap();
+    host.load("java-bossbar").unwrap();
+    assert!(shared.players.lock().unwrap().ui.owned.is_empty(), "создание без зрителей не шлёт оформление");
     let first = bossbar_command(&mut host, &shared, 1, "add", 1);
     assert_eq!(bossbar_actions(&first), [0]);
     let first_uuid = first[0][1..17].to_vec();

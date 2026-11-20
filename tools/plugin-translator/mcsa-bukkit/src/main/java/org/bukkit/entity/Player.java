@@ -5,4 +5,6 @@ public interface Player extends HumanEntity, org.bukkit.OfflinePlayer, org.bukki
  void setDisplayName(String name);
  void playerListName(Component name);
  void sendPlayerListHeaderAndFooter(Component header, Component footer);
+ org.bukkit.scoreboard.Scoreboard getScoreboard();
+ void setScoreboard(org.bukkit.scoreboard.Scoreboard scoreboard);
 }

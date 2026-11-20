@@ -16,6 +16,7 @@ TESTS = (
     'plugins::tests::translated_bukkit_bossbar_multiplayer_updates_and_cleanup',
     'plugins::tests::translated_bukkit_bossbar_remove_all_and_disconnected_viewers',
     'plugins::tests::translated_bukkit_bossbar_visibility_failure_rolls_back_all_viewers',
+    'plugins::tests::translated_bukkit_player_presentation_and_world_change',
 )
 
 

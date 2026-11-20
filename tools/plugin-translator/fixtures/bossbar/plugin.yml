@@ -4,4 +4,4 @@ main: fixtures.BossBarPlugin
 commands:
   barprobe:
     description: Проверка полос боссов через WIT
-    usage: /barprobe add|update|hide|hidden|show|remove|all|second|bounds|limit|invalid|fill-hidden-viewer|show-rejected|free-hidden-viewer|info|tab|tab-reset
+    usage: /barprobe add|update|hide|hidden|show|remove|all|second|bounds|limit|invalid|fill-hidden-viewer|show-rejected|free-hidden-viewer|info|metadata|minitext|tab|tab-reset|board-main|board-private|board-clear

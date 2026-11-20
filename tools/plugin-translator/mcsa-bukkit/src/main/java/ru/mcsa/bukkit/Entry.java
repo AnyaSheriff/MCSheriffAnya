@@ -23,7 +23,8 @@ public final class Entry {
   if(kind==7||kind==9){
    CommandSender sender;
    if(a[0].equals("0")){sender=Bukkit.getPlayer(java.util.UUID.fromString(a[1]));if(sender==null)return 0;}
-   else {final String name=a[2];final boolean console=a[0].equals("1");sender=new CommandSender(){public String getName(){return name;}public void sendMessage(String m){Host.call(23,m);}public boolean isOp(){return console;}public boolean hasPermission(String p){return console;}};}
+   else if(a[0].equals("1"))sender=Bukkit.getConsoleSender();
+   else {final String name=a[2];sender=new CommandSender(){public String getName(){return name;}public void sendMessage(String m){Host.call(23,m);}public boolean isOp(){return false;}public boolean hasPermission(String p){return false;}};}
    PluginCommand command=RuntimeState.plugin.getCommand(a[3]);if(kind==9){if(command!=null)for(String value:command.tabComplete(sender,a[3],Arrays.copyOfRange(a,4,a.length)))Host.call(25,value);return 0;}return command!=null&&command.execute(sender,a[3],Arrays.copyOfRange(a,4,a.length))?1:0;
   }
   if(kind==34){GeneratedLoot.run(a);return 0;}
@@ -59,6 +60,7 @@ public final class Entry {
    case 12:return ChestViews.event(p,Integer.parseInt(a[9]),Integer.parseInt(a[10]),Integer.parseInt(a[11]),Integer.parseInt(a[12]),Integer.parseInt(a[13]));
    case 1:e=new PlayerJoinEvent(p,null);break;
    case 2:e=new PlayerQuitEvent(p,null);break;
+   case 46:e=new PlayerChangedWorldEvent(p,new RemoteWorld(Integer.parseInt(a[9])));break;
    case 3:e=new AsyncPlayerChatEvent(p,a[9]);break;
    case 4:case 5:org.bukkit.block.Block b=new RemoteBlock(new RemoteWorld(Integer.parseInt(a[9])),Integer.parseInt(a[10]),Integer.parseInt(a[11]),Integer.parseInt(a[12]),kind==5?a[13]:null);e=kind==4?new BlockBreakEvent(b,p):new BlockPlaceEvent(b,p);break;
    case 6:e=new PlayerCommandPreprocessEvent(p,"/"+a[9]);break;
@@ -67,9 +69,9 @@ public final class Entry {
    case 11:e=new org.bukkit.event.entity.PlayerDeathEvent(p,a[9].equals("1"));break;
    default:throw new IllegalArgumentException("Неизвестное событие");
   }
-  if(kind==1){MainScoreboard.INSTANCE.sync(p);}if(kind==2)ArmorChanges.leave(p);
+  if(kind==1){MainScoreboard.forPlayer(p.getUniqueId()).sync(p);}if(kind==2)ArmorChanges.leave(p);
   RuntimeState.fire(e);
-  if(kind==2)RemoteBossBar.leave(p);
+  if(kind==2){RemoteBossBar.leave(p);MainScoreboard.leave(p.getUniqueId());}
   if(e instanceof Cancellable&&((Cancellable)e).isCancelled())return 1;
   if(kind==5&&!((BlockPlaceEvent)e).canBuild())return 1;
   if(kind==10||kind==18){Host.call(22,""+((org.bukkit.event.entity.EntityDamageEvent)e).getDamage());return 2;}

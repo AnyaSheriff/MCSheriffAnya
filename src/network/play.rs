@@ -7321,6 +7321,7 @@ async fn read_and_log_play_packets(
                         publish_player(shared, player);
                     }
 
+                    crate::plugins::player_changed_world(shared, &player.uuid, from_dimension);
                     let chunk = player.chunk();
                     standing_in = chunk;
                     send_center_chunk(stream, chunk).await?;

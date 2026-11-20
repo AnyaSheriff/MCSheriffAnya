@@ -52,6 +52,8 @@ public final class RemotePlayer implements Player {
    throw new IllegalStateException("Заголовок списка игроков отклонён ядром");
   }
  }
+ public org.bukkit.scoreboard.Scoreboard getScoreboard() { return MainScoreboard.forPlayer(getUniqueId()); }
+ public void setScoreboard(org.bukkit.scoreboard.Scoreboard scoreboard) { MainScoreboard.assign(this, scoreboard); }
  public void sendMessage(String m){Host.call(2,uuid,m);}public boolean isOp(){return Integer.parseInt(Host.text(10,uuid))>0;}
  public void sendMessage(net.kyori.adventure.text.Component m){if(!Host.yes(27,uuid,Text.json(m)))throw new IllegalStateException("Компонент сообщения отклонён хозяином");}
  public void sendActionBar(net.kyori.adventure.text.Component m){if(!Host.yes(28,uuid,Text.json(m)))throw new IllegalStateException("Компонент action bar отклонён хозяином");}

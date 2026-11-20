@@ -132,6 +132,7 @@ type ItemEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, 
 type InventoryEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, u32, i32, i32, i32), (bool,)>;
 type RespawnEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::types::Location, bool, bool), (mcsa::api::types::Location,)>;
 type MoveEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::types::Location, bool), (Option<mcsa::api::types::Location>,)>;
+type WorldChangeEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, mcsa::api::types::Dimension), ()>;
 type InteractEvent = wasmtime::component::TypedFunc<(mcsa::api::types::Player, u32, u32, Option<mcsa::api::types::BlockPos>, u32), (u32,)>;
 type Death = wasmtime::component::TypedFunc<(mcsa::api::types::Player, bool), ()>;
 
@@ -167,6 +168,7 @@ pub struct Loaded {
     entity_interact: Option<EntityInteract>,
     drag_event: Option<DragEvent>,
     move_event: Option<MoveEvent>,
+    world_change_event: Option<WorldChangeEvent>,
     respawn_event: Option<RespawnEvent>,
     interact_event: Option<InteractEvent>,
     limits: Limits,
@@ -582,13 +584,17 @@ impl Host {
         let move_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-move"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, mcsa::api::types::Location, bool), (Option<mcsa::api::types::Location>,)>(&mut store, &index))
             .transpose().map_err(|error| short(&error))?;
+        let world_change_event = player_events.as_ref()
+            .and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-world-change"))
+            .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, mcsa::api::types::Dimension), ()>(&mut store, &index))
+            .transpose().map_err(|error| short(&error))?;
         let respawn_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-respawn"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, mcsa::api::types::Location, bool, bool), (mcsa::api::types::Location,)>(&mut store, &index))
             .transpose().map_err(|error| short(&error))?;
         let interact_event = player_events.as_ref().and_then(|parent| raw.get_export_index(&mut store, Some(parent), "on-interact"))
             .map(|index| raw.get_typed_func::<(mcsa::api::types::Player, u32, u32, Option<mcsa::api::types::BlockPos>, u32), (u32,)>(&mut store, &index))
             .transpose().map_err(|error| short(&error))?;
-        let mut plugin = Loaded { manifest, trusted, store, instance, completion, priority, place_priority, damage, damage_from, death, inventory_event, item_event, prepare_craft, prepare_anvil, prepare_enchant, enchant_event, food_event, trade_event, furnace_event, ground_item, block_drop, native_event, entity_death, generated_loot, wants_population, populate, world_init, entity_interact, drag_event, move_event, respawn_event, interact_event, limits, stats: Stats::default() };
+        let mut plugin = Loaded { manifest, trusted, store, instance, completion, priority, place_priority, damage, damage_from, death, inventory_event, item_event, prepare_craft, prepare_anvil, prepare_enchant, enchant_event, food_event, trade_event, furnace_event, ground_item, block_drop, native_event, entity_death, generated_loot, wants_population, populate, world_init, entity_interact, drag_event, move_event, world_change_event, respawn_event, interact_event, limits, stats: Stats::default() };
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
         // Холодная инициализация классов и конфигурации не входит в бюджет такта.
@@ -789,6 +795,20 @@ impl Host {
     }
 
     // ----- события -----
+
+    pub fn player_changed_world(&mut self, who: &PlayerView, previous: crate::dimension::Dimension) {
+        if who.dimension == previous { return; }
+        let now = self.shared_tick();
+        let from = super::api::dimension_to_wit(previous);
+        let mut crashes = Vec::new();
+        for plugin in &mut self.loaded {
+            let Some(function) = plugin.world_change_event else { continue; };
+            if let Err(reason) = plugin.call(now, |_, store| function.call(store, (who.to_wit(), from))) {
+                crashes.push(Crash { plugin: plugin.manifest.name.clone(), reason });
+            }
+        }
+        self.bury(crashes);
+    }
 
     pub fn respawn(&mut self, who: &PlayerView, destination: &PlayerView, bed: bool, anchor: bool) -> PlayerView {
         let now = self.shared_tick();let mut to = destination.clone();let mut crashes = Vec::new();

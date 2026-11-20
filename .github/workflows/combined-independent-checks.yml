@@ -92,7 +92,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-      - name: Execute three translated Bukkit BossBar tests
+      - name: Execute translated Bukkit BossBar and presentation tests
         run: python3 -B tools/plugin-translator/bossbar_ci.py runtime --output bossbar-evidence
       - name: Compile own ModSDK fixtures and execute exact Host tests
         if: ${{ !cancelled() && steps.wasm_tools.outcome == 'success' }}

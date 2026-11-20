@@ -1,24 +1,41 @@
 package fixtures;
+import io.papermc.paper.scoreboard.numbers.NumberFormat;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.boss.*;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
 // Собственная проверка API: ни Bukkit/Paper JAR, ни сторонние плагины не используются.
-public final class BossBarPlugin extends JavaPlugin {
+public final class BossBarPlugin extends JavaPlugin implements Listener {
  private BossBar bar,second;
  private final java.util.List<BossBar> capacityBars=new java.util.ArrayList<>();
  private static void check(boolean value){if(!value)throw new IllegalStateException("Проверка BossBar не прошла");}
  @Override public void onEnable(){
+  check(getDescription().getName().equals("java-bossbar") && getDescription().getVersion().equals("1.0")
+      && getDescription().getMain().equals("fixtures.BossBarPlugin"));
+  Bukkit.getPluginManager().registerEvents(this,this);
   bar=Bukkit.createBossBar("\u00a7aПервая",BarColor.BLUE,BarStyle.SEGMENTED_10);
   second=getServer().createBossBar(null,BarColor.RED,BarStyle.SOLID);
   check(bar.isVisible()&&bar.getProgress()==1&&bar.getPlayers().isEmpty());
   check(second.getTitle().isEmpty());
+ }
+ @EventHandler public void onWorldChanged(PlayerChangedWorldEvent event) {
+  Player player = event.getPlayer();
+  player.sendMessage("ChangedWorld " + event.getFrom().getName() + " " + player.getWorld().getName());
  }
  // Проверка отказа выполняется отдельным методом: после catch вызывающий
  // по-прежнему проверяет список зрителей у того же объекта BossBar.
@@ -68,11 +85,67 @@ public final class BossBarPlugin extends JavaPlugin {
   player.playerListName(Component.text("TabAlias"));
   player.sendPlayerListHeaderAndFooter(Component.text("TabHead").append(Component.newline()).append(Component.text("LineTwo")), Component.text("TabFoot"));
  }
+ private static void setMainBoard(Player player) {
+  Scoreboard main = Bukkit.getScoreboardManager().getMainScoreboard();
+  check(player.getScoreboard() == main);
+  Objective objective = main.registerNewObjective("compat", "dummy", Component.text("MainTitle"));
+  objective.setDisplaySlot(DisplaySlot.BELOW_NAME);
+  Score score = objective.getScore(player.getName());
+  check(!score.isScoreSet() && score.getScore() == 0 && main.getEntries().isEmpty());
+  score.numberFormat(NumberFormat.fixed(Component.text("FixedName")));
+  check(score.isScoreSet() && main.getEntries().contains(player.getName()));
+  score.setScore(-7);
+  check(main.getObjective("compat") == objective && objective.getScore(player.getName()).getScore() == -7);
+  Team team = main.registerNewTeam("team");
+  team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+  team.addEntry(player.getName());
+ }
+ private static void setPrivateBoard(Player player) {
+  Scoreboard personal = Bukkit.getScoreboardManager().getNewScoreboard();
+  Objective objective = personal.registerNewObjective("compat", "dummy", "§aPersonalTitle");
+  objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+  objective.getScore("PersonalEntry").setScore(5);
+  player.setScoreboard(personal);
+  check(player.getScoreboard() == personal && objective.getDisplaySlot() == DisplaySlot.SIDEBAR);
+  objective.setDisplayName("ChangedTitle");
+  personal.resetScores("PersonalEntry");
+  check(personal.getEntries().isEmpty() && !objective.getScore("PersonalEntry").isScoreSet());
+  objective.getScore("PersonalEntry").setScore(6);
+ }
+ private static void clearMainBoard(Player player) {
+  Scoreboard main = Bukkit.getScoreboardManager().getMainScoreboard();
+  player.setScoreboard(main);
+  Objective objective = main.getObjective("compat");
+  Score score = objective.getScore(player.getName());
+  check(score.isScoreSet() && score.getScore() == -7);
+  score.resetScore();
+  main.getTeam("team").unregister();
+  objective.unregister();
+  check(main.getObjective("compat") == null && main.getEntries().isEmpty());
+ }
  @Override public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
   if(!(sender instanceof Player)||args.length!=1)return false;
   Player player=(Player)sender;
   if(args[0].equals("info")){
    sender.sendMessage("PlayerInfo "+player.getPing()+" "+Bukkit.getMaxPlayers()+" "+getServer().getMaxPlayers());
+   return true;
+  }
+  if (args[0].equals("metadata")) {
+   org.bukkit.OfflinePlayer online = player;
+   check(online.getPlayer().equals(player));
+   org.bukkit.command.ConsoleCommandSender console = Bukkit.getConsoleSender();
+   check(console == getServer().getConsoleSender() && console.isOp());
+   console.sendMessage("ConsoleMetadata " + getDescription().getFullName());
+   sender.sendMessage("Metadata checked");
+   return true;
+  }
+  if (args[0].equals("minitext")) {
+   Component parsed = MiniMessage.miniMessage().deserialize(
+       "<green>Head <bold>bold</bold></green><br><gradient:#ff0000:#0000ff>A☃Z</gradient>\\<red>");
+   LegacyComponentSerializer serializer = LegacyComponentSerializer.builder().character('&')
+       .hexColors().useUnusualXRepeatedCharacterHexFormat().build();
+   check(serializer.serialize(parsed).equals("&aHead &lbold&r\n&x&f&f&0&0&0&0A&x&8&0&0&0&8&0☃&x&0&0&0&0&f&fZ&r<red>"));
+   player.sendMessage(parsed);
    return true;
   }
   if (args[0].equals("tab")) {
@@ -87,6 +160,12 @@ public final class BossBarPlugin extends JavaPlugin {
    check(player.getDisplayName().equals(player.getName()));
    sender.sendMessage("Tab reset");
    return true;
+  }
+  switch (args[0]) {
+   case "board-main": setMainBoard(player); sender.sendMessage("Board main"); return true;
+   case "board-private": setPrivateBoard(player); sender.sendMessage("Board private"); return true;
+   case "board-clear": clearMainBoard(player); sender.sendMessage("Board cleared"); return true;
+   default: break;
   }
   switch(args[0]){
    case "add":

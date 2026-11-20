@@ -568,10 +568,12 @@ interface inventory-events {
 
 /// Необязательные события перед принятием движения и использованием предмета.
 interface player-events {
-    use types.{player, location, block-pos};
+    use types.{player, location, block-pos, dimension};
     /// none возвращает клиента к прежнему месту; результат проходит проверку координат.
     on-move: func(who: player, destination: location, jump: bool) -> option<location>;
     on-respawn: func(who: player, destination: location, bed: bool, anchor: bool) -> location;
+    /// После перехода, когда данные игрока уже относятся к новому миру.
+    on-world-change: func(who: player, previous: dimension);
     /// 0 — разрешить, 1 — запретить блок, 2 — запретить предмет, 3 — оба.
     on-interact: func(who: player, action: u32, hand: u32, block: option<block-pos>, face: u32) -> u32;
 }
