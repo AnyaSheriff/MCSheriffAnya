@@ -172,13 +172,7 @@ pub fn random_ticks(world: &mut World, players: &[(i32, i32)], distance: i32, sp
                 continue;
             }
 
-            for _ in 0..speed {
-                let index = (world.random_bits() % 4096) as usize;
-                let Some(blocks) = world.section_blocks(cx, cz, section) else {
-                    break;
-                };
-                let state = blocks[index];
-
+            world.sample_random_section(cx, cz, section, speed, |index, state| {
                 if ticks_randomly(state) {
                     let x = cx * 16 + (index % 16) as i32;
                     let z = cz * 16 + (index / 16 % 16) as i32;
@@ -186,7 +180,7 @@ pub fn random_ticks(world: &mut World, players: &[(i32, i32)], distance: i32, sp
 
                     due.push(((x, y, z), i32::from(state)));
                 }
-            }
+            });
         }
     }
 
@@ -1924,6 +1918,36 @@ mod tests {
 #[cfg(test)]
 mod perf_tests {
     use super::*;
+
+    #[test]
+    fn section_sampling_preserves_draws_states_and_rng_continuation() {
+        let mut reference = World::in_memory();
+        let mut sampled = World::in_memory();
+        let ground_section = (-MIN_Y / 16) as usize;
+        for world in [&mut reference, &mut sampled] {
+            world.ensure(-2, 3);
+        }
+        for (cx, cz, section, speed) in [
+            (-2, 3, ground_section, 0),
+            (-2, 3, ground_section, 3),
+            (-2, 3, ground_section, 8192),
+            (-2, 3, ground_section + 1, 30),
+            (-1, 3, ground_section, 30),
+        ] {
+            let mut expected = Vec::new();
+            for _ in 0..speed {
+                let index = (reference.random_bits() % 4096) as usize;
+                let Some(blocks) = reference.section_blocks(cx, cz, section) else { break; };
+                expected.push((index, blocks[index]));
+            }
+            let mut actual = Vec::new();
+            sampled.sample_random_section(cx, cz, section, speed, |index, state| {
+                actual.push((index, state));
+            });
+            assert_eq!(actual, expected);
+            assert_eq!(sampled.random_bits(), reference.random_bits());
+        }
+    }
 
     fn old_chunks(players: &[(i32, i32)], distance: i32) -> Vec<(i32, i32)> {
         let mut chunks = Vec::new();

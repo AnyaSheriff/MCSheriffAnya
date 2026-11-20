@@ -3916,23 +3916,25 @@ impl World {
     /// Случайное число от 0 до 1 — для высоты звуков и прочего, где в игре
     /// тоже случайность. Простой сдвиговый генератор: точность ему не нужна.
     pub fn random_unit(&mut self) -> f32 {
-        let mut x = self.noise.max(1);
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.noise = x;
-        (x % 10_000) as f32 / 10_000.0
+        (self.random_bits() % 10_000) as f32 / 10_000.0
     }
 
     /// Случайное число во всю ширину генератора — там, где нужна точная
     /// доля вроде 3/4096 (случайный такт), а `random_unit` для неё грубовата.
     pub fn random_bits(&mut self) -> u32 {
-        let mut x = self.noise.max(1);
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        self.noise = x;
-        x
+        advance_random_bits(&mut self.noise)
+    }
+
+    /// Состояния из одной секции до применения случайных тактов.
+    pub(crate) fn sample_random_section(&mut self, cx: i32, cz: i32, section: usize, speed: u32,
+                                        mut sample: impl FnMut(usize, Packed)) {
+        let blocks = self.chunks.get(&(cx, cz)).and_then(|chunk| chunk.section(section));
+        for _ in 0..speed {
+            let index = advance_random_bits(&mut self.noise) as usize % SECTION_BLOCKS;
+            // В прежнем обходе отсутствующая секция проверялась после первого числа.
+            let Some(blocks) = blocks else { break; };
+            sample(index, blocks[index]);
+        }
     }
 
     /// Сообщает клиентам, что стоит в этом месте сейчас, — даже если для
@@ -4809,6 +4811,15 @@ impl World {
     pub fn scheduled_count(&self) -> usize {
         self.waiting.len()
     }
+}
+
+fn advance_random_bits(noise: &mut u32) -> u32 {
+    let mut x = (*noise).max(1);
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    *noise = x;
+    x
 }
 
 /// Что стало с чанком, который взялись приготовить.
