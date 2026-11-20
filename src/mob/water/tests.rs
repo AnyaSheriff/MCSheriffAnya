@@ -66,6 +66,7 @@ fn aquatic_save_record_preserves_home_and_bucket_origin() {
         mob.water.home=(50,63,-8); mob.water.has_egg=true;
         mob.water.from_bucket=true; mob.water.variant=4;
         mob.water.salmon_size=2; mob.water.growth=22000;
+        mob.water.following_school=true;
         mob.persistent_tag=true; mob.name=Some("Aquatic".into());
         let mut bytes=Vec::new(); mob.write(&mut bytes);
         let mut input=bytes.as_slice(); let other=Mob::read(&mut input).unwrap();
@@ -74,8 +75,28 @@ fn aquatic_save_record_preserves_home_and_bucket_origin() {
         assert!(other.water.has_egg && other.water.from_bucket && other.persistent_tag);
         assert_eq!(other.water.growth,22000);
         assert_eq!(other.water.variant,4);
+        assert!(!other.water.following_school);
         assert_eq!(other.name,mob.name);
     }
+}
+
+#[test]
+fn fish_leave_the_leader_target_when_close_enough_to_swim_freely() {
+    let mut fish = Mob::new(2, Kind::Salmon, (0.5, 6.0, 0.5));
+    let leader_at = (5.5, 6.0, 0.5);
+    let school = [ai::Mate { id: 1, kind: Kind::Salmon, x: leader_at.0, y: leader_at.1,
+        z: leader_at.2, love: 0, baby: false, ready: true, tamed: false }];
+    let players = [player()];
+    let context = ai::Ctx { mates: &school, players: &players, ..ctx() };
+    let mut rng = Rng::new(11);
+    think(&mut fish, &pool(), &context, &mut rng);
+    assert_eq!(fish.water.swim_to, Some(leader_at));
+    assert!(fish.water.following_school);
+
+    fish.x = 4.0;
+    think(&mut fish, &pool(), &context, &mut rng);
+    assert!(!fish.water.following_school);
+    assert_ne!(fish.water.swim_to, Some(leader_at));
 }
 
 #[test]

@@ -43,6 +43,8 @@ pub struct State {
     pub laying: i32,
     pub got_fish: bool,
     pub swim_to: Option<(f64, f64, f64)>,
+    /// Текущая цель выставлена стаей и исчезает при возвращении к свободному плаванию.
+    pub following_school: bool,
     pub target: Option<i32>,
     pub attack_cooldown: i32,
     pub hunt_cooldown: i32,
@@ -74,7 +76,7 @@ impl State {
             puff: 0, puff_ticks: 0, calm_ticks: 0, dark_ticks: 0,
             playing_dead: 0, growth: 0,
             home: (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32),
-            has_egg: false, laying: 0, got_fish: false, swim_to: None,
+            has_egg: false, laying: 0, got_fish: false, swim_to: None, following_school: false,
             target: None, attack_cooldown: 0, hunt_cooldown: 0, tongue: 0,
             anger: 0, alert: false, mate_ticks: 0, last_attacker: None, egg_target: None, egg_ticks: 0,
             boat: None, panic_ticks: 0, tentacle: 0.0, tentacle_speed: 0.0, lock_ticks: 0, lock_need: 0, dead_pending: 0,
@@ -231,6 +233,7 @@ pub fn on_hurt(mob: &mut Mob, source: Source, push: Option<Push>, damage: f32, d
     if !died && !mob.no_ai && (fish(mob.kind) || matches!(mob.kind,Kind::Squid | Kind::GlowSquid | Kind::Turtle | Kind::Tadpole)) {
         mob.water.panic_ticks = super::PANIC_TICKS;
         mob.water.swim_to = None;
+        mob.water.following_school = false;
     }
     if matches!(mob.kind, Kind::Squid | Kind::GlowSquid) {
         mob.water.dark_ticks = if mob.kind == Kind::GlowSquid { 100 } else { 0 };
@@ -270,6 +273,35 @@ pub fn scute(mob: &mut Mob) {
 }
 fn distance(mob: &Mob, at: (f64,f64,f64)) -> f64 {
     (mob.x-at.0).powi(2)+(mob.y-at.1).powi(2)+(mob.z-at.2).powi(2)
+}
+
+fn school_follow_target(mob: &Mob, mates: &[ai::Mate]) -> Option<(f64, f64, f64)> {
+    let limit = match mob.kind {
+        Kind::Cod => 9,
+        Kind::Salmon => 7,
+        Kind::TropicalFish => 8,
+        _ => return None,
+    };
+    let mut older = 0;
+    let mut leader: Option<(&ai::Mate, f64)> = None;
+    for mate in mates.iter().filter(|mate| mate.kind == mob.kind) {
+        let gap = distance(mob, (mate.x, mate.y, mate.z));
+        if gap < 64.0 {
+            if mate.id < mob.entity_id {
+                older += 1;
+                if older >= limit {
+                    return None;
+                }
+            }
+            if leader.is_none_or(|(seen, _)| mate.id < seen.id) {
+                leader = Some((mate, gap));
+            }
+        }
+    }
+    // В обычном 26.3 четыре лосося и трески продолжают плавать рядом,
+    // не стягиваясь к одной точке. Радиус свободного плавания [проверить].
+    leader.filter(|(mate, gap)| mate.id != mob.entity_id && *gap > 4.0)
+        .map(|(mate, _)| (mate.x, mate.y, mate.z))
 }
 fn near_box(mob: &Mob,at: (f64,f64,f64),size: (f64,f64),margin: f64) -> bool {
     let own=mob.size();
@@ -434,14 +466,13 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai
         return land;
     }
     ai::voice(mob,rng);
-    // Стаи: треска до 9, лосось до 7, тропические до 8. [проверить] Выбор лидера.
-    if matches!(mob.kind, Kind::Cod | Kind::Salmon | Kind::TropicalFish) {
-        let limit=if mob.kind==Kind::Cod {9} else if mob.kind==Kind::Salmon {7} else {8};
-        let school: Vec<_> = ctx.mates.iter().filter(|m| m.kind==mob.kind && distance(mob,(m.x,m.y,m.z)) < 64.0).collect();
-        if let Some(leader)=school.iter().min_by_key(|m| m.id).filter(|m| m.id != mob.entity_id && school.iter().filter(|s| s.id < mob.entity_id).count() < limit) {
-            mob.water.swim_to=if distance(mob,(leader.x,leader.y,leader.z)) > 1.0 {Some((leader.x,leader.y,leader.z))} else {None};
-            return plan;
-        }
+    if let Some(target) = school_follow_target(mob, ctx.mates) {
+        mob.water.swim_to = Some(target);
+        mob.water.following_school = true;
+        return plan;
+    }
+    if std::mem::take(&mut mob.water.following_school) {
+        mob.water.swim_to = None;
     }
     if mob.water.target.is_some() { return plan; }
     if let Some(p) = ctx.players.iter().find(|p| !p.spectator && p.holding.iter().flatten().any(|food| mob.kind.likes(food)) && distance(mob,(p.x,p.y,p.z)) < 100.0) {
