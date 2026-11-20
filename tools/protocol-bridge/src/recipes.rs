@@ -17,28 +17,36 @@ fn display(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersio
     if depth>32 || *budget==0 {return Err(Error::TooLarge);}*budget-=1;
     let raw=input.count(if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11){7}else{10})?;
     let kind=if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11){[0,1,4,5,6,8,9,10][raw]}else{raw};
-    // В775 tag-display — строка; IDSet появился в776. Внутренний
-    // preview-builder уже пишет IDSet: для клиента775 разворачиваем его
-    // в composite, иначе длина набора съедает байты следующих предметов.
-    let old_source=from.protocol()<775;
     let old_target=to.protocol()<775;
-    if kind==6 && (old_source || (from==JavaVersion::V26_1_2 && !context.items.content.is_preview())) {
-        if old_target {uint(out,4);}else if to==JavaVersion::V26_1_2 {uint(out,6);}else{uint(out,6);uint(out,0);}
-        string(input,out)?;
+    if kind == 6 {
+        // Обычный 26.2 ещё присылает строку. IDSet есть в 26.3 и во
+        // внутреннем preview-пакете; старому клиенту явный набор — composite.
+        let source_set = from == JavaVersion::V26_3
+            || (from == JavaVersion::V26_1_2 && context.items.content.is_preview());
+        let target_set = to == JavaVersion::V26_3;
+        let tag = if old_target { 4 } else { 6 };
+        if !source_set {
+            uint(out, tag);
+            if target_set { uint(out, 0); }
+            string(input, out)?;
+        } else if target_set {
+            uint(out, tag);
+            id_set(input, out, from, to, context)?;
+        } else {
+            let count = input.count(65537)?;
+            if count == 0 {
+                uint(out, tag);
+                string(input, out)?;
+            } else {
+                uint(out, if old_target { 7 } else { 10 });
+                uint(out, (count - 1) as u32);
+                for _ in 1..count {
+                    uint(out, if old_target { 2 } else { 4 });
+                    item(input, out, from, to, context)?;
+                }
+            }
+        }
         return Ok(());
-    }
-    if kind==6 && to==JavaVersion::V26_1_2 {
-        let n=input.count(65537)?;
-        if n==0 {uint(out,6);string(input,out)?;}
-        else {uint(out,10);uint(out,(n-1) as u32);for _ in 1..n {uint(out,4);item(input,out,from,to,context)?;}}
-        return Ok(());
-    }
-    if kind==6 && (matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) || matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11)) {
-        // Старый tag-display содержит строку; новый writer передаёт IDSet.
-        if matches!(from,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {uint(out,6);uint(out,0);string(input,out)?;}
-        else {let n=input.count(65537)?;if n==0{uint(out,4);string(input,out)?;}else{
-            uint(out,7);uint(out,(n-1) as u32);for _ in 1..n{uint(out,2);item(input,out,from,to,context)?;}
-        }}return Ok(());
     }
     let target=if matches!(to,JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 | JavaVersion::V1_21_8 | JavaVersion::V1_21_9|JavaVersion::V1_21_11) {match kind{0=>0,1=>1,4=>2,5=>3,8=>5,9=>6,10=>7,_=>return Err(Error::PayloadUnavailable("774 recipe display"))}}else{kind};
     uint(out,target as u32);
@@ -48,7 +56,6 @@ fn display(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersio
         3=>{display(input,out,from,to,context,depth+1,budget)?;uint(out,ids::translate(RegistryKind::Component,from,to,input.uint()?)?);}
         4=>item(input,out,from,to,context)?,
         5=>template(input,out,from,to,context)?,
-        6=>id_set(input,out,from,to,context)?,
         7|9=>{for _ in 0..2 {display(input,out,from,to,context,depth+1,budget)?;}}
         8=>{
             for _ in 0..2 {display(input,out,from,to,context,depth+1,budget)?;}
@@ -161,6 +168,17 @@ mod tests {
         assert_eq!(convert("recipe_book_add",&changed,NEW,OLD).unwrap(),book);
     }
     #[test]
+    fn observed_776_recipe_book_with_named_tags_roundtrips_through_777() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../testdata/recipe-book-tag-776.json")).unwrap();
+        let raw = fixture["body_hex"].as_str().unwrap().as_bytes();
+        let (pairs, rest) = raw.as_chunks::<2>();
+        assert!(rest.is_empty());
+        let body: Vec<u8> = pairs.iter().map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap()).collect();
+        let previous = JavaVersion::V26_2;
+        let current = convert("recipe_book_add", &body, previous, NEW).unwrap();
+        assert_eq!(convert("recipe_book_add", &current, NEW, previous).unwrap(), body);
+    }
+    #[test]
     fn hidden_advancement_gets_explicit_coordinates_and_nonzero_downgrade_fails() {
         // reset, одно достижение a, без parent/display, без requirements,
         // telemetry=false, removed/progress пусты, show=false.
@@ -202,6 +220,33 @@ mod slot_tests {
         let mut input=Cursor::new(&[6,5,b'p',b'l',b'a',b'n',b'k']);
         display(&mut input,&mut out,JavaVersion::V26_1_2,JavaVersion::V26_3,Context::default(),0,&mut budget).unwrap();
         assert_eq!(out,[6,0,5,b'p',b'l',b'a',b'n',b'k']);
+        assert!(input.rest.is_empty());
+    }
+
+    #[test]
+    fn real_776_tag_string_and_preview_composite_use_the_client_layout() {
+        use JavaVersion::{V26_1_2, V26_2, V26_3};
+        let tag = [6, 5, b'p', b'l', b'a', b'n', b'k'];
+        let named_set = [6, 0, 5, b'p', b'l', b'a', b'n', b'k'];
+        for (from, to, data, expected) in [
+            (V26_1_2, V26_2, tag.as_slice(), tag.as_slice()),
+            (V26_2, V26_3, tag.as_slice(), named_set.as_slice()),
+            (V26_3, V26_2, named_set.as_slice(), tag.as_slice()),
+        ] {
+            let mut input = Cursor::new(data);
+            let mut output = Vec::new();
+            display(&mut input, &mut output, from, to, Context::default(), 0, &mut 32).unwrap();
+            assert_eq!(output, expected);
+            assert!(input.rest.is_empty());
+        }
+        let context = Context {
+            items: items::Context { content: crate::content::ContentCodec::white_slab_preview(), ..Default::default() },
+            ..Default::default()
+        };
+        let mut output = Vec::new();
+        let mut input = Cursor::new(&[6, 3, 1, 2]);
+        display(&mut input, &mut output, V26_1_2, V26_2, context, 0, &mut 32).unwrap();
+        assert_eq!(output, [10, 2, 4, 1, 4, 2]);
         assert!(input.rest.is_empty());
     }
 }

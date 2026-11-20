@@ -194,12 +194,13 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
                 // Ядро создаёт эти события только для777; старому клиенту
                 // они не отправляются (обратного аналога ещё не установлено).
                 2019|2020 if from == JavaVersion::V26_1_2 && to == JavaVersion::V26_3 && (0..=5).contains(&data) => data,
-                // Dispenser/jukebox: data0 — не ссылка на реестр. Только
-                // наблюдённые774 (dispenser-jukebox-feedback-774.json) и
-                // пары775/777; другие значения закрыты.
+                // Записи оригинала 769–777: события раздатчика и остановки
+                // проигрывателя несут нулевые данные без ссылки на реестр.
                 1000|1001|1011 if data == 0 && matches!((from,to),
-                    (JavaVersion::V1_21_11,JavaVersion::V26_1_2) | (JavaVersion::V26_1_2,JavaVersion::V1_21_11) |
-                    (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) => 0,
+                    (JavaVersion::V26_1_2, peer) | (peer, JavaVersion::V26_1_2)
+                    if matches!(peer, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 |
+                        JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 |
+                        JavaVersion::V26_2 | JavaVersion::V26_3)) => 0,
                 // Обычные звуковые события777 (wide777 + автокрафтер):
                 // data0 не является ссылкой на реестр.
                 // 1029/0: разрушение, falling-anvil-degrades; 1031/0: наковальня,
@@ -394,7 +395,8 @@ mod tests {
 
     #[test]
     fn dispenser_and_jukebox_stop_preserve_scalar_feedback_without_opening_other_data() {
-        let adjacent = JavaVersion::V1_21_11;
+        let peers = [JavaVersion::V1_21_4, JavaVersion::V1_21_5, JavaVersion::V1_21_6,
+            JavaVersion::V1_21_8, JavaVersion::V1_21_9, JavaVersion::V1_21_11, JavaVersion::V26_2, NEW];
         for kind in [1000i32, 1001, 1011] {
             let mut body = Vec::new();
             body.extend(kind.to_be_bytes());
@@ -402,7 +404,7 @@ mod tests {
             body.extend(0x123456789abcdeffu64.to_be_bytes());
             body.extend(0i32.to_be_bytes());
             body.push(0);
-            for (from, to) in [(OLD, adjacent), (adjacent, OLD), (OLD, NEW), (NEW, OLD)] {
+            for (from, to) in peers.into_iter().flat_map(|peer| [(OLD, peer), (peer, OLD)]) {
                 let mut output = Vec::new();
                 let mut input = Cursor::new(&body);
                 effects("world_event", &mut input, &mut output, from, to, Context::default()).unwrap();
@@ -421,8 +423,8 @@ mod tests {
                 invalid[16] = 2;
                 assert!(effects("world_event", &mut Cursor::new(&invalid), &mut Vec::new(), from, to, Context::default()).is_err());
             }
-            for other in [JavaVersion::V1_21_4, JavaVersion::V26_2] {
-                assert!(effects("world_event", &mut Cursor::new(&body), &mut Vec::new(), OLD, other, Context::default()).is_err());
+            for (from, to) in [(OLD, JavaVersion::V1_12_2), (JavaVersion::V1_21_4, JavaVersion::V26_2)] {
+                assert!(effects("world_event", &mut Cursor::new(&body), &mut Vec::new(), from, to, Context::default()).is_err());
             }
         }
     }

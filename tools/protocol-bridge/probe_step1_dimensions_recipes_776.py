@@ -50,7 +50,7 @@ def display(d, depth=0, version=776):
         assert uint(d) == uint(d) == 0
         r['stack'] = {'item': item, 'count': count}
     elif kind == 6:
-        r['set'] = {'tag':read_string(d)} if version in (769,770,771,772,773,774) else idset(d)
+        r['set'] = idset(d) if version == 777 else {'tag':read_string(d)}
     elif kind in (7, 9):
         r['parts'] = [display(d, depth + 1, version) for _ in range(2)]
     elif kind == 10:
