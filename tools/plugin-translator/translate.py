@@ -62,7 +62,35 @@ def bootstrap(toolchain=True):
     run("jar", "cf", TARGET / "mcsa-bukkit.jar", "-C", TARGET / "sdk", ".")
 
 
+def port_throwable_runtime(c):
+    source = c / "classes/java/lang/Throwable.c"
+    if not source.is_file():
+        return
+    text = source.read_text()
+    if not any(f"meth_jl_Throwable_{method}(" in text for method in ("getSuppressed", "addSuppressed")):
+        return
+    hook = "void meth_jl_Throwable_initNativeException(void* teavm_this_) {\n    return;\n}"
+    if (text.count(hook) != 1
+            or '#include "../../../arrays/classes/java/lang/Throwable.h"' not in text
+            or "fld_suppressed" not in text):
+        raise ValueError("Неизвестный ABI TeaVM Throwable: не удалось инициализировать массив исключений")
+    # В C-выводе TeaVM 0.12.3 поле остаётся NULL, но оба метода ожидают массив.
+    replacement = """void meth_jl_Throwable_initNativeException(void* teavm_this_) {
+    TEAVM_ALLOC_STACK(INT32_C(1));
+    TEAVM_GC_ROOT(INT32_C(0), teavm_this_);
+    TeaVM_Array* empty = meth_otr_Allocator_allocateArray(&Arr_jl_Throwable_Cls, INT32_C(0));
+    teavm_gc_writeBarrier(teavm_this_);
+    TEAVM_FIELD(teavm_this_, cls_jl_Throwable, fld_suppressed) = empty;
+    TEAVM_RELEASE_STACK;
+}"""
+    allocator = '#include "../../org/teavm/runtime/Allocator.h"'
+    if allocator not in text:
+        text = allocator + "\n" + text
+    source.write_text(text.replace(hook, replacement))
+
+
 def port_runtime(c):
+    port_throwable_runtime(c)
     port_decimals(c)
     # Только перенос платформенной части TeaVM; код плагина не исполняется на JVM.
     p = c / "definitions.h"

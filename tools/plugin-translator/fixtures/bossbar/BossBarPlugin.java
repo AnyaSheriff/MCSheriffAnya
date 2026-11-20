@@ -36,6 +36,18 @@ public final class BossBarPlugin extends JavaPlugin {
   }
   throw new IllegalStateException("Лимит хозяина не сработал");
  }
+ private static void checkSuppressedExceptions(){
+  Throwable failure=new IllegalStateException("Основная ошибка");
+  check(failure.getSuppressed().length==0);
+  Throwable first=new IllegalArgumentException("Первая");
+  Throwable second=new IllegalArgumentException("Вторая");
+  failure.addSuppressed(first);
+  failure.addSuppressed(second);
+  Throwable[] snapshot=failure.getSuppressed();
+  check(snapshot.length==2&&snapshot[0]==first&&snapshot[1]==second);
+  snapshot[0]=null;
+  check(failure.getSuppressed()[0]==first);
+ }
  @Override public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
   if(!(sender instanceof Player)||args.length!=1)return false;
   Player player=(Player)sender;
@@ -74,6 +86,7 @@ public final class BossBarPlugin extends JavaPlugin {
     for(BossBar extra:bars)extra.removeAll();
     break;
    case "invalid":
+    checkSuppressedExceptions();
     for(double value:new double[]{Double.NaN,Double.POSITIVE_INFINITY,Double.NEGATIVE_INFINITY,-0.01,1.01}){
      double before=bar.getProgress();try{bar.setProgress(value);throw new IllegalStateException("Неверное заполнение принято");}catch(IllegalArgumentException expected){}check(bar.getProgress()==before);
     }
