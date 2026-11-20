@@ -451,7 +451,7 @@ fn run_inner(command: &str, source: &Source, shared: &Shared, live_query: bool) 
             let words = words_of(command);
             let words: Vec<&str> = words.iter().skip(1).map(String::as_str).collect();
 
-            set_blocks(&words, source, shared, dimension_of(source, shared), name == "fill")
+            set_blocks(&words, || origin_of(source, shared), shared, dimension_of(source, shared), name == "fill")
         }
         "item" => {
             let parts: Vec<&str> = parts.collect();
@@ -587,8 +587,7 @@ fn run_inner(command: &str, source: &Source, shared: &Shared, live_query: bool) 
         }
         "weather" => weather(parts.collect::<Vec<&str>>().as_slice(), shared),
 
-        // Как у оригинала: `execute in <измерение> run tp …` — перенос в
-        // другое измерение. Другие виды execute пока не разбираются.
+        // Прямой выбор измерения для переноса и изменения блоков.
         "execute" => {
             let rest: Vec<&str> = parts.collect();
 
@@ -597,6 +596,27 @@ fn run_inner(command: &str, source: &Source, shared: &Shared, live_query: bool) 
                     Some(dimension) => teleport(tail, source, shared, Some(dimension)),
                     None => Answer::saying(format!("Нет такого измерения: {}", dimension)),
                 },
+                ["in", name, "run", subcommand @ ("setblock" | "fill" | "forceload"), tail @ ..] => {
+                    let Some(dimension) = Dimension::from_name(name) else {
+                        return Answer::saying(format!("Нет такого измерения: {name}"));
+                    };
+                    if !shared.dimension_enabled(dimension) {
+                        return Answer::saying("Это измерение отключено".into());
+                    }
+                    if !allowed(subcommand, source, shared) {
+                        return Answer::saying("На это у тебя нет прав".into());
+                    }
+                    let origin = || {
+                        let scale = dimension_of(source, shared).scale() / dimension.scale();
+                        let (x, y, z) = origin_of(source, shared);
+                        (x * scale, y, z * scale)
+                    };
+                    if *subcommand == "forceload" {
+                        crate::commands_world::forceload_at(tail, shared, dimension, origin())
+                    } else {
+                        set_blocks(tail, origin, shared, dimension, *subcommand == "fill")
+                    }
+                }
                 // throw3-egg-hatch-repeat.md: после cleanup наши цыплята
                 // жили дальше: positioned не разбирался. Меняем только центр
                 // селектора kill, сохраняя исполнителя и его измерение.
@@ -2479,7 +2499,8 @@ fn block_coordinate(text: &str, from: f64) -> Option<i32> {
     }
 }
 
-fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension, area: bool) -> Answer {
+fn set_blocks(parts: &[&str], origin: impl FnOnce() -> (f64, f64, f64),
+              shared: &Shared, dimension: Dimension, area: bool) -> Answer {
     let (corners, block) = match (area, parts) {
         (false, [x, y, z, block, ..]) => ([*x, *y, *z, *x, *y, *z], *block),
         (true, [x1, y1, z1, x2, y2, z2, block, ..]) => ([*x1, *y1, *z1, *x2, *y2, *z2], *block),
@@ -2494,7 +2515,7 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
     };
 
     let mut numbers = [0i32; 6];
-    let from = if corners.iter().any(|text| text.starts_with('~')) { origin_of(source, shared) } else { (0.0, 0.0, 0.0) };
+    let from = if corners.iter().any(|text| text.starts_with('~')) { origin() } else { (0.0, 0.0, 0.0) };
 
     for (index, (slot, text)) in numbers.iter_mut().zip(corners).enumerate() {
         let base = [from.0, from.1, from.2][index % 3];
@@ -3847,6 +3868,9 @@ mod tests {
         let first = Source::Player { uuid: [1; 16], name: "Первый".into() };
         for name in ["minecraft:the_nether", "minecraft:the_end"] {
             assert!(run(&format!("execute in {name} run tp @s 0 70 0"), &first, &shared).reply.contains("отключено"));
+            for command in ["setblock 0 70 0 stone", "fill 0 70 0 1 70 0 stone", "forceload add 0 0"] {
+                assert!(run(&format!("execute in {name} run {command}"), &first, &shared).reply.contains("отключено"));
+            }
             assert!(orders_for(&shared, 1).is_empty());
             let _ = run(&format!("clone from {name} 0 70 0 1 71 1 to minecraft:overworld 0 70 0"), &Source::Console, &shared);
             let _ = run(&format!("clone from minecraft:overworld 0 70 0 1 71 1 to {name} 0 70 0"), &Source::Console, &shared);
@@ -3854,6 +3878,45 @@ mod tests {
         for dimension in [Dimension::Nether, Dimension::End] {
             assert!(!shared.world_in(dimension).lock().unwrap().has_chunk(0, 0));
         }
+    }
+
+    #[test]
+    fn execute_in_uses_the_chosen_world_and_scales_relative_block_coordinates() {
+        let shared = server();
+        let nether = Dimension::Nether;
+        let overworld = Dimension::Overworld;
+        let stone = blocks::state_by_name("stone").unwrap();
+        let glass = blocks::state_by_name("glass").unwrap();
+        let source = Source::Block { x: -65, y: 105, z: 65, dimension: overworld, name: "@".into() };
+        let visitor = Source::Player { uuid: [9; 16], name: "Посетитель".into() };
+        let fill = "execute in minecraft:the_nether run fill 1 100 1 2 100 1 stone";
+        assert!(run(fill, &visitor, &shared).reply.contains("нет прав"));
+        assert!(run(fill, &Source::Console, &shared).reply.contains("Заполнено блоков: 2"));
+        run("execute in minecraft:the_nether run setblock ~ ~ ~ glass", &source, &shared);
+        let nether_source = Source::Block { x: -3, y: 106, z: 1, dimension: nether, name: "@".into() };
+        run("execute in minecraft:overworld run setblock ~ ~ ~ glass", &nether_source, &shared);
+        run(r#"execute in minecraft:the_nether run setblock -10 106 8 chest{Items:[{Slot:0b, id:"minecraft:stone", count:3}]}"#,
+            &Source::Console, &shared);
+
+        let mut nether_world = shared.world_in(nether).lock().unwrap();
+        assert_eq!(nether_world.get_block(1, 100, 1), stone);
+        assert_eq!(nether_world.get_block(2, 100, 1), stone);
+        assert_eq!(nether_world.get_block(-9, 105, 8), glass);
+        assert_eq!(nether_world.container(-10, 106, 8).unwrap().slots[0].as_ref().unwrap().count, 3);
+        drop(nether_world);
+        let mut overworld_world = shared.world_in(overworld).lock().unwrap();
+        assert_ne!(overworld_world.get_block(1, 100, 1), stone);
+        assert_ne!(overworld_world.get_block(-9, 105, 8), glass);
+        assert_eq!(overworld_world.get_block(-20, 106, 12), glass);
+        drop(overworld_world);
+
+        run("execute in minecraft:the_nether run forceload add ~ ~", &source, &shared);
+        assert_eq!(crate::commands_world::forced_chunks(&shared, nether), [(-1, 0)]);
+        assert!(crate::commands_world::forced_chunks(&shared, overworld).is_empty());
+        run("forceload add -9 8", &Source::Console, &shared);
+        run("execute in minecraft:the_nether run forceload remove all", &Source::Console, &shared);
+        assert!(crate::commands_world::forced_chunks(&shared, nether).is_empty());
+        assert_eq!(crate::commands_world::forced_chunks(&shared, overworld), [(-1, 0)]);
     }
 
     /// Строка из F3+C: числа места и взгляда, в `execute in` — измерение.

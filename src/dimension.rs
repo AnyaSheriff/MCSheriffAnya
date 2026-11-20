@@ -60,7 +60,6 @@ impl Dimension {
     }
 
     /// Во сколько раз расстояния здесь короче, чем в обычном мире.
-    #[allow(dead_code)] // для порталов
     pub fn scale(self) -> f64 {
         match self {
             Dimension::Overworld => 1.0,

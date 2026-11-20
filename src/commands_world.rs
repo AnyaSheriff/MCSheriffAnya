@@ -1018,7 +1018,8 @@ pub fn run(name: &str, parts: &[&str], source: &Source, shared: &Shared) -> Answ
         "clone" => clone(parts, source, shared),
         "attribute" => attribute(parts, source, shared),
         "enchant" => enchant(parts, source, shared),
-        "forceload" => forceload(parts, source, shared),
+        "forceload" => forceload_at(parts, shared, crate::commands::dimension_of(source, shared),
+            crate::commands::origin_of(source, shared)),
         "random" => random(parts, source, shared),
         "rotate" => rotate(parts, source, shared),
         "spreadplayers" => spreadplayers(parts, source, shared),
@@ -1867,10 +1868,8 @@ fn chunk_pos(x: i32, z: i32) -> String {
     format!("[{}, {}]", x, z)
 }
 
-fn forceload(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
-    let dimension = crate::commands::dimension_of(source, shared);
+pub(crate) fn forceload_at(parts: &[&str], shared: &Shared, dimension: Dimension, origin: (f64, f64, f64)) -> Answer {
     let dimension_arg = s(dimension.name());
-    let origin = crate::commands::origin_of(source, shared);
     let column = |x: &str, z: &str| -> Option<(i32, i32)> { Some((block_coordinate(x, origin.0)?.div_euclid(16), block_coordinate(z, origin.2)?.div_euclid(16))) };
     let mut forced = shared.world_cmd.forced.lock().expect("удержанные чанки захвачены другим потоком");
     let index = dimension.index();
