@@ -50,27 +50,49 @@ def prepare(out):
  (out/'prepare.json').write_text(json.dumps({'source':git('rev-parse','HEAD').decode().strip(),'tree':git('rev-parse','HEAD^{tree}').decode().strip(),'main':MAIN,'lock_sha256':sha(lock.read_bytes()),'no_native_client_probe':True,'standalone_server_executed':False,'public_admission_unchanged':True,'runtime_test_files':runtime_pin['runtime_test_files']},indent=2)+'\n')
 EXAMPLE_NAMES=('hello','misbehave','chat_filter','custom_tablist','modinfo','protect_spawn')
 EXAMPLE_PIN='tools/protocol-bridge/testdata/owned-rust-examples-lock.json'
-def example_pin():
+def example_pin(current_sources=False):
  pin=json.loads((ROOT/EXAMPLE_PIN).read_text())
  if sha(pin['lock_text'].encode())!=pin['lock_sha256'] or len(pin['old_inputs_sha256'])!=20:raise ValueError('unverified public own-example lock/input pin')
  for name,expected in pin['old_inputs_sha256'].items():
   path=Path(name)
   if path.is_absolute() or '..' in path.parts or not (name.startswith('plugins-examples/') or name=='wit/mcsa-api.wit'):raise ValueError('unexpected own-example source path')
-  if sha((ROOT/path).read_bytes())!=expected:raise ValueError('own-example source differs from approved old input: '+name)
+  if not current_sources and sha((ROOT/path).read_bytes())!=expected:raise ValueError('own-example source differs from approved old input: '+name)
  return pin
 
-def examples_lock(out):
- pin=example_pin();lock=ROOT/'plugins-examples/Cargo.lock';raw=pin['lock_text'].encode()
+def current_example_inputs(pin):
+ tracked=git('ls-files','-z').decode().strip('\0').split('\0')
+ names=set(pin['old_inputs_sha256'])
+ names.update(name for name in tracked if name.startswith('plugins-examples/') and name.endswith(('.rs','.toml','.wit')))
+ names.update(name for name in literal_inputs(tracked) if name.startswith('plugins-examples/'))
+ inputs={}
+ for name in sorted(names):
+  path=ROOT/name
+  if not path.is_file() or path.is_symlink() or not path.resolve().is_relative_to(ROOT.resolve()):
+   raise ValueError('unexpected current own-example source: '+name)
+  inputs[name]=sha(path.read_bytes())
+ return inputs
+
+def examples_lock(out,current_sources=False):
+ pin=example_pin(current_sources);lock=ROOT/'plugins-examples/Cargo.lock';raw=pin['lock_text'].encode()
+ if current_sources:
+  input_fields={'current_source_inputs_sha256':current_example_inputs(pin)}
+ else:
+  input_fields={'all20_source_inputs_byte_exact':pin['old_inputs_sha256'],
+   'additional_current_compiled_guest_data':{p:sha((ROOT/p).read_bytes()) for p in literal_inputs(git('ls-files','-z').decode().strip('\0').split('\0')) if p.startswith('plugins-examples/')}}
  if lock.exists() and lock.read_bytes()!=raw:raise ValueError('unexpected existing guest lock')
  lock.write_bytes(raw);shutil.copyfile(lock,out/'plugins-examples-Cargo.lock')
  (out/'own-examples-inputs.json').write_text(json.dumps({'source':git('rev-parse','HEAD').decode().strip(),
-  'public_guest_lock_sha256':pin['lock_sha256'],'all20_source_inputs_byte_exact':pin['old_inputs_sha256'],'additional_current_compiled_guest_data':{p:sha((ROOT/p).read_bytes()) for p in literal_inputs(git('ls-files','-z').decode().strip('\0').split('\0')) if p.startswith('plugins-examples/')},
+  'public_guest_lock_sha256':pin['lock_sha256'],**input_fields,
   'old_successful_artifact':pin['artifact'],'old_source':pin['source'],'old_zip_sha256':pin['archive_sha256'],
   'scope':'reuse exact public guest lock only; six own components built by this job, no precompiled pack claim'},indent=2)+'\n')
 
-def examples_check(out):
- pin=example_pin()
+def examples_check(out,current_sources=False):
+ pin=example_pin(current_sources)
  if sha((ROOT/'plugins-examples/Cargo.lock').read_bytes())!=pin['lock_sha256']:raise ValueError('guest lock changed during build')
+ if current_sources:
+  before=json.loads((out/'own-examples-inputs.json').read_text())
+  if before.get('source')!=git('rev-parse','HEAD').decode().strip() or before.get('current_source_inputs_sha256')!=current_example_inputs(pin):
+   raise ValueError('own-example source changed during build')
  components={}
  for name in EXAMPLE_NAMES:
   path=ROOT/'plugins-examples/target/wasm32-wasip2/release'/f'{name}.wasm'
@@ -149,11 +171,13 @@ def archive(out):
  files={str(p.relative_to(out)):{'sha256':sha(p.read_bytes()),'bytes':p.stat().st_size} for p in sorted(out.rglob('*')) if p.is_file() and p.name!='receipt.json'}
  (out/'receipt.json').write_text(json.dumps({'source':git('rev-parse','HEAD').decode().strip(),'tree':git('rev-parse','HEAD^{tree}').decode().strip(),'run_id':os.environ.get('GITHUB_RUN_ID'),'attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'status':'failure' if retention_errors else os.environ.get('MCSA_JOB_STATUS'),'pre_archive_job_status':os.environ.get('MCSA_JOB_STATUS'),'sources':{p:sha((ROOT/p).read_bytes()) for p in paths},'files':files,'test_retention_errors':retention_errors,'scope':'public ContainerButton schema/codec source and unit checks only; no separate native client probe or standalone runtime execution; mandatory tests may launch isolated own servers; no admission change'},indent=2)+'\n')
 def main():
- parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['prepare','examples-lock','examples-check','archive']);parser.add_argument('--output',type=Path,required=True);a=parser.parse_args()
+ parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['prepare','examples-lock','examples-check','archive']);parser.add_argument('--output',type=Path,required=True)
+ parser.add_argument('--current-guest-sources',action='store_true');a=parser.parse_args()
+ if a.current_guest_sources and a.mode not in ('examples-lock','examples-check'):parser.error('--current-guest-sources requires an examples mode')
  if os.environ.get('GITHUB_ACTIONS')!='true':raise SystemExit('GitHub-only evidence preparation; no local Cargo/server')
  if a.mode=='prepare':prepare(a.output)
- elif a.mode=='examples-lock':examples_lock(a.output)
- elif a.mode=='examples-check':examples_check(a.output)
+ elif a.mode=='examples-lock':examples_lock(a.output,a.current_guest_sources)
+ elif a.mode=='examples-check':examples_check(a.output,a.current_guest_sources)
  else:
   archive(a.output)
   retention=json.loads((a.output/'retained-test-executables.json').read_text())

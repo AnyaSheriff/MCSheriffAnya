@@ -39,7 +39,7 @@ jobs:
           rustc -vV | tee worldgen-stage-build-logs/rustc.log
           cargo clippy --version | tee worldgen-stage-build-logs/clippy-version.log
           python3 -B tools/fetch-release-lock.py
-          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --output worldgen-stage-build-logs
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-lock --current-guest-sources --output worldgen-stage-build-logs
       - uses: Swatinem/rust-cache@v2
         with:
           key: public-container-button-source
@@ -50,6 +50,7 @@ jobs:
           python -B -m unittest discover -s tools/measure -p 'test_worldgen_exact*.py'
           python -B -m unittest discover -s tools/measure -p 'test_worldgen_stage*.py'
           python -B -m unittest discover -s tools/plugin-translator -p 'test_*.py'
+          python -B -m unittest discover -s tools/protocol-bridge -p 'test_public_container_button_ci.py'
           python -B tools/mod-translator/test_compiler.py
       - name: Strict source checks and NEW runtime build
         id: source
@@ -57,7 +58,7 @@ jobs:
           set -o pipefail
           cargo clippy --locked --release --workspace --all-targets -- -D warnings 2>&1 | tee worldgen-stage-build-logs/clippy.log
           cargo build --locked --release --workspace --manifest-path plugins-examples/Cargo.toml --target wasm32-wasip2 2>&1 | tee worldgen-stage-build-logs/guest-build.log
-          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --output worldgen-stage-build-logs
+          python3 -B tools/protocol-bridge/public_container_button_ci.py examples-check --current-guest-sources --output worldgen-stage-build-logs
           cargo test --locked --release --workspace 2>&1 | tee worldgen-stage-build-logs/default-tests.log
           cargo test --locked --release --workspace --no-default-features 2>&1 | tee worldgen-stage-build-logs/no-default-tests.log
           cargo build --locked --release --bin mcsheriffanya 2>&1 | tee worldgen-stage-build-logs/build.log

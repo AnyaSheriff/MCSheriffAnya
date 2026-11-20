@@ -1,5 +1,6 @@
 """Synthetic owned-file metadata checks only: no Cargo/executable/runtime launch."""
 import importlib.util,tempfile,unittest,json,copy
+from unittest.mock import patch
 from pathlib import Path
 SPEC=importlib.util.spec_from_file_location('chunk_ci',Path(__file__).with_name('public_container_button_ci.py'));CI=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(CI)
 
@@ -49,8 +50,8 @@ class Ownership(unittest.TestCase):
    self.message['target']['kind']=kinds
    with self.assertRaises(ValueError):CI.test_executable(self.message,{self.manifest},{self.source})
 class GuestInputs(unittest.TestCase):
- def test_actual_public_lock_and_all20_current_inputs_match(self):
-  pin=CI.example_pin();self.assertEqual(len(pin['old_inputs_sha256']),20)
+ def test_actual_public_lock_and_all20_historical_hashes_are_available(self):
+  pin=CI.example_pin(current_sources=True);self.assertEqual(len(pin['old_inputs_sha256']),20)
   self.assertEqual(pin['lock_sha256'],'5c9b19a1cc30825633fc26d39910a6649ad26a3c15f7a2014a2c290fe7a8e179')
  def test_changed_public_lock_or_unsafe_path_refuses_before_guest_build(self):
   original=json.loads((CI.ROOT/CI.EXAMPLE_PIN).read_text());old_root=CI.ROOT
@@ -75,6 +76,33 @@ class GuestInputs(unittest.TestCase):
     path=CI.ROOT/CI.EXAMPLE_PIN;path.parent.mkdir(parents=True);path.write_text(json.dumps(pin))
     with self.assertRaises(ValueError):CI.example_pin()
    finally:CI.ROOT=old_root
+ def test_combined_build_pins_current_wit_and_rejects_mutation_after_prepare(self):
+  original=CI.ROOT
+  pin=json.loads((original/CI.EXAMPLE_PIN).read_text())
+  files=sorted(set(pin['old_inputs_sha256']) | {'plugins-examples/custom-tablist/config.yml'})
+  with tempfile.TemporaryDirectory() as t, patch.object(CI,'ROOT',Path(t)):
+   for name in files:
+    path=CI.ROOT/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes((original/name).read_bytes())
+   descriptor=CI.ROOT/CI.EXAMPLE_PIN;descriptor.parent.mkdir(parents=True);descriptor.write_text(json.dumps(pin))
+   wit=CI.ROOT/'wit/mcsa-api.wit';wit.write_text('// reviewed WIT change\n')
+   out=CI.ROOT/'evidence';out.mkdir()
+   def git(*args):
+    if args==('ls-files','-z'):return ('\0'.join(files)+'\0').encode()
+    if args==('rev-parse','HEAD'):return b'current-commit\n'
+    self.fail(f'unexpected git call: {args}')
+   with patch.object(CI,'git',side_effect=git):
+    with self.assertRaisesRegex(ValueError,'approved old input'):
+     CI.examples_lock(out)
+    CI.examples_lock(out,current_sources=True)
+    receipt=json.loads((out/'own-examples-inputs.json').read_text())
+    self.assertEqual(receipt['current_source_inputs_sha256']['wit/mcsa-api.wit'],CI.sha(wit.read_bytes()))
+    self.assertNotIn('all20_source_inputs_byte_exact',receipt)
+    targets=CI.ROOT/'plugins-examples/target/wasm32-wasip2/release'; targets.mkdir(parents=True)
+    for name in CI.EXAMPLE_NAMES:(targets/f'{name}.wasm').write_bytes(b'\0asm\x0d\0\x01\0')
+    CI.examples_check(out,current_sources=True)
+    wit.write_text('// changed while building\n')
+    with self.assertRaisesRegex(ValueError,'source changed during build'):
+     CI.examples_check(out,current_sources=True)
 
 class CompiledInputs(unittest.TestCase):
  def test_current_metadata_and_guest_config_are_in_source_archive_closure(self):
