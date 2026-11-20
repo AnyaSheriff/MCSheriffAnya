@@ -4218,7 +4218,9 @@ pub fn ticked(world: &mut World, pos: Pos) {
                 if let Some(state) = block.with("powered", "false") {
                     set(world, pos, state);
                 }
-            } else if !powered && input {
+            } else if !powered {
+                // Импульс уже запланировал включение. Короткий вход может
+                // пропасть до этого такта, но выход всё равно включается.
                 if let Some(state) = block.with("powered", "true") {
                     set(world, pos, state);
                 }
@@ -5441,6 +5443,28 @@ mod tests {
         run(&mut world, 1);
         assert!(is_on(&block(&world, (15, 1, 0))));
         assert_eq!(wire_power_of(&block(&world, (16, 1, 0))), 15);
+    }
+
+    #[test]
+    fn a_repeater_keeps_a_pulse_shorter_than_its_delay() {
+        let mut world = world();
+        let at = (1, 1, 0);
+        let power = (0, 1, 0);
+        let wire = (2, 1, 0);
+        put(&mut world, at, state("repeater", &[("facing", "west"), ("delay", "4")]));
+        put(&mut world, wire, blocks::state_by_name("redstone_wire").unwrap());
+        put(&mut world, power, blocks::state_by_name("redstone_block").unwrap());
+        run(&mut world, 5);
+        assert!(!is_on(&block(&world, at)));
+        put(&mut world, power, AIR);
+        run(&mut world, 2);
+        assert_eq!(wire_power_of(&block(&world, wire)), 0);
+        run(&mut world, 1);
+        assert_eq!(wire_power_of(&block(&world, wire)), 15);
+        run(&mut world, 7);
+        assert_eq!(wire_power_of(&block(&world, wire)), 15);
+        run(&mut world, 1);
+        assert_eq!(wire_power_of(&block(&world, wire)), 0);
     }
 
     /// Повторитель, в бок которого смотрит другой включённый повторитель,
