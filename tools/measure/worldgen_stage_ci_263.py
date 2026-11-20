@@ -148,7 +148,7 @@ def main():
                             'argmax_column_in_trace': True,
                             'all_trace_chunks_final_saved_equal': True, 'traced_chunks': links,
                             'initial_relief': relief,
-                            'initial_relief_scope': 'Substrate is a material whitelist, also applied to final vanilla saves.'}
+                            'initial_relief_scope': 'Substrate uses a material whitelist; adjacent grid steps compare with final vanilla substrate, and submerged columns require water above substrate.'}
             (evidence / 'stage-link.json').write_text(json.dumps(stage_report, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
             results.append({'seed': seed, 'holdout': seed in stage.SEEDS[2:], 'recording_valid': True,
                             'parity': report['parity'], 'argmax': diagnostic['selected_column'],

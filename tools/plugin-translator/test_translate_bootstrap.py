@@ -1,5 +1,6 @@
 """Проверки команд сборки SDK без запуска внешних инструментов."""
 import io
+import os
 import subprocess
 import sys
 import tempfile
@@ -67,6 +68,26 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn("ОТКАЗ:", stderr.getvalue())
         self.assertIn(self.maven_command[4], stderr.getvalue())
         self.assertFalse((self.target / "sdk").exists())
+
+
+class DispatchCompilerTests(unittest.TestCase):
+    def test_java21_input_uses_compatible_compiler_without_changing_runtime(self):
+        old, new = Path("/opt/jdk17/bin/javac"), Path("/opt/jdk25/bin/javac")
+        def version(args, **_):
+            value = "17.0.13" if args[0] == str(old) else "25.0.1"
+            return subprocess.CompletedProcess(args, 0, "javac " + value + "\n")
+        with patch.dict(os.environ, {}, clear=True), patch.object(translate.shutil, "which", return_value=str(old)), \
+                patch.object(Path, "glob", return_value=[old, new]), patch.object(subprocess, "run", side_effect=version):
+            self.assertEqual(translate.dispatch_javac(21), str(new))
+            self.assertEqual(translate.dispatch_javac(11), str(old))
+
+    def test_absent_compatible_compiler_and_explicit_override(self):
+        with patch.dict(os.environ, {}, clear=True), patch.object(translate.shutil, "which", return_value=None), \
+                patch.object(Path, "glob", return_value=[]):
+            with self.assertRaisesRegex(ValueError, r"javac 21.*MCSA_TRANSLATOR_JAVAC"):
+                translate.dispatch_javac(21)
+        with patch.dict(os.environ, {"MCSA_TRANSLATOR_JAVAC": "/custom/javac"}, clear=True):
+            self.assertEqual(translate.dispatch_javac(21), "/custom/javac")
 
 
 if __name__ == "__main__":

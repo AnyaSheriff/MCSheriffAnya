@@ -55,13 +55,45 @@ def column_record(names):
             'top_substrate': top(names, natural), 'profile_y_inclusive_name': rle_names(names)}
 
 
+def adjacent_substrate_steps(heights):
+    # Сравниваем одинаковые соседние столбцы, в том числе через границу чанка.
+    report = {}
+    ordered = sorted(heights.items())
+    for axis, dx, dz in (('x', 1, 0), ('z', 0, 1)):
+        result = {'pairs': 0, 'same_step': 0, 'abs_error_sum': 0, 'abs_error_max': 0,
+                  'own_steeper': 0, 'reference_steeper': 0, 'opposite_nonzero': 0}
+        worst = None
+        for (x, z), (own, reference) in ordered:
+            neighbor = x + dx, z + dz
+            if neighbor not in heights:
+                continue
+            own_next, reference_next = heights[neighbor]
+            own_step, reference_step = own_next - own, reference_next - reference
+            error = abs(own_step - reference_step)
+            result['pairs'] += 1
+            result['same_step'] += error == 0
+            result['abs_error_sum'] += error
+            result['own_steeper'] += abs(own_step) > abs(reference_step)
+            result['reference_steeper'] += abs(reference_step) > abs(own_step)
+            result['opposite_nonzero'] += own_step * reference_step < 0
+            if worst is None or error > result['abs_error_max']:
+                result['abs_error_max'] = error
+                worst = {'from': [x, z], 'to': list(neighbor), 'grid_step': own_step,
+                         'reference_final_substrate_step': reference_step}
+        result['worst_pair'] = worst
+        report[axis] = result
+    return report
+
+
 def initial_relief_report(traces, vanilla):
     """Сетка нашего рельефа, первое заполнение и грунт в конечном сохранении ванили."""
     if not traces or traces.keys() != vanilla.keys():
         raise ValueError('complete paired relief coverage required')
     report = {'columns': 0, 'grid_equals_initial_substrate': 0,
               'initial_non_air_above_grid': 0, 'initial_non_air_below_grid': 0,
-              'initial_vs_reference_substrate_abs_sum': 0}
+              'initial_vs_reference_substrate_abs_sum': 0,
+              'water_above_substrate': {'both': 0, 'ours_only': 0, 'reference_only': 0, 'neither': 0}}
+    heights = {}
     worst_key = None
     for (cx, cz), trace in sorted(traces.items()):
         initial = trace['stages'][0]
@@ -78,8 +110,14 @@ def initial_relief_report(traces, vanilla):
             own = names[:, z % 16, x % 16]
             solid_top = top(own, natural)
             filled_top = top(own, lambda n: n not in AIR)
-            reference_top = top(reference_names[:, z % 16, x % 16], natural)
+            reference = reference_names[:, z % 16, x % 16]
+            reference_top = top(reference, natural)
             grid_top = grid[x, z]
+            heights[x, z] = grid_top, reference_top
+            own_water = top(own, lambda n: n == 'water') > solid_top
+            reference_water = top(reference, lambda n: n == 'water') > reference_top
+            water_case = ('neither', 'reference_only', 'ours_only', 'both')[2 * own_water + reference_water]
+            report['water_above_substrate'][water_case] += 1
             gap = solid_top - reference_top
             report['columns'] += 1
             report['grid_equals_initial_substrate'] += solid_top == grid_top
@@ -94,6 +132,7 @@ def initial_relief_report(traces, vanilla):
                     'initial_non_air_top': filled_top, 'reference_final_substrate_top': reference_top,
                     'initial_minus_reference': gap,
                 }
+    report['adjacent_substrate_steps'] = adjacent_substrate_steps(heights)
     return report
 
 

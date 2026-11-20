@@ -86,11 +86,15 @@ class StageTests(unittest.TestCase):
         vanilla = {(-1, 0): arrays()}
         vanilla[-1, 0][0][62, 0, 0] = 'sand'
         vanilla[-1, 0][0][74, 0, 0] = 'oak_leaves'
+        vanilla[-1, 0][0][70, 1, 0] = 'water'
         report = stage.initial_relief_report(traces, vanilla)
         self.assertEqual(report['columns'], 256)
         self.assertEqual(report['grid_equals_initial_substrate'], 256)
         self.assertEqual(report['initial_non_air_above_grid'], 1)
         self.assertEqual(report['initial_vs_reference_substrate_abs_sum'], 2)
+        self.assertEqual(report['water_above_substrate'],
+                         {'both': 0, 'ours_only': 1, 'reference_only': 1, 'neither': 254})
+        self.assertEqual([report['adjacent_substrate_steps'][axis]['pairs'] for axis in ('x', 'z')], [240, 240])
         self.assertEqual(report['worst_substrate_column'],
                          {'column': [-16, 0], 'grid_top': 0, 'initial_substrate_top': 0,
                           'initial_non_air_top': 1, 'reference_final_substrate_top': -2,
@@ -98,6 +102,16 @@ class StageTests(unittest.TestCase):
         grid[-1] = grid[0]
         with self.assertRaisesRegex(ValueError, 'grid top coverage'):
             stage.initial_relief_report(traces, vanilla)
+
+    def test_adjacent_relief_counts_negative_chunk_seam_without_connecting_gaps(self):
+        heights = {(-17, 0): (65, 70), (-16, 0): (70, 66), (-15, 0): (70, 66),
+                   (-13, 0): (64, 65), (-16, 1): (69, 66)}
+        steps = stage.adjacent_substrate_steps(heights)
+        x, z = steps['x'], steps['z']
+        self.assertEqual((x['pairs'], x['same_step'], x['abs_error_sum'], x['opposite_nonzero']), (2, 1, 9, 1))
+        self.assertEqual(x['worst_pair'], {'from': [-17, 0], 'to': [-16, 0], 'grid_step': 5,
+                                          'reference_final_substrate_step': -4})
+        self.assertEqual((z['pairs'], z['own_steeper'], z['reference_steeper'], z['abs_error_max']), (1, 1, 0, 1))
 
     def test_full_trace_decode_and_native_hashes(self):
         a, b = stage.decode_stage(snapshot())

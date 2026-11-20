@@ -1,11 +1,33 @@
 // Независимые снимки наблюдения; мир, случайность и события остаются в потоке такта.
-use std::{any::Any, panic::{self, AssertUnwindSafe}, sync::{mpsc, Arc}, thread};
+use std::{any::Any, panic::{self, AssertUnwindSafe}, sync::{mpsc, Arc}, thread, time::{Duration, Instant}};
 
 type Job = Box<dyn FnOnce() + Send>;
-type Batch<R> = (usize, Result<Vec<R>, Box<dyn Any + Send>>);
+type BatchOutput<R> = Result<Vec<R>, Box<dyn Any + Send>>;
+type Batch<R> = (usize, Duration, BatchOutput<R>);
 struct Worker { sender: mpsc::Sender<Job>, handle: thread::JoinHandle<()> }
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Stats { pub jobs: usize, pub items: usize, pub workers: usize, pub cost: std::time::Duration, pub comparisons: usize }
+pub struct Stats {
+    pub jobs: usize,
+    pub items: usize,
+    pub workers: usize,
+    pub cost: Duration,
+    pub comparisons: usize,
+    batch_time: Duration,
+}
+impl Stats {
+    pub fn useful(&self) -> bool {
+        // Удачное ускорение сокращает длительность этапа. Сумма времени отдельных
+        // пачек оценивает объём работы и не гасит помощников только из-за выигрыша.
+        self.items >= 64 && self.comparisons >= 16384 && self.cost.max(self.batch_time) >= Duration::from_millis(1)
+    }
+}
+
+fn time_batch<R>(collect: impl FnOnce() -> Vec<R>) -> (Duration, BatchOutput<R>) {
+    let started = Instant::now();
+    let output = panic::catch_unwind(AssertUnwindSafe(collect));
+    (started.elapsed(), output)
+}
+
 pub struct Executor { workers: Vec<Worker>, width: usize, stats: Stats, failed: bool }
 impl Default for Executor { fn default() -> Self { Self::new() } }
 impl Executor {
@@ -19,7 +41,7 @@ impl Executor {
     pub fn should_parallel(&self, items: usize, comparisons: usize) -> bool {
         self.width > 1 && items >= 64 && comparisons >= 16384 && !self.failed
     }
-    pub fn record_work(&mut self, cost: std::time::Duration, items: usize, comparisons: usize) {
+    pub fn record_work(&mut self, cost: Duration, items: usize, comparisons: usize) {
         if items >= 64 && comparisons >= 16384 { self.stats.cost += cost; self.stats.items += items; self.stats.comparisons += comparisons; }
     }
     fn grow(&mut self, count: usize) {
@@ -52,12 +74,13 @@ impl Executor {
         for (index, chunk) in chunks.into_iter().enumerate() {
             let map = map.clone();
             if index+1 == count {
-                local = Some((index, panic::catch_unwind(AssertUnwindSafe(|| chunk.into_iter().map(|v| map(v)).collect()))));
+                let (elapsed, value) = time_batch(|| chunk.into_iter().map(|v| map(v)).collect());
+                local = Some((index, elapsed, value));
             } else {
                 let done = done.clone();
                 let job: Job = Box::new(move || {
-                    let value = panic::catch_unwind(AssertUnwindSafe(|| chunk.into_iter().map(|v| map(v)).collect()));
-                    let _ = done.send((index, value));
+                    let (elapsed, value) = time_batch(|| chunk.into_iter().map(|v| map(v)).collect());
+                    let _ = done.send((index, elapsed, value));
                 });
                 match self.workers[index].sender.send(job) {
                     Ok(()) => self.stats.jobs += 1,
@@ -73,10 +96,11 @@ impl Executor {
         drop(done);
         let mut collected: Vec<_> = results.into_iter().collect();
         collected.extend(local);
-        collected.sort_by_key(|(index, _)| *index);
+        collected.sort_by_key(|(index, _, _)| *index);
         let mut output = Vec::new();
         let mut failed = None;
-        for (_, value) in collected {
+        for (_, elapsed, value) in collected {
+            self.stats.batch_time += elapsed;
             match value { Ok(values) => output.extend(values), Err(error) => { failed.get_or_insert(error); } }
         }
         if let Some(error) = failed { panic::resume_unwind(error); }
@@ -92,6 +116,27 @@ impl Drop for Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn faster_parallel_work_remains_useful_without_lowering_thresholds() {
+        let mut work = Stats { jobs: 1, items: 64, comparisons: 16384,
+            cost: Duration::from_micros(741), batch_time: Duration::from_micros(1400), ..Stats::default() };
+        assert!(work.useful());
+        work.items = 63;
+        assert!(!work.useful());
+        work.items = 64;
+        work.comparisons = 16383;
+        assert!(!work.useful());
+        work.comparisons = 16384;
+        work.batch_time = Duration::from_micros(999);
+        assert!(!work.useful());
+        work.cost = Duration::from_millis(1);
+        assert!(work.useful());
+        let mut executor = Executor::new();
+        executor.stats = work;
+        executor.begin_tick();
+        assert!(!executor.stats().useful());
+    }
 
     fn closed_worker() -> Worker {
         let (sender, receiver) = mpsc::channel::<Job>();

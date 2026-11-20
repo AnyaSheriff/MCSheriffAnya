@@ -606,7 +606,7 @@ async fn run_with_budget(shared: Arc<Shared>, mut policy: adaptive_mobs::Policy,
         if let Some(count) = &policy.mob_jobs { count.fetch_add(mob_work.jobs, std::sync::atomic::Ordering::SeqCst); }
         let previous_width = policy.width;
         let mob_allowed = mob_parallel_enabled && !mob_executor.spawn_failed();
-        let mob_useful = mob_work.items >= 64 && mob_work.comparisons >= 16_384 && mob_work.cost >= Duration::from_millis(1);
+        let mob_useful = mob_work.useful();
         previous_mob_useful = mob_useful;
         // Фазы выполняются с барьерами по очереди: бюджет берём по максимуму, не складываем.
         let block_cap = if block_allowed && !block_pool.spawn_failed() {

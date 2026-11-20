@@ -8,7 +8,8 @@
 Нужны Linux x86-64, Python 3.12+, JDK 17+, Maven и доступ к Maven Central/GitHub.
 TeaVM, ASM и SnakeYAML загружаются Maven из Central; WASI SDK 34,
 wit-bindgen 0.63.0 и wasm-tools 1.262.0 — из официальных GitHub releases.
-Для JAR, собранных новым JDK, нужен javac, умеющий читать их версию классов.
+Для JAR, собранных новым JDK, переводчик ищет подходящий javac в PATH,
+JAVA_HOME и /usr/lib/jvm. Путь можно задать через MCSA_TRANSLATOR_JAVAC.
 SDK подключается как provided и не включается в JAR плагина.
 Зависимости кешируются в `.m2`, инструменты — в `.toolchain`, сборка — в `target`.
 

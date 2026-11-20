@@ -95,6 +95,11 @@ jobs:
           java-version: '25'
       - name: Execute translated Bukkit BossBar and presentation tests
         run: python3 -B tools/plugin-translator/bossbar_ci.py runtime --output bossbar-evidence
+      - name: Observe world changes from two Java 26.3 clients
+        run: |
+          python3 -B tools/plugin-translator/world_change_ci.py \
+            --binary build-evidence/mcsa-linux-x64 --build-receipt build-evidence/build.json \
+            --fixture tmp/java-test/plugins/java-bossbar --output bossbar-evidence
       - name: Compile own ModSDK fixtures and execute exact Host tests
         if: ${{ !cancelled() && steps.wasm_tools.outcome == 'success' }}
         run: python3 -B tools/measure/combined_independent_ci.py

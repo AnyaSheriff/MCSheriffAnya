@@ -5,6 +5,7 @@ import concurrent.futures
 import hashlib
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,31 @@ PACKAGES = {
 
 def run(*args, **kwargs):
     guarded_run([str(a) for a in args], check=True, **kwargs)
+
+
+def dispatch_javac(required):
+    override = os.environ.get("MCSA_TRANSLATOR_JAVAC")
+    if override:
+        return override
+    candidates = [shutil.which("javac")]
+    if java_home := os.environ.get("JAVA_HOME"):
+        candidates.append(shutil.which(str(Path(java_home) / "bin/javac")))
+    candidates.extend(sorted(Path("/usr/lib/jvm").glob("*/bin/javac")))
+    seen = set()
+    for candidate in filter(None, candidates):
+        path = Path(candidate).resolve()
+        if path in seen:
+            continue
+        seen.add(path)
+        try:
+            result = subprocess.run([str(path), "-version"], stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, text=True, timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        match = re.search(r"^javac (?:1\.)?(\d+)", result.stdout, re.M)
+        if result.returncode == 0 and match and int(match[1]) >= required:
+            return str(path)
+    raise ValueError(f"JAR требует javac {required} или новее. Укажите его через MCSA_TRANSLATOR_JAVAC.")
 
 
 def bootstrap_wasm_toolchain():
@@ -136,6 +162,8 @@ def translate(jar, output, check_only=False, report=None, staged_block_break=Fal
         dest = output / manifest["name"]
         if dest.exists():
             raise ValueError("Папка уже существует; перевод не перезаписывает данные: " + str(dest))
+        compiler = dispatch_javac(int((work / "javac-minimum.txt").read_text()))
+        print("Компилятор обработчиков:", compiler, flush=True)
         # Убираем манифест Class-Path и service providers: TeaVM не должен загружать
         # расширения компилятора из входного JAR на JVM переводчика.
         compiler_jar = work / "input-classes.jar"
@@ -149,7 +177,7 @@ def translate(jar, output, check_only=False, report=None, staged_block_break=Fal
         run("java", "-cp", cp, "ru.mcsa.translator.Normalize", TARGET / "mcsa-bukkit.jar", mapped_sdk, "remap")
         classes = work / "classes"
         classes.mkdir()
-        run(os.environ.get("MCSA_TRANSLATOR_JAVAC", "javac"), "-proc:none", "--release", "11", "-encoding", "UTF-8", "-cp", str(TARGET / "mcsa-bukkit.jar") + os.pathsep + str(compiler_jar), "-d", classes, work / "src/mcsa/generated/Main.java")
+        run(compiler, "-proc:none", "--release", "11", "-encoding", "UTF-8", "-cp", str(TARGET / "mcsa-bukkit.jar") + os.pathsep + str(compiler_jar), "-d", classes, work / "src/mcsa/generated/Main.java")
         run("java", "-Xmx1g", "-cp", cp, "ru.mcsa.translator.Compile", work / "c", classes, mapped_sdk, compiler_jar)
         port_runtime(work / "c")
         wit = work / "wit"
