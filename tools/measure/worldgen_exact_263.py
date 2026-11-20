@@ -156,6 +156,7 @@ def compare_worlds(ours, vanilla, plan, example_limit=20):
                   totals={key: {'compared': 0, 'mismatches': 0} for key in ('block_names', 'biome_cells', 'top_non_air_heights')})
     report['comparison_on_union_nonair'] = {'excluded_name': 'air', 'compared': 0, 'mismatches': 0, 'diagnostic_only': True}
     report['height_definition'] = 'Top block other than air/cave_air/void_air; includes fluids and leaves; empty column=-65.'
+    report['height_grid_axis_order'] = ['z', 'x']
     report['top_non_air_abs_error_sum'] = 0
     report['top_non_air_abs_error_max'] = 0
     pairs = Counter()
@@ -230,7 +231,8 @@ def compare_worlds(ours, vanilla, plan, example_limit=20):
             for label, arrays in [('ours', a), ('vanilla', b)]:
                 header = {'version': '26.3', 'seed': seed, 'dimension': dimension, 'chunk': list(coord)}
                 row[label] = {'block_names_sha256': array_hash(arrays[0], {**header, 'kind': 'block_names', 'axis': 'y,z,x'}),
-                              'biomes_sha256': array_hash(arrays[1], {**header, 'kind': 'quart_biomes', 'axis': 'section,qy,qz,qx'})}
+                              'biomes_sha256': array_hash(arrays[1], {**header, 'kind': 'quart_biomes', 'axis': 'section,qy,qz,qx'}),
+                              'top_non_air_y': arrays[2].tolist()}
             for i, (category, field) in enumerate([('block_names', 'block_name_mismatches'), ('biome_cells', 'biome_cell_mismatches'), ('top_non_air_heights', 'height_column_mismatches')]):
                 different = a[i] != b[i]
                 count = int(np.count_nonzero(different))

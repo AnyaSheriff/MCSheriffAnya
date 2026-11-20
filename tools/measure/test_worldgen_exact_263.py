@@ -72,6 +72,15 @@ class ExactTests(unittest.TestCase):
         self.assertEqual(r['top_non_air_abs_error_sum'], 65)
         self.assertEqual(r['top_non_air_abs_error_max'], 65)
         self.assertEqual(r['chunks'][0]['height_abs_error_sum'], 65)
+        self.assertEqual(r['height_grid_axis_order'], ['z', 'x'])
+        ours = np.array(r['chunks'][0]['ours']['top_non_air_y'])
+        vanilla = np.array(r['chunks'][0]['vanilla']['top_non_air_y'])
+        self.assertEqual(ours.shape, (16, 16))
+        self.assertEqual(vanilla.shape, ours.shape)
+        self.assertEqual(ours[2, 3], 0)
+        self.assertEqual(ours[3, 2], -65)
+        self.assertEqual(vanilla[2, 3], -65)
+        self.assertEqual(np.abs(ours - vanilla).sum(), r['chunks'][0]['height_abs_error_sum'])
 
     def test_biome_y_slices_have_exact_denominators_and_reconcile_full_total(self):
         result = self.run_compare()
