@@ -136,7 +136,10 @@ impl Body {
         for v in [at.0, at.1, at.2] { push_f64(&mut payload, v); }
         push_f32(&mut payload, rotation.0); push_f32(&mut payload, rotation.1);
         payload.push(u8::from(flags & (1 << 50) != 0));
-        if !horse::vehicle_move(&payload, p, shared, &mut Reaction::default()) { vehicle::vehicle_move(&payload, p, shared); }
+        let mut reaction = Reaction::default();
+        if !horse::vehicle_move(&payload, p, shared, &mut reaction) {
+            vehicle::vehicle_move(&payload, p, shared, &mut reaction);
+        }
         vehicle::steer_boat(&[u8::from(flags & (1 << 46) != 0), u8::from(flags & (1 << 47) != 0)], p, shared);
     }
     pub(crate) fn restore_respawn(&mut self, point: Option<crate::bed::RespawnPoint>) { self.state.respawn = point; }

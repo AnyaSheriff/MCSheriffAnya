@@ -8923,7 +8923,9 @@ fn handle_client_packet_inner(
             }
         }
         vehicle::VEHICLE_MOVE => {
-            if !horse::vehicle_move(payload, player, shared, &mut reaction) { vehicle::vehicle_move(payload, player, shared); }
+            if !horse::vehicle_move(payload, player, shared, &mut reaction) {
+                vehicle::vehicle_move(payload, player, shared, &mut reaction);
+            }
         }
         vehicle::STEER_BOAT => vehicle::steer_boat(payload, player, shared),
         PLAYER_INPUT => {

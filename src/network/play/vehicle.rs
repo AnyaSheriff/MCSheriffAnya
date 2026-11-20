@@ -238,8 +238,19 @@ fn release_driver(shared: &Shared, dimension: Dimension, vehicle: i32, rider: i3
     }
 }
 
-/// Move Vehicle: водитель лодки сообщает её новое место.
-pub(super) fn vehicle_move(payload: &[u8], player: &mut PlayerState, shared: &Shared) {
+/// Сообщает водителю настоящее место моба, когда движение не принято.
+pub(super) fn correct_mob_position(mob: &crate::mob::Mob, reaction: &mut Reaction) {
+    let mut packet = encode_varint(0x39);
+    push_f64(&mut packet, mob.x);
+    push_f64(&mut packet, mob.y);
+    push_f64(&mut packet, mob.z);
+    push_f32(&mut packet, mob.yaw);
+    push_f32(&mut packet, mob.pitch);
+    reaction.packets.push(packet);
+}
+
+/// Move Vehicle: водитель сообщает новое место транспорта.
+pub(super) fn vehicle_move(payload: &[u8], player: &mut PlayerState, shared: &Shared, reaction: &mut Reaction) {
     let Some(vehicle) = player.ride.vehicle else {
         return;
     };
@@ -264,8 +275,13 @@ pub(super) fn vehicle_move(payload: &[u8], player: &mut PlayerState, shared: &Sh
     }
     if let Some(mob) = items.mobs_mut().iter_mut().find(|m| m.entity_id == vehicle && m.kind == crate::mob::Kind::HappyGhast && !m.is_dead()) {
         if shared.riding.lock().expect("учёт седоков").driver(vehicle) == Some(player.entity_id) && mob.newmobs.harness.is_some() && !mob.is_baby() {
-            // [проверить] как лодка: движение управляемого транспорта ведёт клиент.
-            mob.x=x; mob.y=y; mob.z=z; mob.yaw=yaw; mob.pitch=pitch;
+            // Чёрный ящик 26.3: стоящий сверху игрок удерживает гаста,
+            // даже когда водитель продолжает присылать Move Vehicle.
+            if mob.newmobs.still > 0 {
+                correct_mob_position(mob, reaction);
+                return;
+            }
+            mob.x=x; mob.y=y; mob.z=z; mob.face(yaw); mob.pitch=pitch;
             mob.vx=0.0; mob.vy=0.0; mob.vz=0.0;
             let at=crate::mob::newmobs::seat((x,y,z),yaw,0);
             player.set_position(at.0,at.1,at.2);
@@ -535,5 +551,49 @@ pub(super) fn input(flags:u8, player:&PlayerState, shared:&Shared) {
     let mut items=shared.items_in(player.dimension).lock().expect("мобы");
     if let Some(m)=items.mobs_mut().iter_mut().find(|m| m.entity_id==id && m.kind==crate::mob::Kind::Camel && m.land.rider==Some(player.entity_id) && m.land.saddle && m.land.sitting) {
         m.land.sitting=false; m.land.pose_tick=m.tame.clock.abs();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_standing_player_stops_the_happy_ghast_even_with_a_driver() {
+        let shared = Shared::new(
+            World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("target/ghast-move-test-ops.json")),
+            crate::skins::Settings::default(),
+        );
+        let mut player = PlayerState::new([13; 16], "Pilot".into(), None, None, 0x7f, 11, (0.5, 103.4, 2.2));
+        let mut ghast = crate::mob::Mob::new(100, crate::mob::Kind::HappyGhast, (0.5, 100.0, 0.5));
+        ghast.newmobs.harness = Some(11);
+        ghast.newmobs.still = 10;
+        shared.items_in(player.dimension).lock().unwrap().add_mob(ghast);
+        assert!(shared.riding.lock().unwrap().mount(player.entity_id, 100, 4));
+        player.ride.vehicle = Some(100);
+        let mut moved = Vec::new();
+        for point in [1.0, 100.0, 0.5] { push_f64(&mut moved, point); }
+        push_f32(&mut moved, 90.0);
+        push_f32(&mut moved, 0.0);
+        moved.push(0);
+
+        let mut reaction = Reaction::default();
+        vehicle_move(&moved, &mut player, &shared, &mut reaction);
+        assert_eq!(reaction.packets.len(), 1);
+        assert_eq!(reaction.packets[0][0], 0x39);
+        assert_eq!(read_position(&reaction.packets[0][1..]), Some((0.5, 100.0, 0.5)));
+        {
+            let mut items = shared.items_in(player.dimension).lock().unwrap();
+            assert_eq!(items.mobs()[0].x, 0.5);
+            items.mobs_mut()[0].newmobs.still = 0;
+        }
+
+        let mut reaction = Reaction::default();
+        vehicle_move(&moved, &mut player, &shared, &mut reaction);
+        assert!(reaction.packets.is_empty());
+        let items = shared.items_in(player.dimension).lock().unwrap();
+        let ghast = &items.mobs()[0];
+        assert_eq!((ghast.x, ghast.yaw, ghast.head_yaw), (1.0, 90.0, 90.0));
     }
 }

@@ -160,10 +160,7 @@ pub(super) fn vehicle_move(payload: &[u8], player: &mut PlayerState, shared: &Sh
         player.set_position(at.0, at.1, at.2);
         player.vit.fall = 0.0;
     } else {
-        let mut packet = encode_varint(0x39);
-        push_f64(&mut packet, mob.x); push_f64(&mut packet, mob.y); push_f64(&mut packet, mob.z);
-        push_f32(&mut packet, mob.yaw); push_f32(&mut packet, mob.pitch);
-        reaction.packets.push(packet);
+        vehicle::correct_mob_position(mob, reaction);
     }
     items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(id as u64));
     true

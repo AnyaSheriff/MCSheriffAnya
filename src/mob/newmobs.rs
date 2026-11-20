@@ -151,14 +151,14 @@ pub(crate) fn player_above_happy_ghast(mob: &Mob, players: &[ai::Watcher]) -> bo
 /// [проверить] полёт: общий ход летающих мобов, без боя и падения.
 pub fn happy_tick(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     ai::voice(mob,rng);
-    if mob.newmobs.ridden {
-        mob.newmobs.still = 0;
-    } else if player_above_happy_ghast(mob, ctx.players) {
+    if player_above_happy_ghast(mob, ctx.players) {
         mob.newmobs.still = 10;
-        if !mob.is_baby() {
+        if !mob.is_baby() && !mob.newmobs.ridden {
             // Чёрный ящик 26.3: взрослый гаст с игроком сверху разворачивается к ближайшей стороне света.
             mob.face(((mob.yaw % 360.0 + 45.0) / 90.0).floor() * 90.0);
         }
+    } else if mob.newmobs.ridden {
+        mob.newmobs.still = 0;
     } else {
         mob.newmobs.still = (mob.newmobs.still - 1).max(0);
     }

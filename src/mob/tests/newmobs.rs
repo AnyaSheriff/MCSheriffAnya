@@ -267,6 +267,9 @@ fn adult_happy_ghast_aligns_on_top_and_keeps_the_riders_heading() {
     m.head_yaw = 33.0;
     newmobs::happy_tick(&mut m, &Flat::new(), &context, &mut rng);
     assert_eq!((m.yaw, m.head_yaw), (33.0, 33.0));
+    assert_eq!(m.newmobs.still, 10);
+    newmobs::happy_tick(&mut m, &Flat::new(), &ctx(), &mut rng);
+    assert_eq!(m.newmobs.still, 0);
 }
 
 #[test]
