@@ -85,6 +85,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
       - name: Translate own Bukkit BossBar fixture
         run: python3 -B tools/plugin-translator/bossbar_ci.py translate --output bossbar-evidence
       - uses: actions/setup-java@v4

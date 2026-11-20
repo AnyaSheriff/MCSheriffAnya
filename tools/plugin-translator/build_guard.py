@@ -22,6 +22,6 @@ def run(args, **kwargs):
     command = list(map(str, args))
     # Приоритет сборки не наследуется живым ядром/ботом из Python-обвязки.
     build_wrapper = len(command) > 1 and Path(command[1]).name in {'translate.py', 'build-fixtures.py', 'test-inspector.py'}
-    if build_wrapper or Path(command[0]).name in {'cargo', 'mvn', 'java', 'javac', 'jar', 'clang', 'wit-bindgen', 'wasm-tools'}:
+    if build_wrapper or Path(command[0]).name in {'cargo', 'gradlew', 'java', 'javac', 'jar', 'clang', 'wit-bindgen', 'wasm-tools'}:
         command = ['nice', '-n', '19', *command]
     return _raw_run(command, env=env, **kwargs)

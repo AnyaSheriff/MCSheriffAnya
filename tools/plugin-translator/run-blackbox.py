@@ -15,6 +15,7 @@ import tempfile
 import time
 import uuid
 import zipfile
+from translate import GRADLE_INPUTS
 
 root = Path(__file__).resolve().parent
 repo = root.parent.parent
@@ -73,7 +74,7 @@ with tempfile.TemporaryDirectory(prefix='java-blackbox-', dir=repo / 'tmp') as t
     (work / 'ops.json').write_text(json.dumps([{'uuid': str(uuid.UUID(bytes=bytes(identity))), 'name': 'JavaTester', 'level': 4}]))
     cache = root / 'target/blackbox-plugins'
     sdk_digest = hashlib.sha256()
-    sources = [*sorted((root/'mcsa-bukkit/src/main/java').rglob('*.java')), *sorted((root/'src/main/java').rglob('*.java')), root/'adapter.c', root/'bridge.h', root/'translate.py', root/'decimal_runtime.py', root/'decimal-runtime.h', repo/'wit/mcsa-api.wit']
+    sources = [*sorted((root/'mcsa-bukkit/src/main/java').rglob('*.java')), *sorted((root/'src/main/java').rglob('*.java')), root/'adapter.c', root/'bridge.h', root/'translate.py', root/'decimal_runtime.py', root/'decimal-runtime.h', repo/'wit/mcsa-api.wit', *GRADLE_INPUTS]
     for source in sources:
         sdk_digest.update(str(source.relative_to(repo)).encode());sdk_digest.update(source.read_bytes())
     for name in ('command', 'events', 'scheduler'):

@@ -5,8 +5,9 @@
 (Java → C → WASI 0.2), добавляет WIT-мост и выдаёт компонент для `plugins/`.
 На сервере JVM не запускается. Исходники Bukkit/Spigot/Paper не использовались.
 
-Нужны Linux x86-64, Python 3.12+, JDK 17+, Maven и доступ к Maven Central/GitHub.
-TeaVM, ASM и SnakeYAML загружаются Maven из Central; WASI SDK 34,
+Нужны Linux x86-64, Python 3.12+, JDK 17+ и доступ к Maven Central и GitHub.
+Gradle Wrapper из `android/` собирает SDK и переводчик, зависимости закреплены в
+`gradle.lockfile`. WASI SDK 34,
 wit-bindgen 0.63.0 и wasm-tools 1.262.0 — из официальных GitHub releases.
 Для JAR, собранных новым JDK, переводчик ищет подходящий javac в PATH,
 JAVA_HOME и /usr/lib/jvm. Путь можно задать через MCSA_TRANSLATOR_JAVAC.

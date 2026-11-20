@@ -20,6 +20,12 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent.parent
 TARGET = ROOT / "target"
 CHAIN = ROOT / ".toolchain"
+GRADLE_WRAPPER = REPO / "android/gradlew"
+GRADLE_INPUTS = (
+    ROOT / "build.gradle", ROOT / "settings.gradle", ROOT / "gradle.lockfile",
+    GRADLE_WRAPPER, REPO / "android/gradle/wrapper/gradle-wrapper.jar",
+    REPO / "android/gradle/wrapper/gradle-wrapper.properties",
+)
 PACKAGES = {
     "wasi-sdk-34.0-x86_64-linux": "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz",
     "wasm-tools-1.262.0-x86_64-linux": "https://github.com/bytecodealliance/wasm-tools/releases/download/v1.262.0/wasm-tools-1.262.0-x86_64-linux.tar.gz",
@@ -73,19 +79,11 @@ def bootstrap_wasm_toolchain():
 
 def bootstrap(toolchain=True):
     TARGET.mkdir(exist_ok=True)
-    if not (TARGET / "lib/teavm-tooling-0.12.3.jar").exists():
-        # Полные координаты исключают поиск плагина Maven по префиксу.
-        run("mvn", "-q", "-f", ROOT / "pom.xml",
-            "org.apache.maven.plugins:maven-dependency-plugin:3.6.1:copy-dependencies",
-            "-DoutputDirectory=target/lib")
+    run(GRADLE_WRAPPER, "--no-daemon", "--console=plain", "--quiet",
+        "--project-dir", ROOT, "--project-cache-dir", TARGET / "gradle",
+        f"-PtranslatorOutput={TARGET}", "buildSdk")
     if toolchain:
         bootstrap_wasm_toolchain()
-    cp = str(TARGET / "lib/*")
-    for source, dest in [(ROOT / "mcsa-bukkit/src/main/java", TARGET / "sdk"), (ROOT / "src/main/java", TARGET / "tool")]:
-        shutil.rmtree(dest, ignore_errors=True)
-        dest.mkdir(exist_ok=True)
-        run("javac", "-proc:none", "--release", "11", "-encoding", "UTF-8", "-cp", cp, "-d", dest, *sorted(source.rglob("*.java")))
-    run("jar", "cf", TARGET / "mcsa-bukkit.jar", "-C", TARGET / "sdk", ".")
 
 
 def port_throwable_runtime(c):

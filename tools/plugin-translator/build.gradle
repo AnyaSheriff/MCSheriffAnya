@@ -1,0 +1,60 @@
+repositories {
+    mavenCentral {
+        metadataSources {
+            mavenPom()
+            ignoreGradleMetadataRedirection()
+        }
+    }
+}
+
+configurations {
+    translatorRuntime {
+        canBeConsumed = false
+        canBeResolved = true
+        resolutionStrategy.activateDependencyLocking()
+    }
+}
+
+dependencies {
+    translatorRuntime 'org.teavm:teavm-tooling:0.12.3'
+    translatorRuntime 'org.teavm:teavm-classlib:0.12.3'
+    translatorRuntime 'org.teavm:teavm-interop:0.12.3'
+    translatorRuntime 'org.ow2.asm:asm:9.7.1'
+    translatorRuntime 'org.yaml:snakeyaml:2.3'
+}
+
+def output = layout.projectDirectory.dir(providers.gradleProperty('translatorOutput').getOrElse('target'))
+layout.buildDirectory = output
+
+tasks.withType(JavaCompile).configureEach {
+    classpath = configurations.translatorRuntime
+    sourceCompatibility = '11'
+    targetCompatibility = '11'
+    options.release = 11
+    options.encoding = 'UTF-8'
+    options.compilerArgs.add('-proc:none')
+}
+
+def copyRuntime = tasks.register('copyTranslatorRuntime', Sync) {
+    from configurations.translatorRuntime
+    into output.dir('lib')
+}
+
+def compileSdk = tasks.register('compileSdk', JavaCompile) {
+    source fileTree('mcsa-bukkit/src/main/java') { include '**/*.java' }
+    destinationDirectory = output.dir('sdk')
+}
+
+def compileTool = tasks.register('compileTool', JavaCompile) {
+    source fileTree('src/main/java') { include '**/*.java' }
+    destinationDirectory = output.dir('tool')
+}
+
+tasks.register('buildSdk', Jar) {
+    dependsOn copyRuntime, compileTool
+    from compileSdk.flatMap { it.destinationDirectory }
+    archiveFileName = 'mcsa-bukkit.jar'
+    destinationDirectory = output
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}

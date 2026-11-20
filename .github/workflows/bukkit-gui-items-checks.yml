@@ -34,7 +34,7 @@ jobs:
           path: |
             tools/plugin-translator/target/lib
             tools/plugin-translator/.toolchain
-          key: bukkit-gui-tools-v1-${{ runner.os }}-${{ hashFiles('tools/plugin-translator/pom.xml', 'tools/plugin-translator/translate.py') }}
+          key: bukkit-gui-tools-v2-${{ runner.os }}-${{ hashFiles('tools/plugin-translator/*.gradle', 'tools/plugin-translator/gradle.lockfile', 'tools/plugin-translator/translate.py', 'android/gradle/wrapper/gradle-wrapper.properties') }}
       - name: Freeze exact compiled source and tested host dependency lock
         run: python3 -B tools/plugin-translator/bukkit_gui_items_ci.py prepare
       - name: Check own finite GUI packet assertions without client dependencies
@@ -47,7 +47,7 @@ jobs:
           node --version > bukkit-gui-items-evidence/node-version.log
           npm --version > bukkit-gui-items-evidence/npm-version.log
           java -version > bukkit-gui-items-evidence/java-version.log 2>&1
-          mvn --version > bukkit-gui-items-evidence/maven-version.log
+          android/gradlew --version > bukkit-gui-items-evidence/gradle-version.log
       - name: Build ordinary plugin-enabled host with exact tested lock
         shell: bash
         run: |

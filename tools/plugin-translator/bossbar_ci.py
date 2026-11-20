@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
+from translate import GRADLE_INPUTS
 
 ROOT = Path(__file__).resolve().parents[2]
 TRANSLATOR = ROOT / 'tools/plugin-translator'
@@ -71,7 +72,8 @@ def run_runtime_tests(output):
 def receipt(output, label):
     paths = [p for base in [TRANSLATOR / 'mcsa-bukkit/src', TRANSLATOR / 'src', TRANSLATOR / 'fixtures/bossbar', ROOT / 'src/plugins'] for p in base.rglob('*') if p.is_file()]
     paths += list(TRANSLATOR.glob('*.py'))
-    paths += [ROOT / p for p in ['wit/mcsa-api.wit', 'tools/plugin-translator/adapter.c', 'tools/plugin-translator/bridge.h', 'tools/plugin-translator/pom.xml', 'Cargo.toml', 'Cargo.lock']]
+    paths += [ROOT / p for p in ['wit/mcsa-api.wit', 'tools/plugin-translator/adapter.c', 'tools/plugin-translator/bridge.h', 'Cargo.toml', 'Cargo.lock']]
+    paths.extend(GRADLE_INPUTS)
     hashes = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(paths)) if p.is_file()}
     payload = {'source': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
                'run': os.environ.get('GITHUB_RUN_ID'), 'attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),

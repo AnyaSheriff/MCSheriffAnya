@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tarfile
 import time
+from translate import GRADLE_INPUTS
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / 'tools/plugin-translator'
@@ -21,6 +22,7 @@ CHEST = 'tools/plugin-translator/mcsa-bukkit/src/main/java/ru/mcsa/bukkit/ChestI
 LOCK_SHA = '6508363c084753b8b60f779a7b7fae6f4222fa6b6c900ddbaa6575ea36fbe1f8'
 WORKFLOW = '.github/workflows/bukkit-gui-items-checks.yml'
 NODE = 'tools/blackbox/ci/attr-phase'
+GRADLE_PATHS = {str(path.relative_to(ROOT)) for path in GRADLE_INPUTS}
 
 
 def digest(path):
@@ -51,6 +53,7 @@ def source_paths():
             if not {'target', '.toolchain', '__pycache__'} & set(p.parts):
                 paths.add(name)
     paths.update([WORKFLOW, NODE + '/package.json', NODE + '/package-lock.json', '.github/release.lock', '.github/release-lock.sha256'])
+    paths.update(GRADLE_PATHS)
     return sorted(paths)
 
 
@@ -194,10 +197,10 @@ def checks():
         raise ValueError('control tree already exists')
     ledger = json.loads((OUT / 'inputs.json').read_text())['sources']
     for name in ledger:
-        if name.startswith('tools/plugin-translator/') or name == 'wit/mcsa-api.wit':
+        if name.startswith('tools/plugin-translator/') or name == 'wit/mcsa-api.wit' or name in GRADLE_PATHS:
             target = CONTROL / name
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / name, target)
+            shutil.copy2(ROOT / name, target)
     old = git('show', BASE + ':' + CHEST)
     assert old != (ROOT / CHEST).read_bytes()
     (CONTROL / CHEST).write_bytes(old)
@@ -212,8 +215,7 @@ def checks():
     shutil.copyfile(host, destination)
     destination.chmod(0o755)
     assert digest(destination) == digest(host)
-    # Инструменты компилятора непрозрачны; только повторное использование тех же байтов.
-    # Первый перевод готовит инструменты для обоих деревьев; старый SDK переводится отдельно.
+    # Оба дерева отдельно собирают SDK с тем же Gradle Wrapper и lock-файлом.
     rc = run('build-new-fixtures', [sys.executable, '-B', TOOL / 'build-fixtures.py'])
     assert rc == 0
     cp = str(TOOL / 'target/sdk') + os.pathsep + str(TOOL / 'target/lib/*')
@@ -226,7 +228,6 @@ def checks():
     cohort('candidate', ROOT, 26210)
     control_tool = CONTROL / 'tools/plugin-translator'
     (control_tool / 'target').mkdir()
-    (control_tool / 'target/lib').symlink_to(TOOL / 'target/lib', target_is_directory=True)
     (control_tool / '.toolchain').symlink_to(TOOL / '.toolchain', target_is_directory=True)
     cohort('old-control', CONTROL, 26211, expected_old=True)
     for name, expected in ledger.items():

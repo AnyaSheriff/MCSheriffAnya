@@ -20,32 +20,29 @@ class BootstrapTests(unittest.TestCase):
         self.run_command = self.enterContext(patch.object(translate, "guarded_run"))
         self.download = self.enterContext(patch.object(translate.urllib.request, "urlretrieve"))
         self.enterContext(patch.object(sys, "argv", ["translate.py", "--build-sdk"]))
-        self.maven_command = [
-            "mvn", "-q", "-f", str(translate.ROOT / "pom.xml"),
-            "org.apache.maven.plugins:maven-dependency-plugin:3.6.1:copy-dependencies",
-            "-DoutputDirectory=target/lib",
+        self.gradle_command = [
+            str(translate.GRADLE_WRAPPER), "--no-daemon", "--console=plain", "--quiet",
+            "--project-dir", str(translate.ROOT),
+            "--project-cache-dir", str(self.target / "gradle"),
+            f"-PtranslatorOutput={self.target}", "buildSdk",
         ]
 
     def tearDown(self):
         self.download.assert_not_called()
 
-    def test_build_sdk_resolves_dependencies_before_compilation(self):
+    def test_build_sdk_uses_pinned_gradle_wrapper(self):
         self.assertEqual(translate.main(), 0)
-        first, *remaining = self.run_command.call_args_list
-        self.assertEqual(first.args, (self.maven_command,))
-        self.assertEqual(first.kwargs, {"check": True})
-        self.assertEqual([call.args[0][0] for call in remaining], ["javac", "javac", "jar"])
+        self.run_command.assert_called_once_with(self.gradle_command, check=True)
 
-    def test_build_sdk_uses_existing_dependency_cache(self):
+    def test_build_sdk_rechecks_incomplete_legacy_dependency_cache(self):
         library = self.target / "lib"
         library.mkdir(parents=True)
         (library / "teavm-tooling-0.12.3.jar").touch()
 
         self.assertEqual(translate.main(), 0)
-        commands = [call.args[0][0] for call in self.run_command.call_args_list]
-        self.assertEqual(commands, ["javac", "javac", "jar"])
+        self.run_command.assert_called_once_with(self.gradle_command, check=True)
 
-    def test_cached_wasm_toolchain_needs_no_java_or_maven(self):
+    def test_cached_wasm_toolchain_needs_no_java_or_gradle(self):
         chain = self.target.parent / ".toolchain"
         for name in translate.PACKAGES:
             (chain / name).mkdir(parents=True)
@@ -64,9 +61,9 @@ class BootstrapTests(unittest.TestCase):
         with redirect_stderr(stderr):
             self.assertEqual(translate.main(), 2)
 
-        self.run_command.assert_called_once_with(self.maven_command, check=True)
+        self.run_command.assert_called_once_with(self.gradle_command, check=True)
         self.assertIn("ОТКАЗ:", stderr.getvalue())
-        self.assertIn(self.maven_command[4], stderr.getvalue())
+        self.assertIn("buildSdk", stderr.getvalue())
         self.assertFalse((self.target / "sdk").exists())
 
 
