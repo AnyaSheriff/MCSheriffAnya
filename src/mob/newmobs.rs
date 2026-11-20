@@ -142,7 +142,17 @@ pub fn harness_colour(name: &str) -> Option<u8> {
 /// [проверить] полёт: общий ход летающих мобов, без боя и падения.
 pub fn happy_tick(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     ai::voice(mob,rng);
-    if mob.newmobs.ridden {mob.newmobs.still=0;} else if ctx.players.iter().any(|p| !p.spectator && (p.x-mob.x).abs() <= 2.0 && (p.z-mob.z).abs() <= 2.0 && p.y >= mob.y+mob.size().1 && p.y < mob.y+mob.size().1+2.0) {mob.newmobs.still=10;} else {mob.newmobs.still=(mob.newmobs.still-1).max(0);}
+    if mob.newmobs.ridden {
+        mob.newmobs.still = 0;
+    } else if ctx.players.iter().any(|p| !p.spectator && (p.x-mob.x).abs() <= 2.0 && (p.z-mob.z).abs() <= 2.0 && p.y >= mob.y+mob.size().1 && p.y < mob.y+mob.size().1+2.0) {
+        mob.newmobs.still = 10;
+        if !mob.is_baby() {
+            // Чёрный ящик 26.3: взрослый гаст с игроком сверху разворачивается к ближайшей стороне света.
+            mob.face(((mob.yaw % 360.0 + 45.0) / 90.0).floor() * 90.0);
+        }
+    } else {
+        mob.newmobs.still = (mob.newmobs.still - 1).max(0);
+    }
     if mob.newmobs.ridden || mob.newmobs.still>0 { (mob.vx,mob.vy,mob.vz)=(0.0,0.0,0.0); return Plan::default(); }
     if mob.newmobs.home.is_none() || (mob.newmobs.was_leashed && mob.leash.is_none()) {
         mob.newmobs.home=Some((mob.x,mob.y,mob.z));
@@ -171,7 +181,12 @@ pub fn happy_tick(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> P
         let candidate=(mob.x+rng.unit()*16.0-8.0,mob.y+rng.unit()*8.0-4.0,mob.z+rng.unit()*16.0-8.0);
         mob.nether.wander=Some(if (candidate.0-home.0).powi(2)+(candidate.1-home.1).powi(2)+(candidate.2-home.2).powi(2)<radius*radius {candidate}else{home});
     }
+    let (x, z) = (mob.x, mob.z);
     super::nether::drift(mob,view);
+    let (dx, dz) = (mob.x - x, mob.z - z);
+    if dx != 0.0 || dz != 0.0 {
+        mob.face((-dx.atan2(dz)).to_degrees() as f32);
+    }
     mob.vitals.fall = 0.0;
     Plan::default()
 }

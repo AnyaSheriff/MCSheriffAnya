@@ -240,9 +240,30 @@ fn ghastling_follows_adults_and_returns_toward_its_home() {
     let context=ai::Ctx{mates:&mates,..ctx()};
     newmobs::happy_tick(&mut m,&Flat::new(),&context,&mut Rng::new(3));
     assert!(m.newmobs.tempted);assert!(m.vx>0.0);assert_eq!(m.newmobs.home,Some((0.5,8.0,0.5)));
+    assert_eq!((m.yaw, m.head_yaw), (-90.0, -90.0));
     m.age=0;m.newmobs.tempted=false;m.newmobs.home=Some((0.0,8.0,0.0));m.nether.wander=None;m.x=100.0;m.vx=0.0;
     newmobs::happy_tick(&mut m,&Flat::new(),&ctx(),&mut Rng::new(9));
     assert_eq!(m.nether.wander,Some((0.0,8.0,0.0)));assert!(m.vx<0.0);
+}
+
+#[test]
+fn adult_happy_ghast_aligns_on_top_and_keeps_the_riders_heading() {
+    let mut m = Mob::new(1, Kind::HappyGhast, (0.5, 8.0, 0.5));
+    m.yaw = -60.0;
+    m.head_yaw = -60.0;
+    m.vx = 0.1;
+    let top = ai::Watcher { x: m.x, y: m.y + m.size().1 + 0.01, z: m.z, ..watcher() };
+    let standing = [top];
+    let context = ai::Ctx { players: &standing, ..ctx() };
+    let mut rng = Rng::new(9);
+    newmobs::happy_tick(&mut m, &Flat::new(), &context, &mut rng);
+    assert_eq!((m.yaw, m.head_yaw), (-90.0, -90.0));
+    assert_eq!((m.x, m.y, m.z, m.vx), (0.5, 8.0, 0.5, 0.0));
+    m.newmobs.ridden = true;
+    m.yaw = 33.0;
+    m.head_yaw = 33.0;
+    newmobs::happy_tick(&mut m, &Flat::new(), &context, &mut rng);
+    assert_eq!((m.yaw, m.head_yaw), (33.0, 33.0));
 }
 
 #[test]

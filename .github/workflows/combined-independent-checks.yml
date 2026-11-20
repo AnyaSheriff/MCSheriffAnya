@@ -100,6 +100,12 @@ jobs:
           python3 -B tools/plugin-translator/world_change_ci.py \
             --binary build-evidence/mcsa-linux-x64 --build-receipt build-evidence/build.json \
             --fixture tmp/java-test/plugins/java-bossbar --output bossbar-evidence
+      - name: Compare Happy Ghast facing with the reference
+        if: ${{ !cancelled() && steps.source.outcome == 'success' && steps.runtime_java.outcome == 'success' }}
+        run: |
+          python3 -B tools/blackbox/happy_ghast_facing_ci.py \
+            --binary build-evidence/mcsa-linux-x64 --build-receipt build-evidence/build.json \
+            --output happy-ghast-evidence
       - name: Compile own ModSDK fixtures and execute exact Host tests
         if: ${{ !cancelled() && steps.wasm_tools.outcome == 'success' }}
         run: python3 -B tools/measure/combined_independent_ci.py
@@ -170,6 +176,7 @@ jobs:
             bossbar-evidence/
             mod-evidence/
             build-evidence/
+            happy-ghast-evidence/
             worldgen-stage-build-logs/own-example-components/
           retention-days: 14
           if-no-files-found: warn
