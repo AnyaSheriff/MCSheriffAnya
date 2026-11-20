@@ -18,7 +18,6 @@ use crate::world::AIR;
 pub const GROUND: i32 = 0;
 
 /// Высота, на которой стоит игрок: над верхним блоком земли.
-#[cfg(test)]
 pub const SURFACE: i32 = GROUND + 1;
 
 /// Сколько слоёв земли под дёрном.

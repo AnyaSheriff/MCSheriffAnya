@@ -5035,9 +5035,12 @@ impl World {
         }
 
         let column_at = |x, z| self.generator.column_at(x, z);
-        let place = if matches!(&*self.generator, Generator::Normal(terrain) if terrain.preview()) {
-            spawn_search::find_preview(column_at)
-        } else { spawn_search::find(column_at) };
+        let place = match &*self.generator {
+            // Суша плоского мира лежит ниже обычного уровня моря.
+            Generator::Flat => (0.5, f64::from(flat::SURFACE), 0.5),
+            Generator::Normal(terrain) if terrain.preview() => spawn_search::find_preview(column_at),
+            _ => spawn_search::find(column_at),
+        };
         log_info!("Точка появления: {} {} {}", place.0, place.1, place.2);
         place
     }
@@ -7408,6 +7411,19 @@ mod safety_tests {
 #[cfg(test)]
 mod spawn_tests {
     use super::*;
+
+    #[test]
+    fn the_flat_spawn_point_stands_on_grass() {
+        let mut world = World::in_memory();
+        assert_eq!(world.spawn_position(), (0.5, f64::from(flat::SURFACE), 0.5));
+        world.ensure(0, 0);
+        assert_eq!(world.get_block(0, flat::GROUND, 0), blocks::state_by_name("grass_block").unwrap());
+        assert_eq!(world.get_block(0, flat::SURFACE, 0), AIR);
+
+        let explicit = (4.5, 63.0, -2.5);
+        world.set_spawn_position(explicit);
+        assert_eq!(world.spawn_position(), explicit);
+    }
 
     /// Точка появления — на суше и над водой: в обычном мире начало координат
     /// запросто оказывается морем.
