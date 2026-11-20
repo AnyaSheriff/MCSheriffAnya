@@ -38,6 +38,25 @@ fn swamp_chunk_sheep_need_dry_grass_in_both_generators() {
 }
 
 #[test]
+fn new_plains_animals_start_with_varied_body_and_head_angles() {
+    let ground = Pad::new("air");
+    let mut angles = std::collections::HashSet::new();
+    let mut entity_id = 0;
+    for seed in 0..256 {
+        let animals = land_for_new_chunk(&ground, -11, 21, "plains", &mut Rng::new(seed), &mut || {
+            entity_id += 1;
+            entity_id
+        });
+        for animal in animals {
+            assert!((0.0..=360.0).contains(&animal.yaw));
+            assert_eq!(animal.yaw, animal.head_yaw);
+            angles.insert((animal.yaw * 256.0 / 360.0) as u8);
+        }
+    }
+    assert!(angles.len() >= 16, "Углы новых животных: {angles:?}");
+}
+
+#[test]
 fn wolves_and_small_animals_reject_flooded_surfaces() {
     for (kind, floor) in [(Kind::Rabbit,"sand"),(Kind::Fox,"podzol"),(Kind::Parrot,"oak_leaves"),(Kind::Armadillo,"red_sand")] {
         let mut pad=Pad::new("air"); pad.floor=state(floor);

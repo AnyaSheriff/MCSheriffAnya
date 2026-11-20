@@ -558,7 +558,12 @@ pub fn land_for_new_chunk(view: &dyn View, cx: i32, cz: i32, biome: &str, rng: &
             if super::horse::equine(kind) { super::horse::initialize(&mut mob,rng); mob.horse.variant=coat | ((rng.below(5) as i32)<<8); }
             if kind==Kind::Sheep { mob.color=wild_colour(rng); }
             if kind==Kind::PolarBear && !result.is_empty() || matches!(kind,Kind::Panda|Kind::Goat|Kind::Llama) && rng.below(20)==0 { mob.age=super::BABY_AGE; }
-            if fits(view,&mob) { result.push(mob); }
+            if fits(view, &mob) {
+                // В записи 26.3 первые пакеты коров, овец и свиней уже
+                // передают совпадающие ненулевые углы тела и головы.
+                mob.face((rng.unit() * 360.0) as f32);
+                result.push(mob);
+            }
             break;
         }
     }
