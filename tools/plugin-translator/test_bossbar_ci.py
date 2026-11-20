@@ -21,6 +21,19 @@ class ActualRuntimeResult(unittest.TestCase):
         for name in (*ci.TESTS, 'plugins::tests::own_mod_source_tests::translated_own_mod_source_lifecycle_events_and_isolation'):
             ci.verify_runtime_log(name, self.log(name))
 
+    def test_runtime_gate_can_be_loaded_from_another_tool(self):
+        # ModSDK загружает проверку по пути без импорта каталога переводчика.
+        probe = '''
+import importlib.util
+import sys
+spec = importlib.util.spec_from_file_location("own_runtime_gate", sys.argv[1])
+gate = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gate)
+gate.verify_runtime_log(sys.argv[2], sys.argv[3])
+'''
+        name = ci.TESTS[0]
+        subprocess.run([ci.sys.executable, '-I', '-B', '-c', probe, ci.__file__, name, self.log(name)], check=True)
+
     def test_recorded_ci_44059957194_interleaved_native_info(self):
         # Exact native test-output section, without GitHub's outer timestamps.
         log = '''running 1 test

@@ -9,7 +9,6 @@ import re
 import shutil
 import subprocess
 import sys
-from translate import GRADLE_INPUTS
 
 ROOT = Path(__file__).resolve().parents[2]
 TRANSLATOR = ROOT / 'tools/plugin-translator'
@@ -70,6 +69,8 @@ def run_runtime_tests(output):
 
 
 def receipt(output, label):
+    from translate import GRADLE_INPUTS
+
     paths = [p for base in [TRANSLATOR / 'mcsa-bukkit/src', TRANSLATOR / 'src', TRANSLATOR / 'fixtures/bossbar', ROOT / 'src/plugins'] for p in base.rglob('*') if p.is_file()]
     paths += list(TRANSLATOR.glob('*.py'))
     paths += [ROOT / p for p in ['wit/mcsa-api.wit', 'tools/plugin-translator/adapter.c', 'tools/plugin-translator/bridge.h', 'Cargo.toml', 'Cargo.lock']]
