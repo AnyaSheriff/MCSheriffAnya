@@ -3898,13 +3898,13 @@ mod tests {
         run(r#"execute in minecraft:the_nether run setblock -10 106 8 chest{Items:[{Slot:0b, id:"minecraft:stone", count:3}]}"#,
             &Source::Console, &shared);
 
-        let mut nether_world = shared.world_in(nether).lock().unwrap();
+        let nether_world = shared.world_in(nether).lock().unwrap();
         assert_eq!(nether_world.get_block(1, 100, 1), stone);
         assert_eq!(nether_world.get_block(2, 100, 1), stone);
         assert_eq!(nether_world.get_block(-9, 105, 8), glass);
         assert_eq!(nether_world.container(-10, 106, 8).unwrap().slots[0].as_ref().unwrap().count, 3);
         drop(nether_world);
-        let mut overworld_world = shared.world_in(overworld).lock().unwrap();
+        let overworld_world = shared.world_in(overworld).lock().unwrap();
         assert_ne!(overworld_world.get_block(1, 100, 1), stone);
         assert_ne!(overworld_world.get_block(-9, 105, 8), glass);
         assert_eq!(overworld_world.get_block(-20, 106, 12), glass);

@@ -7417,7 +7417,7 @@ mod spawn_tests {
         let mut world = World::in_memory();
         assert_eq!(world.spawn_position(), (0.5, f64::from(flat::SURFACE), 0.5));
         world.ensure(0, 0);
-        assert_eq!(world.get_block(0, flat::GROUND, 0), blocks::state_by_name("grass_block").unwrap());
+        assert_eq!(world.get_block(0, flat::GROUND, 0), crate::blocks::state_by_name("grass_block").unwrap());
         assert_eq!(world.get_block(0, flat::SURFACE, 0), AIR);
 
         let explicit = (4.5, 63.0, -2.5);
