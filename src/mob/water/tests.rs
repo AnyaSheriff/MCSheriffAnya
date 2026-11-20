@@ -191,6 +191,36 @@ fn spawn_rules_require_dark_water_or_lush_clay() {
 }
 
 #[test]
+fn naturally_spawned_fish_have_different_initial_body_angles() {
+    let mut world = crate::world::World::in_memory();
+    let water = blocks::state_by_name("water").unwrap();
+    for x in 32..48 {
+        for z in 16..32 {
+            for y in 49..=63 {
+                world.set_block_silently(x, y, z, water);
+            }
+        }
+    }
+    let river = crate::world::terrain::Biome::River.number() as crate::world::BiomeId;
+    assert!(world.fill_biome((32, 48, 16), (47, 63, 31), river, None) > 0);
+    let mut watcher = player();
+    watcher.y = 62.0;
+    let mut random = Rng::new(136);
+    let mut id = 200;
+    let mut born = Vec::new();
+    for _ in 0..128 {
+        let batch = spawn::attempt(&mut world, &[watcher], &born, &mut random, &mut || { id += 1; id });
+        born.extend(batch);
+    }
+    let yaws: std::collections::HashSet<_> = born.iter().filter(|mob| mob.kind == Kind::Salmon)
+        .map(|mob| {
+            assert!((0.0..=360.0).contains(&mob.yaw));
+            (mob.yaw * 256.0 / 360.0) as u8
+        }).collect();
+    assert!(yaws.len() >= 3, "Углы появившихся лососей: {yaws:?}");
+}
+
+#[test]
 fn turtle_eggs_hatch_only_on_sand_and_queue_babies() {
     let mut world=crate::world::World::in_memory();
     world.set_time_of_day(21500);

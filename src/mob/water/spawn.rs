@@ -96,6 +96,9 @@ pub fn attempt(world:&mut World,players:&[ai::Watcher],mobs:&[Mob],rng:&mut Rng,
                 let cat=category(mob.kind) as usize;
                 if counts[cat]>=caps[cat] {break;}
                 counts[cat]+=1;
+                // Обычный спавн лосося и кальмара в холодном океане 26.3:
+                // уже первый пакет задаёт угол тела до запуска плавания.
+                mob.yaw = (rng.unit() * 360.0) as f32;
                 born.push(mob);
             }
         }
