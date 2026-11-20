@@ -3885,13 +3885,21 @@ mod tests {
         let shared = server();
         let nether = Dimension::Nether;
         let overworld = Dimension::Overworld;
+        // Как у оригинала, fill и setblock работают только в загруженных чанках.
+        {
+            let mut world = shared.world_in(nether).lock().unwrap();
+            world.ensure(0, 0);
+            world.ensure(-1, 0);
+        }
+        shared.world_in(overworld).lock().unwrap().ensure(-2, 0);
         let stone = blocks::state_by_name("stone").unwrap();
         let glass = blocks::state_by_name("glass").unwrap();
         let source = Source::Block { x: -65, y: 105, z: 65, dimension: overworld, name: "@".into() };
         let visitor = Source::Player { uuid: [9; 16], name: "Посетитель".into() };
         let fill = "execute in minecraft:the_nether run fill 1 100 1 2 100 1 stone";
         assert!(run(fill, &visitor, &shared).reply.contains("нет прав"));
-        assert!(run(fill, &Source::Console, &shared).reply.contains("Заполнено блоков: 2"));
+        let reply = run(fill, &Source::Console, &shared).reply;
+        assert!(reply.contains("Заполнено блоков: 2"), "{reply}");
         run("execute in minecraft:the_nether run setblock ~ ~ ~ glass", &source, &shared);
         let nether_source = Source::Block { x: -3, y: 106, z: 1, dimension: nether, name: "@".into() };
         run("execute in minecraft:overworld run setblock ~ ~ ~ glass", &nether_source, &shared);
