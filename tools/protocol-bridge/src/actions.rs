@@ -196,11 +196,12 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
                 2019|2020 if from == JavaVersion::V26_1_2 && to == JavaVersion::V26_3 && (0..=5).contains(&data) => data,
                 // Записи оригинала 769–777: события раздатчика и остановки
                 // проигрывателя несут нулевые данные без ссылки на реестр.
-                1000|1001|1011 if data == 0 && matches!((from,to),
+                1000|1001|1011 if data == 0 && (matches!((from,to),
                     (JavaVersion::V26_1_2, peer) | (peer, JavaVersion::V26_1_2)
                     if matches!(peer, JavaVersion::V1_21_4 | JavaVersion::V1_21_5 | JavaVersion::V1_21_6 |
                         JavaVersion::V1_21_8 | JavaVersion::V1_21_9 | JavaVersion::V1_21_11 |
-                        JavaVersion::V26_2 | JavaVersion::V26_3)) => 0,
+                        JavaVersion::V26_2 | JavaVersion::V26_3)) ||
+                    (from == JavaVersion::V26_1_2 && to == from && context.items.content.is_native_view())) => 0,
                 // Обычные звуковые события777 (wide777 + автокрафтер):
                 // data0 не является ссылкой на реестр.
                 // 1029/0: разрушение, falling-anvil-degrades; 1031/0: наковальня,
@@ -426,6 +427,26 @@ mod tests {
             for (from, to) in [(OLD, JavaVersion::V1_12_2), (JavaVersion::V1_21_4, JavaVersion::V26_2)] {
                 assert!(effects("world_event", &mut Cursor::new(&body), &mut Vec::new(), from, to, Context::default()).is_err());
             }
+        }
+    }
+
+    #[test]
+    fn native_775_view_preserves_verified_zero_data_for_dispenser_and_jukebox() {
+        let context = Context {
+            items: crate::items::Context { content: crate::content::ContentCodec::white_slab_preview().native_view(), ..Default::default() },
+            ..Default::default()
+        };
+        // Запись оригинального 26.1.2: раздатчик (40, 100, 40), проигрыватель (42, 100, 40).
+        for (event, position) in [(1000i32, 0x0a00_0002_8064u64), (1001, 0x0a00_0002_8064), (1011, 0x0a80_0002_8064)] {
+            let mut body = vec![0x2e];
+            body.extend(event.to_be_bytes());
+            body.extend(position.to_be_bytes());
+            body.extend([0; 5]);
+            let convert = |body: &[u8]| crate::wire::translate_with_context(crate::State::Play,
+                crate::Direction::Clientbound, OLD, OLD, body, context).map(std::borrow::Cow::into_owned);
+            assert_eq!(convert(&body).unwrap(), body);
+            body[16] = 1;
+            assert_eq!(convert(&body), Err(Error::PayloadUnavailable("unverified level event data")));
         }
     }
 
