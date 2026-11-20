@@ -16,8 +16,8 @@ android {
         minSdk 24
         targetSdk 35
         // Переопределение используется только для собственного APK code+1 в CI.
-        versionCode providers.gradleProperty('appVersionCode').getOrElse('6').toInteger()
-        versionName '0.2.4-preview'
+        versionCode providers.gradleProperty('appVersionCode').getOrElse('7').toInteger()
+        versionName '0.2.5-preview'
         manifestPlaceholders = [runtimeAbi: selectedAbi]
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk { abiFilters selectedAbi }

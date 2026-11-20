@@ -58,12 +58,13 @@ interrupted=json.loads((p/'install-interruption-after.json').read_text());interr
 assert interrupted['status']=='passed' and interrupted['cleanup'] and interrupted['data_retained'] and interrupted['host_idle']
 assert interrupted['actual_retained_or_system_removed'] in {'session_retained_and_cancelled','system_removed_session_recovered_idle'}
 assert interrupted['session_id']==interrupted_before['session_id'] and interrupted['pid']!=interrupted_before['pid']
-assert before['installed']['code']==6 and before['target']==after['installed']['code']==7
-assert before['session_present'] and before['pending_code']==7 and confirm['system_package']
+base=before['installed']['code'];target=before['target']
+assert type(base) is int and target==base+1 and target==after['installed']['code']
+assert before['session_present'] and before['pending_code']==target and confirm['system_package']
 assert before['candidate_sha256']==after['installed_apk_sha256']
 assert before['installer_foreground_before_finish']==confirm['package']
 assert before['installed']['signatures']==after['installed']['signatures']
 assert before['installed']['first_install_time']==after['installed']['first_install_time']
 assert before['retained']==after['retained'] and after['reservation_cleared'] and after['host_idle']
-(p/'receipt.json').write_text(json.dumps({'status':'passed','api':after['api'],'instrumentation_tests':4,'actual_retained_or_system_removed':interrupted['actual_retained_or_system_removed'],'interrupted_session_cleanup':interrupted['cleanup'],'scope':'actual own same-key APK 6 to 7 through system-confirmed PackageInstaller; data/core/backups retained; not ARM hardware','files':{f.name:hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.iterdir()) if f.is_file()}},indent=2)+'\n')
+(p/'receipt.json').write_text(json.dumps({'status':'passed','api':after['api'],'instrumentation_tests':4,'actual_retained_or_system_removed':interrupted['actual_retained_or_system_removed'],'interrupted_session_cleanup':interrupted['cleanup'],'base_version_code':base,'target_version_code':target,'scope':'actual own same-key APK through system-confirmed PackageInstaller; data/core/backups retained; not ARM hardware','files':{f.name:hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(p.iterdir()) if f.is_file()}},indent=2)+'\n')
 PY

@@ -10,6 +10,10 @@ from pathlib import Path
 
 out = Path(sys.argv[1])
 out.mkdir(parents=True, exist_ok=True)
+before = json.loads((out / 'install-flow-before.json').read_text())
+target = before['target']
+if type(target) is not int or target != before['installed']['code'] + 1:
+    raise ValueError('installer fixture needs the next versionCode')
 trusted = {'com.android.packageinstaller', 'com.google.android.packageinstaller', 'com.android.permissioncontroller', 'com.google.android.permissioncontroller'}
 
 def adb(*args):
@@ -58,11 +62,11 @@ try:
     for attempt in range(90):
         state = adb('shell', 'dumpsys', 'package', 'ru.sheriffanya.mcsa').decode(errors='replace')
         (out / 'package-after.txt').write_text(state)
-        if re.search(r'\bversionCode=7\b', state):
+        if re.search(rf'\bversionCode={target}\b', state):
             break
         time.sleep(1)
     else:
-        raise RuntimeError('system-confirmed update did not reach versionCode 7')
+        raise RuntimeError(f'system-confirmed update did not reach versionCode {target}')
 except Exception as error:
     (out / 'failure.json').write_text(json.dumps({'status': 'failed', 'error': str(error), 'adb_install_fallback': False}, indent=2)+'\n')
     raise

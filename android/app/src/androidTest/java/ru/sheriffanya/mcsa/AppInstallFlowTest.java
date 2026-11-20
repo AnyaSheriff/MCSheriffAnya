@@ -52,7 +52,7 @@ public class AppInstallFlowTest {
         assertTrue(HostState.idle());Context app=context();PackageManager pm=app.getPackageManager();
         File input=new File(InstrumentationRegistry.getArguments().getString("appUpgradeApk","/data/local/tmp/mcsa-upgrade.apk"));
         PackageInfo candidate=pm.getPackageArchiveInfo(input.getAbsolutePath(),0);assertNotNull(candidate);long target=code(candidate);
-        assertEquals(7,target);assertEquals(6,installed().getLong("code"));
+        assertEquals(BuildConfig.VERSION_CODE + 1L,target);assertEquals(BuildConfig.VERSION_CODE,installed().getLong("code"));
         File dir=new File(app.getCacheDir(),"app-updates");assertTrue(dir.isDirectory()||dir.mkdirs());File apk=new File(dir,java.util.UUID.randomUUID()+".apk");
         try(InputStream in=new FileInputStream(input);FileOutputStream out=new FileOutputStream(apk)) { byte[] buffer=new byte[65536];int n;while((n=in.read(buffer))!=-1) out.write(buffer,0,n);out.getFD().sync(); }
         JSONObject item=new JSONObject().put("bytes",apk.length()).put("sha256",CoreDownload.sha256(apk)).put("url","https://github.com/AnyaSheriff/MCSheriffAnya/releases/download/test/test.apk");
@@ -76,7 +76,7 @@ public class AppInstallFlowTest {
     }
     @Test public void verifyInterruptedSessionAndCancel() throws Exception {
         Context app=context();JSONObject before=new JSONObject(ServerSettings.read(new File(app.getFilesDir(),"install-interruption-before.json")));
-        assertEquals(6,installed().getLong("code"));assertTrue("new process after force-stop",before.getInt("pid")!=android.os.Process.myPid());
+        assertEquals(before.getLong("target") - 1,installed().getLong("code"));assertTrue("new process after force-stop",before.getInt("pid")!=android.os.Process.myPid());
         int id=before.getInt("session_id");boolean exists=app.getPackageManager().getPackageInstaller().getSessionInfo(id)!=null;
         sameFiles(before.getJSONObject("retained"),retained());
         if(exists) {

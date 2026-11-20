@@ -7,7 +7,7 @@ on:
       core_update_pin:
         description: 'Verified candidate native pin for OTA checks; bundled APK pin stays unchanged'
         required: false
-        default: 'android/ota-pins/r10.json'
+        default: 'android/ota-pins/r12.json'
         type: string
       test_manifest_url:
         description: 'Signed candidate channel for the emulator build only; phone APKs keep the public channel'
@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      TEST_MANIFEST_URL: ${{ inputs.test_manifest_url || 'https://raw.githubusercontent.com/AnyaSheriff/MCSheriffAnya/android-updates/candidate-r10.json' }}
-      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/ota-pins/r10.json' }}
+      TEST_MANIFEST_URL: ${{ inputs.test_manifest_url || 'https://raw.githubusercontent.com/AnyaSheriff/MCSheriffAnya/android-updates/candidate-r12.json' }}
+      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/ota-pins/r12.json' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,7 +48,9 @@ jobs:
           if [ -n "$TEST_MANIFEST_URL" ]; then extra+=("-PcoreManifestUrl=$TEST_MANIFEST_URL"); fi
           (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 "${extra[@]}" :app:assembleDebug) 2>&1 | tee apk-build-evidence/emulator-base-build.log
           cp android/app/build/outputs/apk/debug/app-debug.apk apk-test/app-x86_64-debug.apk
-          (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 -PappVersionCode=7 "${extra[@]}" :app:assembleDebug) 2>&1 | tee apk-build-evidence/upgrade-fixture-build.log
+          base_code=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging apk-test/app-x86_64-debug.apk | awk -F"'" '/^package:/{print $4}')
+          [[ "$base_code" =~ ^[1-9][0-9]*$ ]]
+          (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 -PappVersionCode="$((base_code + 1))" "${extra[@]}" :app:assembleDebug) 2>&1 | tee apk-build-evidence/upgrade-fixture-build.log
           cp android/app/build/outputs/apk/debug/app-debug.apk apk-test/app-upgrade-x86_64.apk
           (cd android && ./gradlew --no-daemon -PapkAbi=x86_64 "${extra[@]}" :app:assembleDebug :app:testDebugUnitTest :app:assembleDebugAndroidTest :app:lintDebug) 2>&1 | tee apk-build-evidence/checks.log
           cp android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk apk-test/
@@ -86,7 +88,7 @@ jobs:
     timeout-minutes: 30
     env:
       TEST_API: ${{ matrix.api }}
-      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/ota-pins/r10.json' }}
+      CORE_UPDATE_PIN: ${{ inputs.core_update_pin || 'android/ota-pins/r12.json' }}
     steps:
       - uses: actions/checkout@v4
         with:
