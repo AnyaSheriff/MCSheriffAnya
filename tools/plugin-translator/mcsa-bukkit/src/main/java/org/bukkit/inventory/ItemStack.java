@@ -7,6 +7,9 @@ public class ItemStack implements Cloneable {
  private Material type;private int amount;private ItemMetadata meta;
  public ItemStack(Material material){this(material,1);}public ItemStack(Material material,int amount){type=java.util.Objects.requireNonNull(material);this.amount=amount;meta=ItemMetadata.create(material);}public Material getType(){return type;}public int getAmount(){return amount;}public void setAmount(int amount){this.amount=amount;changed();}public void setType(Material material){type=java.util.Objects.requireNonNull(material);meta=meta.copyFor(material);changed();}
  public ItemStack clone(){ItemStack copy=new ItemStack(type,amount);copy.meta=meta.clone();return copy;}public boolean isEmpty(){return type.isAir()||amount<=0;}public int getMaxStackSize(){return type.getMaxStackSize();}
+ // Условие из Javadoc ItemStack — "if some meta data has been set".
+ // https://jd.papermc.io/paper/1.21.11/org/bukkit/inventory/ItemStack.html
+ public boolean hasItemMeta(){return !type.isAir()&&meta.hasValues();}
  public ItemMeta getItemMeta(){return type.isAir()?null:meta.clone();}public boolean setItemMeta(ItemMeta value){if(value==null){meta=ItemMetadata.create(type);changed();return true;}if(!(value instanceof ItemMetadata))throw new IllegalArgumentException("Чужой ItemMeta");meta=((ItemMetadata)value).copyFor(type);changed();return true;}
  public boolean editMeta(java.util.function.Consumer<? super ItemMeta> consumer){ItemMeta copy=getItemMeta();if(copy==null)return false;consumer.accept(copy);return setItemMeta(copy);}
  public io.papermc.paper.persistence.PersistentDataContainerView getPersistentDataContainer(){return meta.getPersistentDataContainer().clone();}

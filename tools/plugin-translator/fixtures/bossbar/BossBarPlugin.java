@@ -97,6 +97,7 @@ public final class BossBarPlugin extends JavaPlugin implements Listener {
   check(player.hasPotionEffect(PotionEffectType.SPEED) && !player.hasPotionEffect(PotionEffectType.POISON));
   PlayerInventory inventory = player.getInventory();
   ItemStack sword = new ItemStack(Material.IRON_SWORD);
+  check(!sword.hasItemMeta());
   ItemMeta meta = sword.getItemMeta();
   meta.setDisplayName("§aRace blade");
   meta.setLore(java.util.List.of("§bRacial equipment"));
@@ -108,13 +109,16 @@ public final class BossBarPlugin extends JavaPlugin implements Listener {
   inventory.setChestplate(new ItemStack(Material.IRON_CHESTPLATE));
   inventory.setHelmet(new ItemStack(Material.IRON_HELMET));
   check(inventory.getItemInMainHand().getType() == Material.IRON_SWORD);
-  check(inventory.getItemInMainHand().getItemMeta().isUnbreakable());
+  check(inventory.getItemInMainHand().hasItemMeta() && inventory.getItemInMainHand().getItemMeta().isUnbreakable());
   check(inventory.getArmorContents()[1].getType() == Material.IRON_LEGGINGS);
   inventory.setLeggings(null);
   check(inventory.getArmorContents()[1] == null);
   Location at = player.getLocation();
-  player.getWorld().playSound(at, Sound.ENTITY_WARDEN_SONIC_CHARGE, 0.6f, 1.2f);
-  player.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, at, 3, 0.25, 0.5, 1);
+  org.bukkit.World world = player.getWorld();
+  org.bukkit.block.Block block = world.getBlockAt(new Location(world, -0.25, 64.5, 1.75));
+  check(block.getWorld().equals(world) && block.getX() == -1 && block.getY() == 64 && block.getZ() == 1);
+  world.playSound(at, Sound.ENTITY_WARDEN_SONIC_CHARGE, 0.6f, 1.2f);
+  world.spawnParticle(Particle.TOTEM_OF_UNDYING, at, 3, 0.25, 0.5, 1);
   player.sendActionBar("§aRace ready");
  }
  private static void setMainBoard(Player player) {

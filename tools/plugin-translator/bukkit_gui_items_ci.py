@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import signal
 import subprocess
@@ -223,7 +224,8 @@ def checks():
     classes.mkdir(exist_ok=False)
     assert run('sdk-contracts-compile', ['javac', '-proc:none', '--release', '11', '-encoding', 'UTF-8', '-cp', cp, '-d', classes, TOOL / 'src/test/java/ru/mcsa/translator/SdkContracts.java']) == 0
     assert run('sdk-contracts', ['java', '-cp', str(classes) + os.pathsep + cp, 'ru.mcsa.translator.SdkContracts']) == 0
-    assert 'PASS: 173 ' in (OUT / 'sdk-contracts.log').read_text()
+    contracts = re.search(r'^PASS: (\d+) контрактов текста, YAML, PDC, копирования ItemMeta и свойств предметов$', (OUT / 'sdk-contracts.log').read_text(), re.M)
+    assert contracts and int(contracts[1]) >= 173
     # Новое дерево запускается первым: его полный проход нужен независимо от контроля.
     cohort('candidate', ROOT, 26210)
     control_tool = CONTROL / 'tools/plugin-translator'

@@ -12,4 +12,10 @@ public interface World extends org.bukkit.generator.WorldInfo {
  enum Environment {NORMAL,NETHER,THE_END,CUSTOM}
  Environment getEnvironment();java.util.List<org.bukkit.entity.Player> getPlayers();int getMinHeight();int getMaxHeight();
  default Material getType(int x,int y,int z){return getBlockAt(x,y,z).getType();}
- String getName(); WorldBorder getWorldBorder(); org.bukkit.block.Block getBlockAt(int x,int y,int z); Location getSpawnLocation(); long getTime(); void setTime(long time); boolean hasStorm(); void setStorm(boolean storm); boolean isThundering(); void setThundering(boolean thunder); }
+ String getName(); WorldBorder getWorldBorder(); org.bukkit.block.Block getBlockAt(int x,int y,int z); Location getSpawnLocation(); long getTime(); void setTime(long time); boolean hasStorm(); void setStorm(boolean storm); boolean isThundering(); void setThundering(boolean thunder);
+ // Javadoc World обещает "Block at the given location".
+ // https://jd.papermc.io/paper/1.21.11/org/bukkit/World.html
+ default org.bukkit.block.Block getBlockAt(Location location){
+  return getBlockAt(location.getBlockX(),location.getBlockY(),location.getBlockZ());
+ }
+}
