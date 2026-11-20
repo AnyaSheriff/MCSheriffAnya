@@ -14,8 +14,10 @@ public interface Context {
     void onJoin(Consumer<Player> action);
     void onQuit(Consumer<Player> action);
     void onChat(Consumer<ChatEvent> action);
+    void onCommand(String name, int level, Consumer<CommandEvent> action);
     void every(int period, Runnable action);
     void broadcast(String text);
     void log(String text);
     void message(Player player, String text);
+    void reply(CommandEvent command, String text);
 }

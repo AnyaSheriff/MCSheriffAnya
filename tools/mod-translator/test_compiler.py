@@ -313,5 +313,48 @@ class ChatCompilerTests(unittest.TestCase):
             parse(self.source + 'hidden();')
 
 
+class CommandCompilerTests(unittest.TestCase):
+    fixture = REPO / 'tools/mod-api/fixtures/command'
+    source = (fixture / 'CommandAudit.java').read_text(encoding='utf-8')
+
+    def test_two_typed_commands_and_ownership_in_generated_c(self):
+        _, program, _ = load(self.fixture)
+        self.assertEqual([(c['command'], c['level']) for c in program['callbacks']],
+                         [('mod_echo', 0), ('mod_admin', 4)])
+        code = generate(program)
+        self.assertEqual(code.count('mcsa_api_command_register(&spec,&err)'), 2)
+        self.assertIn('append(caller->name.ptr,caller->name.len);', code)
+        self.assertIn('if(args->len>1) append(args->ptr[1].ptr,args->ptr[1].len);', code)
+        self.assertIn('plugin_string_dup_n(&ret->message.val,buffer,used);', code)
+        self.assertLess(code.index('callback_1(caller,name,args,ret);'),
+                        code.index('mcsa_api_types_sender_free(caller);'))
+
+    def test_bad_names_levels_and_argument_indexes_are_refused(self):
+        for old, new, code in [
+            ('"mod_echo"', '"/mod_echo"', 'command-name'),
+            ('"mod_echo"', '"ModEcho"', 'command-name'),
+            ('"mod_echo"', '"mod_admin"', 'duplicate-command'),
+            ('"mod_echo", 0', '"mod_echo", 5', 'command-level'),
+            ('"mod_echo", 0', '"mod_echo", "0"', 'command-level'),
+            ('argument(1)', 'argument(32)', 'command-argument'),
+            ('argument(1)', 'argument(01)', 'command-argument'),
+            ('senderName()', 'uuid()', 'unsupported-command-field'),
+        ]:
+            with self.subTest(new=new), self.assertRaises(Refusal) as err:
+                parse(self.source.replace(old, new))
+            self.assertEqual(err.exception.issue['code'], code)
+
+    def test_reply_is_scoped_and_unique(self):
+        cases = [
+            (SOURCE.replace('ctx.log("mod-fixture started");', 'ctx.reply(command,"x");'), 'unsupported-command-action'),
+            (self.source.replace('ctx.log("command fixture ran");', 'ctx.reply(command,"second");'), 'duplicate-reply'),
+            (self.source.replace('ctx.log("command fixture ran");', 'ctx.message(command,"x");'), 'unsupported-source'),
+        ]
+        for source, code in cases:
+            with self.subTest(code=code), self.assertRaises(Refusal) as err:
+                parse(source)
+            self.assertEqual(err.exception.issue['code'], code)
+
+
 if __name__ == '__main__':
     unittest.main()

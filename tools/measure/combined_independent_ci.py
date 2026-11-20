@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTS = {
     'runtime.log': 'plugins::tests::own_mod_source_tests::translated_own_mod_source_lifecycle_events_and_isolation',
     'runtime-chat.log': 'plugins::tests::own_mod_source_tests::translated_own_mod_chat_is_typed_ordered_and_cancelled',
+    'runtime-command.log': 'plugins::tests::own_mod_source_tests::translated_own_mod_commands_keep_replies_permissions_and_cleanup',
 }
 
 
@@ -30,7 +31,7 @@ def main():
     fingerprint = lambda: {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(paths))}
     before = fingerprint()
     (output / 'before.json').write_text(json.dumps({'source': source, 'files': before}, indent=2) + '\n')
-    commands = [('build-fixtures.log', [sys.executable, '-B', 'tools/mod-translator/build_fixtures.py', '--chat'])]
+    commands = [('build-fixtures.log', [sys.executable, '-B', 'tools/mod-translator/build_fixtures.py', '--chat', '--command'])]
     commands += [
         (log, ['cargo', 'test', '--release', '--locked', '--bin', 'mcsheriffanya', test,
                '--', '--ignored', '--exact', '--test-threads=1'])
@@ -53,10 +54,13 @@ def main():
     from compiler import parse, generate
     fixture_source = (ROOT / 'tools/mod-api/fixtures/welcome/Welcome.java').read_text(encoding='utf-8')
     chat_source = (ROOT / 'tools/mod-api/fixtures/chat/ChatAudit.java').read_text(encoding='utf-8')
+    command_source = (ROOT / 'tools/mod-api/fixtures/command/CommandAudit.java').read_text(encoding='utf-8')
     fixtures = {
         'mod-welcome': fixture_source,
         'mod-welcome-b': fixture_source.replace('mod:', 'mod-b:').replace('every(2,', 'every(3,'),
         'mod-chat': chat_source,
+        'mod-command': command_source,
+        'mod-command-conflict': command_source.replace('mod_echo', 'mod_unique'),
     }
     wit_sha = hashlib.sha256((ROOT / 'wit/mcsa-api.wit').read_bytes()).hexdigest()
     for name, java in fixtures.items():

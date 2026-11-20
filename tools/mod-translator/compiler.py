@@ -112,8 +112,15 @@ class Parser:
         self.take('public'); self.take('void'); self.take('initialize'); self.take('(')
         self.take('Context'); self.context = self.name(); self.take(')'); self.take('{')
         callbacks = []
+        commands = set()
         while self.token.text != '}':
-            callbacks.append(self.registration())
+            callback = self.registration()
+            if callback['event'] == 'onCommand':
+                name = callback['command']
+                if name in commands:
+                    self.fail(f'Команда «{name}» уже объявлена', 'duplicate-command')
+                commands.add(name)
+            callbacks.append(callback)
             if len(callbacks) > 64:
                 self.fail('Не более 64 обработчиков', 'registration-limit')
         self.take('}'); self.take('}'); self.take('<EOF>')
@@ -122,25 +129,36 @@ class Parser:
     def registration(self):
         self.take(self.context); self.take('.')
         event = self.name()
-        if event not in {'onStart', 'onStop', 'onJoin', 'onQuit', 'onChat', 'every'}:
+        if event not in {'onStart', 'onStop', 'onJoin', 'onQuit', 'onChat', 'onCommand', 'every'}:
             self.fail(f'Регистрация «{event}» не поддерживается', 'unsupported-event')
         self.take('(')
         period = None
+        extra = {}
         if event == 'every':
             token = self.take()
             if token.string or not re.fullmatch('[1-9][0-9]{0,6}', token.text) or not 1 <= int(token.text) <= 2400000:
                 self.fail('Период every должен быть целым 1..2400000', 'period')
             period = int(token.text)
             self.take(',')
+        if event == 'onCommand':
+            if not self.token.string or not re.fullmatch('[a-z0-9_-]{1,32}', self.token.text):
+                self.fail('Имя команды: строка из 1..32 символов a-z, 0-9, _ и -', 'command-name')
+            extra['command'] = self.take().text
+            self.take(',')
+            if self.token.string or not re.fullmatch('[0-4]', self.token.text):
+                self.fail('Уровень прав команды — целое число от 0 до 4', 'command-level')
+            extra['level'] = int(self.take().text)
+            self.take(',')
         player = None
-        if event in {'onJoin', 'onQuit', 'onChat'}:
+        if event in {'onJoin', 'onQuit', 'onChat', 'onCommand'}:
             player = self.name()
             if player == self.context:
-                self.fail('Имя игрока должно отличаться от Context')
+                self.fail('Имя параметра должно отличаться от Context')
         else:
             self.take('('); self.take(')')
         self.take('->'); self.take('{')
         actions = []
+        replied = False
         while self.token.text != '}':
             if event == 'onChat' and self.token.text == player:
                 self.take(player); self.take('.')
@@ -154,16 +172,24 @@ class Parser:
                 continue
             self.take(self.context); self.take('.')
             operation = self.name()
-            if operation not in {'broadcast', 'log', 'message'}:
+            if operation not in {'broadcast', 'log', 'message', 'reply'}:
                 self.fail(f'Действие «{operation}» не поддерживается', 'unsupported-action')
             self.take('(')
             if operation == 'message':
-                if player is None:
-                    self.fail('message доступно только в обработчике игрока')
-                self.take(player)
                 if event == 'onChat':
                     self.fail('Для onChat личное сообщение пока не поддерживается; используйте log/broadcast', 'unsupported-chat-action')
+                if event not in {'onJoin', 'onQuit'}:
+                    self.fail('message доступно только в обработчике входа или выхода игрока')
+                self.take(player)
                 self.take(',')
+            if operation == 'reply':
+                if event != 'onCommand':
+                    self.fail('reply доступно только внутри onCommand', 'unsupported-command-action')
+                if replied:
+                    self.fail('Команда может вернуть только один reply', 'duplicate-reply')
+                self.take(player)
+                self.take(',')
+                replied = True
             expression = []
             while True:
                 if self.token.string:
@@ -171,11 +197,23 @@ class Parser:
                 elif player and self.token.text == player:
                     self.take(player); self.take('.')
                     field = self.name()
-                    allowed = {'message', 'playerName', 'playerUuid'} if event == 'onChat' else {'name', 'uuid'}
+                    allowed = {
+                        'onChat': {'message', 'playerName', 'playerUuid'},
+                        'onCommand': {'name', 'senderName', 'argument'},
+                    }.get(event, {'name', 'uuid'})
                     if field not in allowed:
+                        if event == 'onCommand':
+                            self.fail(f'Поле команды «{field}» не поддерживается', 'unsupported-command-field')
                         self.fail(f'Поле игрока «{field}» не поддерживается', 'unsupported-player-field')
-                    self.take('('); self.take(')')
-                    expression.append(('chat' if event == 'onChat' else 'player', field))
+                    self.take('(')
+                    if field == 'argument':
+                        if self.token.string or not re.fullmatch('0|[1-9]|[12][0-9]|3[01]', self.token.text):
+                            self.fail('Номер аргумента — целое число от 0 до 31', 'command-argument')
+                        expression.append(('argument', int(self.take().text)))
+                    else:
+                        kind = {'onChat': 'chat', 'onCommand': 'command'}.get(event, 'player')
+                        expression.append((kind, field))
+                    self.take(')')
                 else:
                     self.fail('Нужно строковое выражение с поддержанными полями текущего события')
                 if len(expression) > 32:
@@ -188,7 +226,7 @@ class Parser:
             if len(actions) > 64:
                 self.fail('Не более 64 действий в обработчике', 'action-limit')
         self.take('}'); self.take(')'); self.take(';')
-        return dict(event=event, period=period, actions=actions)
+        return dict(event=event, period=period, actions=actions, **extra)
 
 
 def parse(source):
@@ -206,17 +244,23 @@ def generate(program):
              'static bool active;', 'static char buffer[131073];', 'static size_t used;',
              'static void append(const void *p, size_t n) { if(n > sizeof(buffer)-1-used) abort(); if(n) memcpy(buffer+used,p,n); used+=n; }']
     callbacks = program['callbacks']
+    commands = [(i, c) for i, c in enumerate(callbacks) if c['event'] == 'onCommand']
     for i, callback in enumerate(callbacks):
         player = callback['event'] in {'onJoin', 'onQuit'}
         chat = callback['event'] == 'onChat'
+        command = callback['event'] == 'onCommand'
         parameters = 'mcsa_api_types_player_t *who' if player else 'void'
         if chat:
             parameters = 'mcsa_api_types_player_t *who, plugin_string_t *message, bool *cancelled'
+        if command:
+            parameters = 'mcsa_api_types_sender_t *caller, plugin_string_t *name, plugin_list_string_t *args, mcsa_api_types_command_result_t *ret'
         lines.append(f'static void callback_{i}({parameters}) {{')
         if player or chat:
             lines.append('(void)who;')
         if chat:
             lines.append('(void)message; (void)cancelled;')
+        if command:
+            lines.append('(void)caller; (void)name; (void)args; (void)ret;')
         for action in callback['actions']:
             if action['operation'] == 'cancel':
                 lines.append('*cancelled=true;')
@@ -230,16 +274,30 @@ def generate(program):
                     field = {'message': 'message', 'playerName': 'who->name', 'playerUuid': 'who->uuid'}[value]
                     access = 'message->' if field == 'message' else field + '.'
                     lines.append(f'append({access}ptr,{access}len);')
+                elif kind == 'command':
+                    access = 'name->' if value == 'name' else 'caller->name.'
+                    lines.append(f'append({access}ptr,{access}len);')
+                elif kind == 'argument':
+                    lines.append(f'if(args->len>{value}) append(args->ptr[{value}].ptr,args->ptr[{value}].len);')
                 else:
                     lines.append(f'append(who->{value}.ptr,who->{value}.len);')
             # Блок сохраняет одинаковое имя переменной для нескольких действий.
-            call = dict(broadcast='mcsa_api_server_broadcast(&text)', log='mcsa_api_log_write(MCSA_API_LOG_LEVEL_INFO,&text)', message='(void)mcsa_api_player_send_message(&who->uuid,&text)')[action['operation']]
-            lines.append('{ plugin_string_t text={(uint8_t*)buffer,used}; ' + call + '; }')
+            if action['operation'] == 'reply':
+                lines.append('ret->message.is_some=true;')
+                lines.append('if(used) plugin_string_dup_n(&ret->message.val,buffer,used);')
+            else:
+                call = dict(broadcast='mcsa_api_server_broadcast(&text)', log='mcsa_api_log_write(MCSA_API_LOG_LEVEL_INFO,&text)', message='(void)mcsa_api_player_send_message(&who->uuid,&text)')[action['operation']]
+                lines.append('{ plugin_string_t text={(uint8_t*)buffer,used}; ' + call + '; }')
         lines.append('}')
     every = [i for i, c in enumerate(callbacks) if c['event'] == 'every']
     if every:
         lines.append(f'static uint32_t handles[{len(every)}];')
     lines.append('void exports_mcsa_api_lifecycle_enable(void) { if(active) return; active=true;')
+    for _, command in commands:
+        literal, size = c_string(command['command'])
+        lines.append('{ plugin_string_t err; '
+                     f'mcsa_api_command_command_spec_t spec={{.name={{(uint8_t*){literal},{size}}},.level={command["level"]}}}; '
+                     'if(!mcsa_api_command_register(&spec,&err)) { mcsa_api_log_write(MCSA_API_LOG_LEVEL_ERROR,&err); plugin_string_free(&err); abort(); } }')
     for slot, i in enumerate(every):
         period = callbacks[i]['period']
         lines.append(f'handles[{slot}]=mcsa_api_scheduler_run_repeating({period},{period},{i+1});')
@@ -269,9 +327,20 @@ def generate(program):
         if callback['event'] == 'onChat':
             lines.append(f'callback_{i}(who,message,&cancelled);')
     lines.append('} ret->tag=cancelled ? MCSA_API_TYPES_CHAT_RESULT_CANCEL : MCSA_API_TYPES_CHAT_RESULT_PASS; }')
+    lines.append('void exports_mcsa_api_events_on_command(mcsa_api_types_sender_t *caller,plugin_string_t *name,plugin_list_string_t *args,mcsa_api_types_command_result_t *ret) { memset(ret,0,sizeof(*ret));')
+    if commands:
+        for i, command in commands:
+            literal, size = c_string(command['command'])
+            lines.append(f'if(active && name->len=={size} && !memcmp(name->ptr,{literal},{size})) {{')
+            lines.append(f'ret->success=true; callback_{i}(caller,name,args,ret);')
+            lines.append('}')
+        # Параметры принадлежат гостю, ответ освобождает сгенерированный post-return.
+        lines.append('mcsa_api_types_sender_free(caller); plugin_string_free(name); plugin_list_string_free(args);')
+    else:
+        lines.append('(void)caller;(void)name;(void)args;')
+    lines.append('}')
     lines.extend([
         'mcsa_api_types_verdict_t exports_mcsa_api_events_on_block_break(mcsa_api_types_player_t *who,mcsa_api_types_block_pos_t *pos,plugin_string_t *block) { (void)who;(void)pos;(void)block;return MCSA_API_TYPES_VERDICT_ALLOW; }',
         'mcsa_api_types_verdict_t exports_mcsa_api_events_on_block_place(mcsa_api_types_player_t *who,mcsa_api_types_block_pos_t *pos,plugin_string_t *block) { (void)who;(void)pos;(void)block;return MCSA_API_TYPES_VERDICT_ALLOW; }',
-        'mcsa_api_types_verdict_t exports_mcsa_api_events_on_player_command(mcsa_api_types_player_t *who,plugin_string_t *line) { (void)who;(void)line;return MCSA_API_TYPES_VERDICT_ALLOW; }',
-        'void exports_mcsa_api_events_on_command(mcsa_api_types_sender_t *caller,plugin_string_t *name,plugin_list_string_t *args,mcsa_api_types_command_result_t *ret) { (void)caller;(void)name;(void)args;memset(ret,0,sizeof(*ret)); }'])
+        'mcsa_api_types_verdict_t exports_mcsa_api_events_on_player_command(mcsa_api_types_player_t *who,plugin_string_t *line) { (void)who;(void)line;return MCSA_API_TYPES_VERDICT_ALLOW; }'])
     return '\n'.join(lines) + '\n'

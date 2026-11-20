@@ -11,6 +11,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--toolchain', type=Path, default=CHAIN)
     parser.add_argument('--chat', action='store_true', help='Также собрать собственный пример отмены чата')
+    parser.add_argument('--command', action='store_true', help='Также собрать пример команд с разным уровнем прав')
     parser.add_argument('--output', type=Path, default=REPO / 'tmp/mod-test/plugins')
     args = parser.parse_args()
     fixture = REPO / 'tools/mod-api/fixtures/welcome'
@@ -27,6 +28,16 @@ def main():
 
     if args.chat:
         print(build(REPO / 'tools/mod-api/fixtures/chat', args.output, args.toolchain), flush=True)
+    if args.command:
+        fixture = REPO / 'tools/mod-api/fixtures/command'
+        print(build(fixture, args.output, args.toolchain), flush=True)
+        with tempfile.TemporaryDirectory(prefix='own-mod-command-conflict-') as temporary:
+            project = Path(temporary)
+            manifest = (fixture / 'mod.toml').read_text(encoding='utf-8').replace('mod-command', 'mod-command-conflict')
+            source = (fixture / 'CommandAudit.java').read_text(encoding='utf-8').replace('mod_echo', 'mod_unique')
+            (project / 'mod.toml').write_text(manifest, encoding='utf-8')
+            (project / 'CommandAudit.java').write_text(source, encoding='utf-8')
+            print(build(project, args.output, args.toolchain), flush=True)
 
 
 if __name__ == '__main__':

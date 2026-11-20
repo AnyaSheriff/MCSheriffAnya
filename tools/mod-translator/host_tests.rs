@@ -131,4 +131,37 @@ mod own_mod_source_tests {
         host.unload_all();
     }
 
+    #[test]
+    #[ignore = "нужен собственный mod-command из build_fixtures.py --command, CI-only"]
+    fn translated_own_mod_commands_keep_replies_permissions_and_cleanup() {
+        let root = server_root("own-mod-command");
+        install_mod(&root, "mod-command");
+        install_mod(&root, "mod-command-conflict");
+        let mut host = Host::new(shared(), root).unwrap();
+        let player = || wit::Sender { kind: wit::SenderKind::Player, uuid: Some(view().to_wit().uuid), name: "Первый".into() };
+        assert!(host.run_command(console(), "mod_echo", &[]).is_none());
+        host.load("mod-command").unwrap();
+        assert_eq!(host.command_level("mod_echo"), Some(0));
+        assert_eq!(host.command_level("mod_admin"), Some(4));
+        assert!(host.load("mod-command-conflict").is_err());
+        assert!(!host.is_loaded("mod-command-conflict"));
+        assert!(host.command_level("mod_unique").is_none());
+        assert_eq!(host.command_names(0), ["mod_echo"]);
+        assert_eq!(host.command_names(4), ["mod_admin", "mod_echo"]);
+        assert_eq!(host.run_command(console(), "mod_echo", &[]), Some((true, "mod_echo:Console::".into())));
+        let args = [r#"Русский "текст""#.into(), "🌲".into()];
+        assert_eq!(host.run_command(player(), "mod_echo", &args), Some((true, r#"mod_echo:Первый:Русский "текст":🌲"#.into())));
+        assert_eq!(host.run_command(console(), "mod_admin", &[]), Some((true, "operator-only".into())));
+        assert!(host.run_command(console(), "missing", &args).is_none());
+        host.unload("mod-command").unwrap();
+        assert!(host.command_names(4).is_empty());
+        assert!(host.run_command(console(), "mod_admin", &[]).is_none());
+        host.load("mod-command-conflict").unwrap();
+        assert_eq!(host.command_names(4), ["mod_admin", "mod_unique"]);
+        host.unload("mod-command-conflict").unwrap();
+        host.load("mod-command").unwrap();
+        assert_eq!(host.command_names(4), ["mod_admin", "mod_echo"]);
+        assert_eq!(host.run_command(console(), "mod_echo", &[]), Some((true, "mod_echo:Console::".into())));
+        host.unload_all();
+    }
 }

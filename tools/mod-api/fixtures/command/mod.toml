@@ -1,0 +1,7 @@
+name = "mod-command"
+version = "0.1.0"
+api = "mcsa-mod-source-0.1"
+sdk_abi = "mcsa:api@0.1.0"
+minecraft = "26.3"
+protocol = 777
+source = "CommandAudit.java"
