@@ -349,6 +349,13 @@ fn attack(plan: &mut Plan, ctx: &Ctx, id: i32, damage: f32, dir: (f64,f64)) {
         plan.melee = Some(super::hostile::Melee { target: id, damage, push, wither: false, hunger: false });
     } else { plan.bite = Some((id,damage,push)); }
 }
+
+fn in_herd_range(dx: f64, dz: f64, radius: f64) -> bool {
+    // Дальних мобов отсекаем без hypot. У границы сохраняется прежнее
+    // строгое сравнение расстояния и первый подходящий моб в порядке хранения.
+    dx.abs() < radius && dz.abs() < radius && dx.hypot(dz) < radius
+}
+
 // Вики, Llama: «up to nine llamas». Цепь без циклов, один хвост у головы.
 pub fn herd(mobs: &mut [Mob], _players: &[ai::Watcher], _view: &dyn View) {
     herd_with_executor(mobs, _players, _view, None);
@@ -363,16 +370,16 @@ pub fn herd_with_executor(mobs: &mut [Mob], _players: &[ai::Watcher], _view: &dy
         let inputs = mobs.iter().enumerate().filter(|(_,m)| llama(m.kind) || !m.is_baby() && (m.kind==Kind::PolarBear || m.kind==Kind::Panda && m.land.personality()==6))
             .map(|(i,m)| (i,m.kind,m.x,m.z,m.land.target)).collect();
         let values = executor.as_deref_mut().expect("исполнитель наблюдения").ordered_map(inputs, move |(i,kind,x,z,target)| {
-            let target = if llama(kind) && target.is_none() { wolves.iter().find(|w| (w.1-x).hypot(w.2-z)<10.0).map(|w|w.0) } else { target };
-            let target = if matches!(kind,Kind::PolarBear|Kind::Panda) { target.or_else(||hurt.iter().find(|h|h.0==kind && (h.1-x).hypot(h.2-z)<8.0).map(|h|h.3)) } else { target };
+            let target = if llama(kind) && target.is_none() { wolves.iter().find(|w| in_herd_range(w.1-x, w.2-z, 10.0)).map(|w|w.0) } else { target };
+            let target = if matches!(kind,Kind::PolarBear|Kind::Panda) { target.or_else(||hurt.iter().find(|h|h.0==kind && in_herd_range(h.1-x, h.2-z, 8.0)).map(|h|h.3)) } else { target };
             (i,target)
         });
         for (i,target) in values { mobs[i].land.target=target; }
     } else {
     for m in mobs.iter_mut() {
-        if llama(m.kind) && m.land.target.is_none() { m.land.target=wolves.iter().find(|w| (w.1-m.x).hypot(w.2-m.z)<10.0).map(|w| w.0); }
+        if llama(m.kind) && m.land.target.is_none() { m.land.target=wolves.iter().find(|w| in_herd_range(w.1-m.x, w.2-m.z, 10.0)).map(|w| w.0); }
         if !m.is_baby() && (m.kind==Kind::PolarBear || m.kind==Kind::Panda && m.land.personality()==6) {
-            m.land.target=m.land.target.or_else(|| hurt.iter().find(|h| h.0==m.kind && (h.1-m.x).hypot(h.2-m.z)<8.0).map(|h| h.3));
+            m.land.target=m.land.target.or_else(|| hurt.iter().find(|h| h.0==m.kind && in_herd_range(h.1-m.x, h.2-m.z, 8.0)).map(|h| h.3));
         }
     }
     }
@@ -538,6 +545,20 @@ pub fn lightning(mob:&mut Mob, bolt:i32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn herd_range_prefilter_matches_original_strict_distance() {
+        for radius in [8.0_f64, 10.0] {
+            let axis = [f64::NEG_INFINITY, -radius.next_up(), -radius, -radius.next_down(),
+                -0.0, radius / 2.0, radius.next_down(), radius, radius.next_up(),
+                f64::INFINITY, f64::NAN, f64::MAX];
+            for dx in axis {
+                for dz in axis {
+                    assert_eq!(in_herd_range(dx, dz, radius), dx.hypot(dz) < radius, "{dx}, {dz}, {radius}");
+                }
+            }
+        }
+    }
     struct Flat;
     impl View for Flat {
         fn block(&self,_:i32,y:i32,_:i32)->i32 { blocks::state_by_name(if y==0 { "stone" } else { "air" }).unwrap() }

@@ -44,6 +44,38 @@ fn threat(kind: Kind) -> f64 {
     }
 }
 
+type Position = (f64, f64, f64);
+
+#[derive(Default)]
+struct Sensing {
+    threats: Vec<(Position, f64)>,
+    golems: Vec<Position>,
+}
+
+impl Sensing {
+    fn capture(mobs: &[Mob]) -> Self {
+        let mut sources = Self::default();
+        for mob in mobs {
+            let range = threat(mob.kind);
+            if range != 0.0 && !mob.is_dead() {
+                sources.threats.push(((mob.x, mob.y, mob.z), range));
+            } else if mob.kind == Kind::IronGolem && !mob.is_dead() {
+                sources.golems.push((mob.x, mob.y, mob.z));
+            }
+        }
+        sources
+    }
+
+    fn observe(&self, (x, y, z): Position, detect_golem: bool) -> (bool, bool) {
+        let within = |(a, b, c): Position, radius| {
+            (x - a).abs() <= radius && (y - b).abs() <= radius && (z - c).abs() <= radius
+        };
+        let panic = self.threats.iter().any(|&(at, range)| within(at, range));
+        let detected = detect_golem && self.golems.iter().any(|&at| within(at, 16.0));
+        (panic, detected)
+    }
+}
+
 // Големы деревни могут появляться в воде (вики, Iron Golem). Общая
 // проверка сухого появления здесь не подходит. [проверить] неполные формы.
 fn space(view: &dyn View, at: (f64,f64,f64)) -> bool {
@@ -65,39 +97,35 @@ pub fn step(mobs: &mut [Mob], view: &dyn View, now: i64, day: i64, rng: &mut Rng
 
 pub fn step_with_executor(mobs: &mut [Mob], view: &dyn View, now: i64, day: i64, rng: &mut Rng, next_id: &mut dyn FnMut() -> i32, mut executor: Option<&mut super::parallel::Executor>) -> Vec<Mob> {
     let sensing_started = executor.as_ref().map(|_| std::time::Instant::now());
-    let targets = if executor.is_some() { mobs.iter().filter(|m| m.kind == Kind::Villager && !m.is_dead() && !m.no_ai).count() } else { 0 };
-    let comparisons = targets.saturating_mul(mobs.len()).saturating_mul(2);
-    // Только угрозы и големы: первый цикл меняет жителей, но не этот снимок.
-    let sensed = if executor.as_ref().is_some_and(|e| e.should_parallel(targets, comparisons)) {
-        let threats: Vec<_> = mobs.iter().filter(|m| !m.is_dead() && threat(m.kind) != 0.0).map(|m| (m.x,m.y,m.z,threat(m.kind))).collect();
-        let golems: Vec<_> = mobs.iter().filter(|m| m.kind == Kind::IronGolem && !m.is_dead()).map(|m| (m.x,m.y,m.z)).collect();
-        let threats = std::sync::Arc::new(threats);
-        let golems = std::sync::Arc::new(golems);
-        let inputs = mobs.iter().enumerate().filter(|(_,m)| m.kind == Kind::Villager && !m.is_dead() && !m.no_ai)
-            .map(|(i,m)| (i,m.x,m.y,m.z,m.ticks.is_multiple_of(200))).collect();
-        let values = executor.as_deref_mut().expect("исполнитель наблюдения").ordered_map(inputs, move |(i,x,y,z,detect)| {
-            let panic = threats.iter().any(|&(tx,ty,tz,r)| (x-tx).abs()<=r && (y-ty).abs()<=r && (z-tz).abs()<=r);
-            let detected = detect && golems.iter().any(|&(gx,gy,gz)| (x-gx).abs()<=16.0 && (y-gy).abs()<=16.0 && (z-gz).abs()<=16.0);
-            (i,panic,detected)
-        });
+    let active = |m: &Mob| m.kind == Kind::Villager && !m.is_dead() && !m.no_ai;
+    let (targets, checks) = mobs.iter().filter(|m| active(m)).fold((0_usize, 0_usize), |(count, checks), m| {
+        (count + 1, checks + usize::from(m.ticks.is_multiple_of(200)))
+    });
+    if targets == 0 { return Vec::new(); }
+    // Цикл ниже меняет только жителей. Он не трогает угрозы и големов, поэтому
+    // обе ветки могут читать один раз собранный снимок вместо поиска по всем мобам.
+    let sources = std::sync::Arc::new(Sensing::capture(mobs));
+    let comparisons = targets.saturating_mul(sources.threats.len())
+        .saturating_add(checks.saturating_mul(sources.golems.len()));
+    let sensed = executor.as_deref_mut().filter(|e| e.should_parallel(targets, comparisons)).map(|executor| {
+        let inputs = mobs.iter().enumerate().filter(|(_, m)| active(m))
+            .map(|(i, m)| (i, (m.x, m.y, m.z), m.ticks.is_multiple_of(200))).collect();
+        let sources = sources.clone();
+        let values = executor.ordered_map(inputs, move |(i, at, detect)| (i, sources.observe(at, detect)));
         let mut by_index = vec![None; mobs.len()];
-        for (i,panic,detected) in values { by_index[i] = Some((panic,detected)); }
-        Some(by_index)
-    } else { None };
+        for (i, value) in values { by_index[i] = Some(value); }
+        by_index
+    });
     let mut sensing_cost = sensing_started.map(|started| started.elapsed()).unwrap_or_default();
     let mut claimed = Vec::new();
     for i in 0..mobs.len() {
-        if mobs[i].kind != Kind::Villager || mobs[i].is_dead() || mobs[i].no_ai { continue; }
+        if !active(&mobs[i]) { continue; }
         // Чёрный ящик, gaps2-villager-golem: зомби за барьером всё равно пугает —
         // прямая видимость не нужна, достаточно расстояния.
         let serial_started = (executor.is_some() && sensed.is_none()).then(std::time::Instant::now);
         let (panic, detected) = sensed.as_ref().and_then(|values| values[i]).unwrap_or_else(|| {
-        let panic = mobs.iter().any(|m| {
-            let range = threat(m.kind);
-            !m.is_dead() && range != 0.0 && near(&mobs[i],m,range)
-        });
-        let detected = mobs[i].ticks.is_multiple_of(200) && mobs.iter().any(|m| m.kind == Kind::IronGolem && !m.is_dead() && near(&mobs[i],m,16.0));
-        (panic, detected)
+            let m = &mobs[i];
+            sources.observe((m.x, m.y, m.z), m.ticks.is_multiple_of(200))
         });
         if let Some(started) = serial_started { sensing_cost += started.elapsed(); }
         let m = &mut mobs[i];

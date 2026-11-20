@@ -80,6 +80,8 @@ fn herd_matches_original_first_match_and_strict_radius_formulas() {
 #[test]
 fn villagers_match_original_ranges_detection_and_sleeping_position_changes() {
     let mut mobs=fixture();
+    // Сравнения считаются только по реальным угрозам и големам.
+    mobs.extend((0..96).map(|i| Mob::new(9000+i, Kind::Zombie, (10000.0+i as f64, 1.0, 10000.0))));
     // Сдвиг спящего жителя не должен менять снимок угроз следующего жителя.
     for (i,m) in mobs.iter_mut().enumerate() {
         if m.kind==Kind::Villager { m.villager.summon.bed=Some((1000+i as i32,1,1000)); }
