@@ -184,6 +184,19 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
         integer(info.max_players);
         break;
     }
+    case 166: {
+        mcsa_api_presentation_player_info_t info;
+        if (mcsa_api_presentation_get_player_info(&s[0], &info)) {
+            string(info.display_name);
+            mcsa_api_presentation_player_info_free(&info);
+        } else {
+            text("");
+        }
+        break;
+    }
+    case 167: number(mcsa_api_presentation_set_display_name(&s[0], &s[1]));break;
+    case 168: number(mcsa_api_presentation_set_player_list_name(&s[0], &s[1]));break;
+    case 169: number(mcsa_api_presentation_set_tab_header_footer(&s[0], &s[1], &s[2]));break;
     default: abort();
     }
     free(copy);return output;

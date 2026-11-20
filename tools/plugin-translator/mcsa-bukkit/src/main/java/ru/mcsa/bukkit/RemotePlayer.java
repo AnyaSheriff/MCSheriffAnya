@@ -1,6 +1,10 @@
 package ru.mcsa.bukkit;
 import org.bukkit.*;import org.bukkit.entity.Player;import org.bukkit.inventory.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 public final class RemotePlayer implements Player {
+ private static final LegacyComponentSerializer DISPLAY_NAMES = LegacyComponentSerializer.builder()
+     .hexColors().useUnusualXRepeatedCharacterHexFormat().build();
  private java.util.UUID parsedUuid;private final String uuid,name;private final Location location;private final GameMode mode;
  public RemotePlayer(String[] a,int i){uuid=a[i];name=a[i+1];mode=GameMode.values()[Integer.parseInt(a[i+2])];location=new Location(new RemoteWorld(Integer.parseInt(a[i+3])),Double.parseDouble(a[i+4]),Double.parseDouble(a[i+5]),Double.parseDouble(a[i+6]),Float.parseFloat(a[i+7]),Float.parseFloat(a[i+8]));}
  @Override public boolean equals(Object other){return other instanceof RemotePlayer&&uuid.equals(((RemotePlayer)other).uuid);}@Override public int hashCode(){return uuid.hashCode();}
@@ -31,6 +35,23 @@ public final class RemotePlayer implements Player {
  public World getWorld(){return getLocation().getWorld();} public GameMode getGameMode(){for(Player p:Bukkit.getOnlinePlayers())if(p.getUniqueId().toString().equals(uuid))return ((RemotePlayer)p).mode;return mode;}
  public void setGameMode(GameMode m){Host.call(11,uuid,""+m.ordinal());}public double getHealth(){return Double.parseDouble(Host.text(12,uuid));}
  public int getPing(){return Integer.parseInt(Host.text(164,uuid));}
+ public String getDisplayName() {
+  String component = Host.text(166, uuid);
+  return component.isEmpty() ? name : DISPLAY_NAMES.serialize(Text.fromJson(component));
+ }
+ public void setDisplayName(String value) {
+  String component = value == null ? "null" : Text.json(DISPLAY_NAMES.deserialize(value));
+  if (!Host.yes(167, uuid, component)) throw new IllegalStateException("Отображаемое имя отклонено ядром");
+ }
+ public void playerListName(Component value) {
+  String component = value == null ? "null" : Text.json(value);
+  if (!Host.yes(168, uuid, component)) throw new IllegalStateException("Имя в списке игроков отклонено ядром");
+ }
+ public void sendPlayerListHeaderAndFooter(Component header, Component footer) {
+  if (!Host.yes(169, uuid, Text.json(header), Text.json(footer))) {
+   throw new IllegalStateException("Заголовок списка игроков отклонён ядром");
+  }
+ }
  public void sendMessage(String m){Host.call(2,uuid,m);}public boolean isOp(){return Integer.parseInt(Host.text(10,uuid))>0;}
  public void sendMessage(net.kyori.adventure.text.Component m){if(!Host.yes(27,uuid,Text.json(m)))throw new IllegalStateException("Компонент сообщения отклонён хозяином");}
  public void sendActionBar(net.kyori.adventure.text.Component m){if(!Host.yes(28,uuid,Text.json(m)))throw new IllegalStateException("Компонент action bar отклонён хозяином");}

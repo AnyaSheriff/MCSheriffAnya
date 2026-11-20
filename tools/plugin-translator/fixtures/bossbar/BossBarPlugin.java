@@ -1,4 +1,8 @@
 package fixtures;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.boss.*;
 import org.bukkit.command.*;
@@ -48,11 +52,40 @@ public final class BossBarPlugin extends JavaPlugin {
   snapshot[0]=null;
   check(failure.getSuppressed()[0]==first);
  }
+ private static void setTabPresentation(Player player) {
+  LegacyComponentSerializer serializer = LegacyComponentSerializer.builder().character('&')
+      .hexColors().useUnusualXRepeatedCharacterHexFormat().build();
+  Component text = Component.text("Name", NamedTextColor.AQUA)
+      .decoration(TextDecoration.BOLD, true)
+      .append(Component.newline())
+      .append(Component.text("Line").decoration(TextDecoration.BOLD, false));
+  check(serializer.serialize(text).equals("&b&lName\n&bLine"));
+  String legacy = "&x&1&2&3&4&a&b&lName\n&x&1&2&3&4&a&bLine";
+  check(serializer.serialize(serializer.deserialize(legacy)).equals(legacy));
+  player.setDisplayName(legacy.replace('&', '§'));
+  check(player.getDisplayName().equals(legacy.replace('&', '§')));
+  check(Bukkit.getPlayer(player.getUniqueId()).getDisplayName().equals(player.getDisplayName()));
+  player.playerListName(Component.text("TabAlias"));
+  player.sendPlayerListHeaderAndFooter(Component.text("TabHead").append(Component.newline()).append(Component.text("LineTwo")), Component.text("TabFoot"));
+ }
  @Override public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
   if(!(sender instanceof Player)||args.length!=1)return false;
   Player player=(Player)sender;
   if(args[0].equals("info")){
    sender.sendMessage("PlayerInfo "+player.getPing()+" "+Bukkit.getMaxPlayers()+" "+getServer().getMaxPlayers());
+   return true;
+  }
+  if (args[0].equals("tab")) {
+   check(player.getDisplayName().equals(player.getName()));
+   setTabPresentation(player);
+   sender.sendMessage("Tab updated");
+   return true;
+  }
+  if (args[0].equals("tab-reset")) {
+   player.playerListName(null);
+   player.setDisplayName(null);
+   check(player.getDisplayName().equals(player.getName()));
+   sender.sendMessage("Tab reset");
    return true;
   }
   switch(args[0]){

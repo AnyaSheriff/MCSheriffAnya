@@ -117,18 +117,42 @@ impl api::Host for PluginCtx {
         send(&mut players, uuid, ui::header_packet(&json!(""), &json!(""))); true
     }
     fn set_display_name(&mut self, uuid: String, text: String) -> bool {
-        let (Some(uuid), Some(value)) = (self.ui_player(&uuid), component(&text)) else { return false; };
+        let Some(uuid) = self.ui_player(&uuid) else { return false; };
+        let value = if text == "null" {
+            None
+        } else {
+            let Some(value) = component(&text) else { return false; };
+            Some(value)
+        };
         let mut players = self.shared.players.lock().expect("игроки");
         if !players.ui.info.contains_key(&uuid) { return false; }
-        players.ui.displays.insert(uuid, (self.name.clone(), value)); true
+        if let Some(value) = value {
+            players.ui.displays.insert(uuid, (self.name.clone(), value));
+        } else if players.ui.displays.get(&uuid).is_some_and(|(owner, _)| owner == &self.name) {
+            players.ui.displays.remove(&uuid);
+        }
+        true
     }
     fn set_player_list_name(&mut self, uuid: String, text: String) -> bool {
-        let (Some(uuid), Some(value)) = (self.ui_player(&uuid), component(&text)) else { return false; };
+        let Some(uuid) = self.ui_player(&uuid) else { return false; };
+        let value = if text == "null" {
+            None
+        } else {
+            let Some(value) = component(&text) else { return false; };
+            Some(value)
+        };
         let mut players = self.shared.players.lock().expect("игроки");
         if !players.ui.info.contains_key(&uuid) { return false; }
-        if players.ui.list_names.get(&uuid).is_some_and(|(owner, old)| owner == &self.name && old == &value) { return true; }
-        players.ui.list_names.insert(uuid, (self.name.clone(), value.clone()));
-        ui::broadcast_list(&mut players, &uuid, Some(&value)); true
+        if let Some(value) = &value {
+            if players.ui.list_names.get(&uuid).is_some_and(|(owner, old)| owner == &self.name && old == value) { return true; }
+            players.ui.list_names.insert(uuid, (self.name.clone(), value.clone()));
+        } else if players.ui.list_names.get(&uuid).is_some_and(|(owner, _)| owner == &self.name) {
+            players.ui.list_names.remove(&uuid);
+        } else {
+            return true;
+        }
+        ui::broadcast_list(&mut players, &uuid, value.as_ref());
+        true
     }
     fn set_team(&mut self, uuid: String, value: api::Team) -> bool {
         let (Some(name), Some(prefix), Some(suffix)) = (id(&self.name, &value.id), component(&value.prefix), component(&value.suffix)) else { return false; };

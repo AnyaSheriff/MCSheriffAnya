@@ -239,7 +239,9 @@ interface presentation {
     set-tab-header-footer: func(uuid: string, header: string, footer: string) -> bool;
     /// Возвращает заголовок/подвал ядру, только если им владеет вызывающий.
     reset-tab-header-footer: func(uuid: string) -> bool;
+    /// JSON null возвращает обычное имя, если переименование принадлежит вызывающему.
     set-display-name: func(uuid: string, text: string) -> bool;
+    /// JSON null снимает только собственное переименование в списке.
     set-player-list-name: func(uuid: string, text: string) -> bool;
     set-team: func(uuid: string, value: team) -> bool;
     remove-team: func(uuid: string, id: string) -> bool;

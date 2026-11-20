@@ -57,6 +57,44 @@ fn bossbar_other_packets(shared: &Shared, n: u8) -> Vec<Vec<u8>> {
 
 fn bossbar_actions(packets: &[Vec<u8>]) -> Vec<u8> { packets.iter().map(|p| p[17]).collect() }
 
+fn assert_tab_presentation(host: &mut Host, shared: &Shared) {
+    use crate::{network::nbt::text_component, players::Order, presentation::{header_packet, list_packet}};
+    use serde_json::json;
+    use super::api::mcsa::api::presentation::Host as _;
+    let player = [1; 16];
+    let viewer = [2; 16];
+
+    assert_eq!(host.run_command(bossbar_sender(1), "barprobe", &["tab".into()]), Some((true, String::new())));
+    let update = list_packet(&player, Some(&json!({"text":"TabAlias"})));
+    let header = header_packet(
+        &json!({"text":"TabHead","extra":[{"text":"\n"},{"text":"LineTwo"}]}),
+        &json!({"text":"TabFoot"}),
+    );
+    {
+        let mut players = shared.players.lock().unwrap();
+        assert_eq!(players.ui.displays[&player].0, "java-bossbar");
+        assert!(matches!(players.take_orders(&player).as_slice(),
+            [Order::Packet(list), Order::Packet(tab), Order::Message { component }]
+            if *list == update && *tab == header && *component == text_component("Tab updated")));
+        assert!(matches!(players.take_orders(&viewer).as_slice(), [Order::Packet(list)] if *list == update));
+        assert!(!players.ui.displays.contains_key(&viewer));
+    }
+
+    assert_eq!(host.run_command(bossbar_sender(1), "barprobe", &["tab-reset".into()]), Some((true, String::new())));
+    let reset = list_packet(&player, None);
+    let mut players = shared.players.lock().unwrap();
+    assert!(matches!(players.take_orders(&player).as_slice(), [Order::Packet(list), Order::Message { component }]
+        if *list == reset && *component == text_component("Tab reset")));
+    assert!(matches!(players.take_orders(&viewer).as_slice(), [Order::Packet(list)] if *list == reset));
+    assert!(!players.ui.displays.contains_key(&player));
+    assert!(!players.ui.list_names.contains_key(&player));
+    drop(players);
+    let ctx = host.loaded[0].store.data_mut();
+    assert!(ctx.reset_tab_header_footer(crate::network::login::format_uuid(&player)));
+    let orders = shared.players.lock().unwrap().take_orders(&player);
+    assert!(matches!(orders.as_slice(), [Order::Packet(packet)] if *packet == header_packet(&json!(""), &json!(""))));
+}
+
 #[test]
 #[ignore = "нужен переведённый fixtures/bossbar в tmp/java-test/plugins/java-bossbar"]
 fn translated_bukkit_bossbar_multiplayer_updates_and_cleanup() {
@@ -81,6 +119,7 @@ fn translated_bukkit_bossbar_multiplayer_updates_and_cleanup() {
         assert!(matches!(orders.as_slice(), [crate::players::Order::Message { component }]
             if *component == crate::network::nbt::text_component(&format!("PlayerInfo {ping} {max} {max}"))));
     }
+    assert_tab_presentation(&mut host, &shared);
     let first = bossbar_command(&mut host, &shared, 1, "add", 1);
     assert_eq!(bossbar_actions(&first), [0]);
     let first_uuid = first[0][1..17].to_vec();
