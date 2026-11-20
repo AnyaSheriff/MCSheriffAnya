@@ -101,7 +101,7 @@ fn all_recipe_items_are_valid_in_each_client_registry() {
                     _ => wire::translate_with_context(State::Play, Direction::Clientbound, JavaVersion::V26_1_2, version, &body, context),
                 }
                     .unwrap_or_else(|error| panic!("{profile:?} {version:?} {}: {error:?}", entry.key));
-                let mut case = serde_json::json!({"payload": packet[1..].iter().map(|b| format!("{b:02x}")).collect::<String>(), "entries": 1, "item_count": count, "protocol": version.protocol(), "old_slots": version.protocol() < 775, "string_tags": version.protocol() <= 775});
+                let mut case = serde_json::json!({"payload": packet[1..].iter().map(|b| format!("{b:02x}")).collect::<String>(), "entries": 1, "item_count": count, "protocol": version.protocol(), "old_slots": version.protocol() < 775, "string_tags": version != JavaVersion::V26_3});
                 case["recipe"] = entry.key.clone().into();
                 cases.push(case);
             }

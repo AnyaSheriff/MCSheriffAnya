@@ -61,7 +61,7 @@ def main():
 
                     def observe_packet(self, name, payload):
                         if name == 'recipe_book_add':
-                            entries, replace = Decoder(payload, names, string_tags=version == 775).book()
+                            entries, replace = Decoder(payload, names, string_tags=version in (775, 776)).book()
                             path = out / f'{version}-recipe-{len(row["packets"])}.bin'
                             path.write_bytes(payload)
                             row['packets'].append({'entries': len(entries), 'replace': replace,

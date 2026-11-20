@@ -42,9 +42,21 @@ class RecipeDecoderTests(unittest.TestCase):
         with self.assertRaises((ValueError, UnicodeDecodeError)):
             Decoder((root / 'former-idset-builder.bin').read_bytes(), names, string_tags=True).book()
 
-    def test_775_tag_is_string_and_776_tag_is_idset(self):
+    def test_775_tag_is_string_and_777_tag_is_idset(self):
         self.assertEqual(Decoder(b'\x06\x05plank', NAMES, string_tags=True).slot(), [6, 'plank'])
         self.assertEqual(Decoder(b'\x06\x00\x05plank', NAMES).slot(), [6, {'tag': 'plank'}])
+
+    def test_776_official_slot_tags_are_strings_inside_full_recipe(self):
+        fixture = json.loads((ROOT.parent / 'recipe-book-tag-776.json').read_text())
+        body = bytes.fromhex(fixture['body_hex'])
+        items = {360: 'crafting_table'}
+        rows, replace = Decoder(body, items, string_tags=True).book()
+        self.assertFalse(replace)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['recipe']['ingredients'], [[6, 'minecraft:planks']] * 4)
+        self.assertEqual(rows[0]['requirements'], [{'tag': 'minecraft:planks'}] * 4)
+        with self.assertRaises(ValueError):
+            Decoder(body, items).book()
 
     def test_trailing_and_invalid_item_are_rejected(self):
         with self.assertRaisesRegex(ValueError, 'trailing'):
