@@ -666,11 +666,26 @@ impl mcsa::api::world::Host for PluginCtx {
     }
 
     fn spawn_particle(&mut self, at: wit::Location, name: String, count: u32, dx: f64, dy: f64, dz: f64) -> Result<(), String> {
-        if !self.shared.dimension_enabled(dimension_from_wit(at.dimension)) { return Err("Измерение отключено".into()); }
-        if ![at.x,at.y,at.z,dx,dy,dz].iter().all(|v| v.is_finite()) || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0 || !(-2048.0..=2048.0).contains(&at.y) || [dx,dy,dz].iter().any(|v| !(0.0..=64.0).contains(v)) || count > 4096 {return Err("Недопустимые параметры частиц".into());}
-        if !PLUGIN_PARTICLES.contains(&name.as_str()) {return Err("Частица вне поддерживаемого каталога".into());}
+        self.spawn_particle_with_speed(at, name, count, mcsa::api::world::ParticleSpread { dx, dy, dz, speed: 0.0 })
+    }
+
+    fn spawn_particle_with_speed(&mut self, at: wit::Location, name: String, count: u32, spread: mcsa::api::world::ParticleSpread) -> Result<(), String> {
+        let dimension = dimension_from_wit(at.dimension);
+        if !self.shared.dimension_enabled(dimension) { return Err("Измерение отключено".into()); }
+        let mcsa::api::world::ParticleSpread { dx, dy, dz, speed } = spread;
+        if ![at.x, at.y, at.z].iter().all(|v| v.is_finite())
+            || at.x.abs() > 30_000_000.0 || at.z.abs() > 30_000_000.0
+            || !(-2048.0..=2048.0).contains(&at.y)
+            || [dx, dy, dz].iter().any(|v| !(0.0..=64.0).contains(v))
+            || !speed.is_finite() || count > 4096
+        {
+            return Err("Недопустимые параметры частиц".into());
+        }
+        if !PLUGIN_PARTICLES.contains(&name.as_str()) { return Err("Частица вне поддерживаемого каталога".into()); }
         let kind = crate::commands_admin::PARTICLES.iter().position(|n| *n == name).ok_or("Неизвестная частица")? as i32;
-        self.shared.world_in(dimension_from_wit(at.dimension)).lock().expect("мир").note_particle(kind,None,(at.x,at.y,at.z),(dx as f32,dy as f32,dz as f32),0.0,count as i32);Ok(())
+        self.shared.world_in(dimension).lock().expect("мир")
+            .note_particle(kind, None, (at.x, at.y, at.z), (dx as f32, dy as f32, dz as f32), speed, count as i32);
+        Ok(())
     }
     fn break_naturally(&mut self, pos: wit::BlockPos) -> Result<bool, String> {
         if !self.shared.dimension_enabled(dimension_from_wit(pos.dimension)) { return Err("Измерение отключено".into()); }

@@ -128,8 +128,15 @@ fn assert_race_presentation(host: &mut Host, shared: &Shared) {
                 && packet.windows(b"Race ready".len()).any(|value| value == b"Race ready"))));
     }
     let (events, _) = world.lock().unwrap().events_since(from, 0);
-    assert!(matches!(events.as_slice(), [WorldEvent::Sound(sound), WorldEvent::Particle {kind, count, ..}]
-        if sound.name == "entity.warden.sonic_charge" && crate::commands_admin::PARTICLES[*kind as usize] == "totem_of_undying" && *count == 3));
+    let [WorldEvent::Sound(sound),
+        WorldEvent::Particle { kind, count: 3, speed: first_speed, .. },
+        WorldEvent::Particle { kind: directed, count: 0, offset, speed, .. }] = events.as_slice() else {
+        panic!("ожидались звук и две частицы");
+    };
+    assert_eq!(sound.name, "entity.warden.sonic_charge");
+    assert_eq!(crate::commands_admin::PARTICLES[*kind as usize], "totem_of_undying");
+    assert_eq!(directed, kind);
+    assert_eq!((*first_speed, *offset, *speed), (0.0, (0.25, 0.5, 1.0), 0.75));
 }
 
 fn assert_bukkit_scoreboard(host: &mut Host, shared: &Shared) {

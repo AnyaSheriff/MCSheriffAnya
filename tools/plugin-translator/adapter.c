@@ -211,6 +211,12 @@ void *mcsa_call(int32_t op,void *data,int32_t len) {
         break;
     }
     case 174: number(mcsa_api_presentation_remove_score(&s[0], &s[1], &s[2]));break;
+    case 175: {
+        mcsa_api_types_location_t at = {.dimension = atoi(a[0]), .x = atof(a[1]), .y = atof(a[2]), .z = atof(a[3])};
+        mcsa_api_world_particle_spread_t spread = {.dx = atof(a[6]), .dy = atof(a[7]), .dz = atof(a[8]), .speed = (float)atof(a[9])};
+        if (!mcsa_api_world_spawn_particle_with_speed(&at, &s[4], atoi(a[5]), &spread, &err)) error(err);
+        break;
+    }
     default: abort();
     }
     free(copy);return output;

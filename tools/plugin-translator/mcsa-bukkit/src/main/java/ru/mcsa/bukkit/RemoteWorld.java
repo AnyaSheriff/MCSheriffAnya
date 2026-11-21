@@ -7,6 +7,10 @@ public final class RemoteWorld implements World {
  private org.bukkit.entity.Item drop(Location loc,org.bukkit.inventory.ItemStack item,boolean natural){java.util.Objects.requireNonNull(item);if(loc.getWorld()==null||!loc.getWorld().getName().equals(getName()))throw new IllegalArgumentException("Разные миры");return new RemoteItem(Host.text(79,""+dimension,""+loc.getX(),""+loc.getY(),""+loc.getZ(),Ascii.lower(item.getType().name()),""+item.getAmount(),item.metadata(),""+natural));}
  public org.bukkit.entity.Item dropItem(Location loc,org.bukkit.inventory.ItemStack item){return drop(loc,item,false);}public org.bukkit.entity.Item dropItemNaturally(Location loc,org.bukkit.inventory.ItemStack item){return drop(loc,item,true);}
  public void spawnParticle(Particle particle,Location loc,int count,double dx,double dy,double dz){if(loc.getWorld()==null||!loc.getWorld().getName().equals(getName()))throw new IllegalArgumentException("Разные миры");Host.call(86,""+dimension,""+loc.getX(),""+loc.getY(),""+loc.getZ(),Ascii.lower(particle.name()),""+count,""+dx,""+dy,""+dz);}
+ public void spawnParticle(Particle particle,Location loc,int count,double dx,double dy,double dz,double extra){
+  if(loc.getWorld()==null||!loc.getWorld().getName().equals(getName()))throw new IllegalArgumentException("Разные миры");
+  Host.call(175,""+dimension,""+loc.getX(),""+loc.getY(),""+loc.getZ(),Ascii.lower(particle.name()),""+count,""+dx,""+dy,""+dz,""+extra);
+ }
  public boolean isChunkLoaded(int x,int z){return Host.yes(72,""+dimension,""+x,""+z);}
  public int getHighestBlockYAt(Location loc){if(loc.getWorld()!=null&&!loc.getWorld().getName().equals(getName()))throw new IllegalArgumentException("Разные миры");return Integer.parseInt(Host.text(73,""+dimension,""+loc.getBlockX(),""+loc.getBlockZ()));}
  @SuppressWarnings("unchecked") public <T>T getGameRuleValue(GameRule<T> rule){if(rule!=GameRule.RANDOM_TICK_SPEED)throw new UnsupportedOperationException("Неизвестное правило мира");return (T)Integer.valueOf(Host.text(74));}

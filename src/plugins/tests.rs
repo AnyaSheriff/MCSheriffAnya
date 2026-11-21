@@ -722,6 +722,10 @@ fn bukkit_host_operations_remain_typed_and_bounded() {
     assert!(ctx.spawn_particle(at, "totem_of_undying".into(), 3, 0.25, 0.5, 1.0).is_ok());
     assert!(ctx.spawn_particle(at, "block".into(), 3, 0.25, 0.5, 1.0).is_err());
     assert!(ctx.spawn_particle(at, "totem_of_undying".into(), 4097, 0.25, 0.5, 1.0).is_err());
+    for speed in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        let spread = super::api::mcsa::api::world::ParticleSpread { dx: 0.25, dy: 0.5, dz: 1.0, speed };
+        assert!(ctx.spawn_particle_with_speed(at, "totem_of_undying".into(), 0, spread).is_err());
+    }
     let (events, _) = overworld.lock().unwrap().events_since(from, 0);
     let [crate::world::WorldEvent::Sound(sound), crate::world::WorldEvent::Particle { kind, block, at, offset, speed, count, .. }] = events.as_slice() else {
         panic!("ожидались ровно звук и частица");

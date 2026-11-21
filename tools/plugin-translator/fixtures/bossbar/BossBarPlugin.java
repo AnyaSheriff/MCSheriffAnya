@@ -119,6 +119,7 @@ public final class BossBarPlugin extends JavaPlugin implements Listener {
   check(block.getWorld().equals(world) && block.getX() == -1 && block.getY() == 64 && block.getZ() == 1);
   world.playSound(at, Sound.ENTITY_WARDEN_SONIC_CHARGE, 0.6f, 1.2f);
   world.spawnParticle(Particle.TOTEM_OF_UNDYING, at, 3, 0.25, 0.5, 1);
+  world.spawnParticle(Particle.TOTEM_OF_UNDYING, at, 0, 0.25, 0.5, 1, 0.75);
   player.sendActionBar("§aRace ready");
  }
  private static void setMainBoard(Player player) {

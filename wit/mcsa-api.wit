@@ -276,6 +276,8 @@ interface %world {
     highest-block: func(dimension: dimension, x: s32, z: s32) -> result<s32, string>;
     random-tick-speed: func() -> u32;
     spawn-particle: func(at: location, name: string, count: u32, dx: f64, dy: f64, dz: f64) -> result<_, string>;
+    record particle-spread { dx: f64, dy: f64, dz: f64, speed: f32 }
+    spawn-particle-with-speed: func(at: location, name: string, count: u32, spread: particle-spread) -> result<_, string>;
     break-naturally: func(pos: block-pos) -> result<bool, string>;
     play-sound: func(at: location, sound: string, volume: f32, pitch: f32) -> result<_, string>;
 

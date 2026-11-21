@@ -8,6 +8,9 @@ public interface World extends org.bukkit.generator.WorldInfo {
  org.bukkit.util.RayTraceResult rayTraceBlocks(Location start,org.bukkit.util.Vector direction,double maxDistance,FluidCollisionMode fluids,boolean ignorePassable);
  org.bukkit.entity.Item dropItem(Location location,org.bukkit.inventory.ItemStack item);org.bukkit.entity.Item dropItemNaturally(Location location,org.bukkit.inventory.ItemStack item);
  void spawnParticle(Particle particle,Location loc,int count,double dx,double dy,double dz);
+ // По Javadoc World значение extra зависит от частицы и обычно задаёт скорость.
+ // https://jd.papermc.io/paper/1.21.11/org/bukkit/World.html
+ void spawnParticle(Particle particle,Location loc,int count,double dx,double dy,double dz,double extra);
  boolean isChunkLoaded(int x,int z);int getHighestBlockYAt(Location location);<T>T getGameRuleValue(GameRule<T> rule);void playSound(Location location,Sound sound,float volume,float pitch);
  enum Environment {NORMAL,NETHER,THE_END,CUSTOM}
  Environment getEnvironment();java.util.List<org.bukkit.entity.Player> getPlayers();int getMinHeight();int getMaxHeight();
