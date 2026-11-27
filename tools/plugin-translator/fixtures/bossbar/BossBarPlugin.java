@@ -93,6 +93,7 @@ public final class BossBarPlugin extends JavaPlugin implements Listener {
   player.playerListName(Component.text("TabAlias"));
   player.sendPlayerListHeaderAndFooter(Component.text("TabHead").append(Component.newline()).append(Component.text("LineTwo")), Component.text("TabFoot"));
  }
+ @SuppressWarnings("deprecation")
  private static void checkRacePresentation(Player player) {
   check(player.hasPotionEffect(PotionEffectType.SPEED) && !player.hasPotionEffect(PotionEffectType.POISON));
   PlayerInventory inventory = player.getInventory();
@@ -103,13 +104,17 @@ public final class BossBarPlugin extends JavaPlugin implements Listener {
   meta.setLore(java.util.List.of("§bRacial equipment"));
   meta.setUnbreakable(true);
   sword.setItemMeta(meta);
+  sword.setDurability((short)7);
   inventory.setItemInMainHand(sword);
   inventory.setBoots(new ItemStack(Material.IRON_BOOTS));
   inventory.setLeggings(new ItemStack(Material.IRON_LEGGINGS));
   inventory.setChestplate(new ItemStack(Material.IRON_CHESTPLATE));
   inventory.setHelmet(new ItemStack(Material.IRON_HELMET));
-  check(inventory.getItemInMainHand().getType() == Material.IRON_SWORD);
-  check(inventory.getItemInMainHand().hasItemMeta() && inventory.getItemInMainHand().getItemMeta().isUnbreakable());
+  ItemStack equipped = inventory.getItemInMainHand();
+  check(equipped.getType() == Material.IRON_SWORD && equipped.getDurability() == 7);
+  check(equipped.hasItemMeta() && equipped.getItemMeta().isUnbreakable());
+  equipped.setDurability((short)0);
+  check(inventory.getItemInMainHand().getDurability() == 0);
   check(inventory.getArmorContents()[1].getType() == Material.IRON_LEGGINGS);
   inventory.setLeggings(null);
   check(inventory.getArmorContents()[1] == null);

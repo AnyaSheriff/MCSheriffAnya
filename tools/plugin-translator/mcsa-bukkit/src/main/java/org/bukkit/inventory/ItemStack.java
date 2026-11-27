@@ -1,5 +1,5 @@
 package org.bukkit.inventory;
-import org.bukkit.Material;import org.bukkit.enchantments.Enchantment;import org.bukkit.inventory.meta.ItemMeta;import ru.mcsa.bukkit.ItemMetadata;
+import org.bukkit.Material;import org.bukkit.enchantments.Enchantment;import org.bukkit.inventory.meta.Damageable;import org.bukkit.inventory.meta.ItemMeta;import ru.mcsa.bukkit.ItemMetadata;
 public class ItemStack implements Cloneable {
  private java.util.function.Consumer<ItemStack> observer;
  public ItemStack observe(java.util.function.Consumer<ItemStack> observer){this.observer=observer;return this;}
@@ -12,6 +12,17 @@ public class ItemStack implements Cloneable {
  public boolean hasItemMeta(){return !type.isAir()&&meta.hasValues();}
  public ItemMeta getItemMeta(){return type.isAir()?null:meta.clone();}public boolean setItemMeta(ItemMeta value){if(value==null){meta=ItemMetadata.create(type);changed();return true;}if(!(value instanceof ItemMetadata))throw new IllegalArgumentException("Чужой ItemMeta");meta=((ItemMetadata)value).copyFor(type);changed();return true;}
  public boolean editMeta(java.util.function.Consumer<? super ItemMeta> consumer){ItemMeta copy=getItemMeta();if(copy==null)return false;consumer.accept(copy);return setItemMeta(copy);}
+ // По Javadoc ItemStack: «durability is now part of ItemMeta».
+ // https://jd.papermc.io/paper/1.21.11/org/bukkit/inventory/ItemStack.html
+ @Deprecated public short getDurability(){
+  return meta instanceof Damageable ? (short)((Damageable)meta).getDamage() : 0;
+ }
+ @Deprecated public void setDurability(short durability){
+  if(meta instanceof Damageable){
+   ((Damageable)meta).setDamage(durability);
+   changed();
+  }
+ }
  public io.papermc.paper.persistence.PersistentDataContainerView getPersistentDataContainer(){return meta.getPersistentDataContainer().clone();}
  public java.util.Map<Enchantment,Integer> getEnchantments(){return meta.getEnchants();}public void addUnsafeEnchantment(Enchantment enchant,int level){meta.addEnchant(enchant,level,true);changed();}public int getEnchantmentLevel(Enchantment enchant){return getEnchantments().getOrDefault(enchant,0);}public boolean containsEnchantment(Enchantment enchant){return getEnchantments().containsKey(enchant);}
  // По Javadoc ItemStack: "Previous level, or 0"; запись нужна лишь при снятии.

@@ -6,6 +6,25 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import ru.mcsa.bukkit.Text;
 public final class SdkContracts {
  private static int checks;private static void check(boolean value){checks++;if(!value)throw new AssertionError("check "+checks);}
+ @SuppressWarnings("deprecation")
+ private static void checkLegacyDurability(org.bukkit.inventory.ItemStack original, NamespacedKey marker){
+  int[] writes={0};
+  org.bukkit.inventory.ItemStack item=original.clone().observe(changed->writes[0]++);
+  org.bukkit.inventory.meta.ItemMeta before=item.getItemMeta();
+  check(item.getDurability()==3);
+  item.setDurability((short)17);
+  check(writes[0]==1&&item.getDurability()==17);
+  check(((org.bukkit.inventory.meta.Damageable)item.getItemMeta()).getDamage()==17);
+  check(item.getPersistentDataContainer().get(marker,org.bukkit.persistence.PersistentDataType.STRING).equals("blink"));
+  check(item.getItemMeta().hasDisplayName()&&item.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.SHARPNESS)==2);
+  item.setItemMeta(before);
+  check(writes[0]==2&&item.getDurability()==3);
+  item.setDurability((short)0);
+  check(writes[0]==3&&item.getDurability()==0);
+  org.bukkit.inventory.ItemStack stone=new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE);
+  stone.setDurability((short)12);
+  check(stone.getDurability()==0&&!stone.hasItemMeta());
+ }
  private static java.util.List<String> styledRuns(Component component){java.util.List<String> out=new java.util.ArrayList<>();styledRuns(ru.mcsa.bukkit.Yaml.parse(Text.json(component)),new java.util.HashMap<>(),out);return out;}
  private static void styledRuns(java.util.Map<?,?> node,java.util.Map<String,Object> parent,java.util.List<String> out){java.util.Map<String,Object> style=new java.util.HashMap<>(parent);for(String key:java.util.List.of("color","bold","italic"))if(node.containsKey(key))style.put(key,node.get(key));Object text=node.get("text");if(text!=null&&!text.equals(""))out.add(text+"|"+style.get("color")+"|"+style.get("bold")+"|"+style.get("italic"));Object children=node.get("extra");if(children instanceof java.util.List)for(Object child:(java.util.List<?>)children)styledRuns((java.util.Map<?,?>)child,style,out);}
  public static void main(String[] args){
@@ -80,6 +99,7 @@ public final class SdkContracts {
   check(org.bukkit.inventory.ItemStack.fromHost(org.bukkit.Material.IRON_SWORD,1,"{\"_native\":3,\"unbreakable\":true}").getItemMeta().isUnbreakable());
   check(item.equals(restored)&&item.hashCode()==restored.hashCode());
   check(((org.bukkit.inventory.meta.Damageable)restored.getItemMeta()).getDamage()==3);
+  checkLegacyDurability(restored, marker);
   check(restored.getEnchantmentLevel(org.bukkit.enchantments.Enchantment.SHARPNESS)==2);
   restored.editMeta(m->m.getPersistentDataContainer().set(marker,org.bukkit.persistence.PersistentDataType.STRING,"other"));check(!restored.isSimilar(item));
   org.bukkit.persistence.PersistentDataContainer data=new ru.mcsa.bukkit.DataContainer();java.util.List<String> list=new java.util.ArrayList<>(java.util.List.of("one","two"));data.set(marker,org.bukkit.persistence.PersistentDataType.LIST.strings(),list);list.add("three");check(data.get(marker,org.bukkit.persistence.PersistentDataType.LIST.strings()).size()==2);
